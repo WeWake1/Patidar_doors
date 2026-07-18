@@ -1,0 +1,124 @@
+/* ═══════════════ World themes — Timbers · Doors · Ply · WPC ═══════════════
+   Each world page redefines the semantic --w-* tokens declared on .world in
+   global.css, plus its own static texture motifs (gradients/SVG only — no
+   filters, nothing animated during scroll). One brand, four moods. */
+
+/* ── shared world plumbing ───────────────────────────────── */
+.world {
+  background: var(--w-bg);
+  color: var(--w-ink);
+}
+.world__desc { color: var(--w-mut); }
+.world__title { color: var(--w-ink); }
+.world__section-title { color: var(--w-ink); }
+.world__section-title::after {
+  content: '';
+  display: block;
+  width: 44px;
+  height: 3px;
+  margin-top: 10px;
+  background: var(--w-accent);
+}
+.world__why { background: var(--w-surface); border-top: 1px solid var(--w-line); }
+.world__why h2 { color: var(--w-ink); }
+.world__why p { color: var(--w-mut); }
+
+/* buttons inherit the world's ink so they work on dark worlds too */
+.world .btn--dark { background: var(--w-accent); border-color: var(--w-accent); color: var(--w-bg); }
+.world .btn--dark:hover { background: var(--w-ink); border-color: var(--w-ink); color: var(--w-bg); }
+.world .btn--ghost { color: var(--w-ink); border-color: var(--w-ink); }
+.world .btn--ghost:hover { background: var(--w-ink); color: var(--w-bg); }
+
+/* ── TIMBERS — dark sawmill ──────────────────────────────── */
+[data-world='timbers'] {
+  --w-bg: #2b2419;
+  --w-surface: #352c1f;
+  --w-ink: #efe6d4;
+  --w-mut: #b8a98d;
+  --w-accent: #c9903f;
+  --w-line: #4a3f2d;
+}
+[data-world='timbers'] .world__intro {
+  background:
+    radial-gradient(circle at 88% 30%, transparent 0 54px, rgba(201, 144, 63, 0.14) 54px 57px, transparent 57px 86px, rgba(201, 144, 63, 0.12) 86px 89px, transparent 89px 122px, rgba(201, 144, 63, 0.1) 122px 125px, transparent 125px 160px, rgba(201, 144, 63, 0.08) 160px 163px, transparent 163px),
+    repeating-linear-gradient(178deg, transparent 0 26px, rgba(0, 0, 0, 0.22) 26px 28px, transparent 28px 61px, rgba(239, 230, 212, 0.03) 61px 63px),
+    var(--w-bg);
+}
+[data-world='timbers'] .card {
+  background: #3a3023;
+  border-color: #4a3f2d;
+}
+[data-world='timbers'] .card__stage { background: linear-gradient(180deg, #443827, #382e1f); }
+[data-world='timbers'] .card__name { color: var(--w-ink); }
+[data-world='timbers'] .card__tag { color: var(--w-mut); }
+[data-world='timbers'] .card__price--enquire { color: var(--w-mut); }
+[data-world='timbers'] .card__cat { color: var(--w-accent); }
+[data-world='timbers'] .card:hover { box-shadow: 0 26px 50px rgba(0, 0, 0, 0.45); }
+[data-world='timbers'] .card:hover .card__cta { background: var(--w-accent); color: #2b2419; }
+[data-world='timbers'] .card .btn--ghost { color: var(--w-ink); border-color: #5d4f38; }
+
+/* ── DOORS — flagship, the brand home ────────────────────── */
+[data-world='doors'] {
+  --w-bg: #f5f0e6;
+  --w-surface: #efe7d6;
+  --w-ink: #211a12;
+  --w-mut: #6f6354;
+  --w-accent: #a98b4f;
+  --w-line: #e6dcc6;
+}
+[data-world='doors'] .world__intro {
+  background:
+    radial-gradient(90% 120% at 50% -30%, rgba(169, 139, 79, 0.16), transparent 60%),
+    var(--w-bg);
+}
+[data-world='doors'] .world__motif {
+  background: repeating-linear-gradient(90deg, transparent 0 120px, rgba(169, 139, 79, 0.07) 120px 122px);
+  mask-image: linear-gradient(180deg, transparent 30%, #000);
+  -webkit-mask-image: linear-gradient(180deg, transparent 30%, #000);
+}
+
+/* ── PLY — technical, engineered, spec-sheet ─────────────── */
+[data-world='ply'] {
+  --w-bg: #efe7d8;
+  --w-surface: #e7dcc7;
+  --w-ink: #241c13;
+  --w-mut: #6d5f4c;
+  --w-accent: #b0725a;
+  --w-line: #d9cdb2;
+}
+[data-world='ply'] .world__intro {
+  border-bottom: 12px solid transparent;
+  border-image: repeating-linear-gradient(90deg, #c9ae85 0 34px, #8a7355 34px 38px, #e2cda8 38px 72px, #8a7355 72px 76px) 12;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 44px, rgba(36, 28, 19, 0.045) 44px 46px),
+    var(--w-bg);
+}
+[data-world='ply'] .world__kicker { font-family: var(--sans); }
+[data-world='ply'] .world__section-title { font: 600 22px/1.2 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; }
+[data-world='ply'] .card__name { font: 600 19px/1.2 var(--sans); }
+
+/* ── WPC — cool, waterproof, modern ──────────────────────── */
+[data-world='wpc'] {
+  --w-bg: #e9eeec;
+  --w-surface: #dde5e2;
+  --w-ink: #1e3634;
+  --w-mut: #56706c;
+  --w-accent: #2f7e72;
+  --w-line: #c8d4d0;
+}
+[data-world='wpc'] .world__intro {
+  background:
+    repeating-radial-gradient(140% 60% at 50% 118%, transparent 0 68px, rgba(47, 126, 114, 0.08) 68px 70px),
+    linear-gradient(180deg, #f2f6f4, var(--w-bg)),
+    var(--w-bg);
+}
+[data-world='wpc'] .kicker,
+[data-world='wpc'] .card__cat { color: var(--w-accent); }
+[data-world='wpc'] .card { border-radius: 10px; overflow: hidden; }
+[data-world='wpc'] .card__stage { background: linear-gradient(180deg, #f0f4f2, #dbe4e1); }
+
+/* world door cards inside the hero corridor share these accents */
+.world-door--timbers { --wd: #c9903f; }
+.world-door--doors { --wd: #a98b4f; }
+.world-door--ply { --wd: #b0725a; }
+.world-door--wpc { --wd: #2f7e72; }
