@@ -9,6 +9,7 @@ import { ToastProvider } from './components/Toast'
 import { WhatsAppFloat } from './components/WhatsAppFloat'
 import { getWorld } from './data/worlds'
 import { Checkout } from './pages/Checkout'
+import { DevGallery } from './pages/DevGallery'
 import { Faq } from './pages/Faq'
 import { Home } from './pages/Home'
 import { NotFound } from './pages/NotFound'
@@ -62,6 +63,7 @@ export default function App() {
               <Route path="/order-confirmed" element={<OrderConfirmed />} />
               <Route path="/faq" element={<Faq />} />
               <Route path="/policies" element={<Policies />} />
+              {import.meta.env.DEV && <Route path="/dev/gallery" element={<DevGallery />} />}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import type { ArtId, ProductImage, Tone } from '../data/products'
+import { useAjarInView } from '../lib/useAjarInView'
 import { DoorArt } from './DoorArt'
 
 /**
@@ -46,8 +47,9 @@ export function DoorScene({
   ]
     .filter(Boolean)
     .join(' ')
+  const ajarRef = useAjarInView<HTMLDivElement>(hoverOpen)
   return (
-    <div className={classes}>
+    <div ref={ajarRef} className={classes}>
       <div className="door-scene__frame" aria-hidden="true" />
       <div className="door-scene__room" aria-hidden="true">
         <div className="door-scene__room-lines" />

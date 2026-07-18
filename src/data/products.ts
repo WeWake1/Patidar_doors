@@ -19,6 +19,8 @@
  * most-pinned door motifs of 2025–26. See docs/design-research.md.
  */
 
+import { photoVisualFor } from './photoMap'
+
 export type WorldId = 'timbers' | 'doors' | 'ply' | 'wpc'
 
 export type ArtId =
@@ -478,8 +480,8 @@ function factoryDoor(
     specs,
     purchasable: false,
     priceUnit: 'leaf',
-    // Placeholder until a curated photo is assigned (see data/photoMap.ts).
-    visual: { kind: 'art', art: 'classic', tones: 'wood', defaultTone },
+    // Curated photo when one exists; classic-leaf placeholder otherwise.
+    visual: photoVisualFor(id, name) ?? { kind: 'art', art: 'classic', tones: 'wood', defaultTone },
   }
 }
 
@@ -676,7 +678,13 @@ const WPC_PRODUCTS: Product[] = [
     ],
     purchasable: false,
     priceUnit: 'leaf',
-    visual: { kind: 'material', material: 'wpc', base: '#A9B8B3', dark: '#71827D', light: '#D2DCD8' },
+    visual: photoVisualFor('wpc-cnc-door', '28 mm CNC WPC Doors') ?? {
+      kind: 'material',
+      material: 'wpc',
+      base: '#A9B8B3',
+      dark: '#71827D',
+      light: '#D2DCD8',
+    },
   },
   {
     id: 'wpc-digital-veneer-door',
@@ -692,7 +700,13 @@ const WPC_PRODUCTS: Product[] = [
     ],
     purchasable: false,
     priceUnit: 'leaf',
-    visual: { kind: 'material', material: 'wpc', base: '#9C8B70', dark: '#6F6350', light: '#C2B294' },
+    visual: photoVisualFor('wpc-digital-veneer-door', 'Digital Veneer WPC Doors') ?? {
+      kind: 'material',
+      material: 'wpc',
+      base: '#9C8B70',
+      dark: '#6F6350',
+      light: '#C2B294',
+    },
   },
 ]
 
