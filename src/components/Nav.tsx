@@ -3,9 +3,12 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useCart } from '../cart/CartContext'
 
 const links = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/shop', label: 'Shop doors' },
-  { to: '/faq', label: 'FAQ' },
+  { to: '/timbers', label: 'Timbers' },
+  { to: '/doors', label: 'Doors' },
+  { to: '/ply', label: 'Ply' },
+  { to: '/wpc', label: 'WPC' },
+  { to: '/shop', label: 'Catalogue' },
+  { to: '/visit', label: 'Visit' },
 ]
 
 export function Nav() {
@@ -33,7 +36,6 @@ export function Nav() {
             <NavLink
               key={l.to}
               to={l.to}
-              end={l.end}
               className={({ isActive }) => `nav__link${isActive ? ' nav__link--active' : ''}`}
             >
               {l.label}
@@ -66,7 +68,6 @@ export function Nav() {
             <NavLink
               key={l.to}
               to={l.to}
-              end={l.end}
               className={({ isActive }) => `nav__menu-link${isActive ? ' nav__menu-link--active' : ''}`}
             >
               {l.label}

@@ -16,17 +16,18 @@ export function Footer() {
           </p>
         </div>
         <div>
-          <div className="footer__head">Doors</div>
+          <div className="footer__head">Ranges</div>
           <div className="footer__col">
-            <Link to="/shop?cat=Series">Signature series</Link>
-            <Link to="/shop?cat=Laminated">Laminated doors</Link>
-            <Link to="/shop?cat=WPC">WPC doors</Link>
-            <Link to="/shop?cat=Safety">Safety doors</Link>
+            <Link to="/timbers">Timbers</Link>
+            <Link to="/doors">Doors</Link>
+            <Link to="/ply">Ply</Link>
+            <Link to="/wpc">WPC</Link>
           </div>
         </div>
         <div>
           <div className="footer__head">Company</div>
           <div className="footer__col">
+            <Link to="/visit">Visit the store</Link>
             <Link to="/faq">FAQ</Link>
             <Link to="/policies">Warranty & policies</Link>
             <Link to="/checkout">Checkout</Link>

@@ -1,32 +1,43 @@
 import { useSearchParams } from 'react-router-dom'
 import { ProductCard } from '../components/ProductCard'
-import { CATEGORIES, PRODUCTS } from '../data/products'
+import { PRODUCTS } from '../data/products'
+import { WORLDS } from '../data/worlds'
 import { usePageMeta } from '../lib/usePageMeta'
 
 export function Shop() {
-  usePageMeta('All doors', 'Twelve original made-to-measure door designs — laminated, WPC, signature series and safety doors. Factory direct, installed.')
+  usePageMeta(
+    'Catalogue',
+    'The full Patidar Doors catalogue — teak timbers, made-to-measure doors, plywood and WPC, all from our own yard and factory.',
+  )
   const [params, setParams] = useSearchParams()
-  const cat = params.get('cat') ?? 'All'
-  const products = PRODUCTS.filter((p) => cat === 'All' || p.cat === cat)
+  const world = params.get('world') ?? 'all'
+  const products = PRODUCTS.filter((p) => world === 'all' || p.world === world)
 
   return (
     <div className="shop page-pad">
-      <div className="kicker">The collection</div>
-      <h1 className="shop__title">All doors</h1>
+      <div className="kicker">Everything under one roof</div>
+      <h1 className="shop__title">Catalogue</h1>
       <p className="shop__sub">
-        Every door is made to order in your exact size and finish. Prices shown are for a standard 8′ × 3′ leaf,
-        installation included.
+        Timbers, doors, ply and WPC — everything on this page is stocked or made by us. Doors are made to order in
+        your exact size; sheet and timber prices are confirmed in store or on WhatsApp.
       </p>
 
-      <div className="chips" role="group" aria-label="Filter by category">
-        {CATEGORIES.map((c) => (
+      <div className="chips" role="group" aria-label="Filter by range">
+        <button
+          type="button"
+          className={`chip${world === 'all' ? ' chip--on' : ''}`}
+          onClick={() => setParams({}, { replace: true })}
+        >
+          All
+        </button>
+        {WORLDS.map((w) => (
           <button
-            key={c}
+            key={w.id}
             type="button"
-            className={`chip${cat === c ? ' chip--on' : ''}`}
-            onClick={() => setParams(c === 'All' ? {} : { cat: c }, { replace: true })}
+            className={`chip${world === w.id ? ' chip--on' : ''}`}
+            onClick={() => setParams({ world: w.id }, { replace: true })}
           >
-            {c}
+            {w.name}
           </button>
         ))}
       </div>

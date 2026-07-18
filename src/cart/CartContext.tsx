@@ -118,7 +118,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         {
           ...l,
           name: product.name,
-          art: product.art,
+          art: product.visual.kind === 'art' ? product.visual.art : 'classic',
           sizeLabel: size.label,
           toneName: tone.name,
           unitPrice,

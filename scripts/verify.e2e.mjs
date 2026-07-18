@@ -79,27 +79,47 @@ await page.locator('.process').scrollIntoViewIfNeeded()
 await page.waitForTimeout(900)
 await shot('04-home-process')
 
-/* ── SHOP ──────────────────────────────────────────────── */
-await step('shop shows 12 doors', async () => {
+/* ── SHOP / CATALOGUE ──────────────────────────────────── */
+await step('catalogue shows all 49 products', async () => {
   await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
   await page.waitForSelector('.card')
   const n = await page.locator('.card').count()
-  if (n !== 12) throw new Error(`expected 12 cards, got ${n}`)
+  if (n !== 49) throw new Error(`expected 49 cards, got ${n}`)
 })
 await page.waitForTimeout(600)
 await shot('05-shop-all', { fullPage: true })
 
-await step('category filter works', async () => {
-  await page.getByRole('button', { name: 'Laminated', exact: true }).click()
+await step('world filter works', async () => {
+  await page.getByRole('button', { name: 'Doors', exact: true }).click()
   await page.waitForTimeout(300)
   const n = await page.locator('.card').count()
-  if (n !== 4) throw new Error(`expected 4 laminated, got ${n}`)
-  if (!page.url().includes('cat=Laminated')) throw new Error('url param missing')
+  if (n !== 27) throw new Error(`expected 27 doors, got ${n}`)
+  if (!page.url().includes('world=doors')) throw new Error('url param missing')
+})
+
+/* ── WORLD PAGES ───────────────────────────────────────── */
+await step('world pages render themed sections', async () => {
+  for (const w of ['timbers', 'doors', 'ply', 'wpc']) {
+    await page.goto(BASE + '/' + w, { waitUntil: 'networkidle' })
+    await page.waitForSelector(`[data-world="${w}"]`)
+    if (!(await page.locator('.world__section .card').count())) throw new Error(`${w}: no product cards`)
+  }
+})
+await shot('05b-world-timbers')
+
+await step('visit page renders', async () => {
+  await page.goto(BASE + '/visit', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.visit__grid')
 })
 
 /* ── PRODUCT ───────────────────────────────────────────── */
-await step('product page + configurator pricing', async () => {
+await step('legacy /door/:id redirects to /product/:id', async () => {
   await page.goto(BASE + '/door/meridian', { waitUntil: 'networkidle' })
+  await page.waitForURL('**/product/meridian')
+})
+
+await step('product page + configurator pricing', async () => {
+  await page.goto(BASE + '/product/meridian', { waitUntil: 'networkidle' })
   await page.waitForSelector('.pdp__price')
   const p1 = await page.locator('.pdp__price').innerText()
   if (!p1.includes('86,900')) throw new Error(`default price wrong (ebony default 84500+2400): ${p1}`)
@@ -131,7 +151,7 @@ await step('cart persists across reload', async () => {
 
 /* second product into cart */
 await step('add second product (flute, sage)', async () => {
-  await page.goto(BASE + '/door/flute', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/product/flute', { waitUntil: 'networkidle' })
   await page.getByRole('button', { name: /Add to cart/ }).click()
   await page.waitForSelector('.toast')
 })
@@ -230,7 +250,7 @@ await step('mobile home + burger menu', async () => {
 })
 
 await step('mobile shop + pdp', async () => {
-  await page.goto(BASE + '/door/haveli', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/product/haveli', { waitUntil: 'networkidle' })
   await page.waitForTimeout(500)
   await shot('15-mobile-pdp')
 })
