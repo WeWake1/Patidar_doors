@@ -1,0 +1,244 @@
+/* End-to-end verification of the Doorswala app using system Chrome (headless). */
+import { chromium } from 'playwright-core'
+
+const BASE = process.env.BASE ?? 'http://localhost:5199'
+const OUT = process.env.OUT ?? '.'
+const shots = []
+const errors = []
+const logs = []
+
+const browser = await chromium.launch({
+  channel: 'chrome',
+  headless: true,
+})
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
+const page = await ctx.newPage()
+
+page.on('console', (m) => {
+  if (m.type() === 'error' || m.type() === 'warning') logs.push(`[${m.type()}] ${m.text()}`)
+})
+page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
+
+// capture wa.me URL instead of opening a popup
+await page.addInitScript(() => {
+  window.__waUrl = null
+  const orig = window.open
+  window.open = (url, ...rest) => {
+    if (typeof url === 'string' && url.includes('wa.me')) {
+      window.__waUrl = url
+      return null
+    }
+    return orig.call(window, url, ...rest)
+  }
+})
+
+async function shot(name, opts = {}) {
+  const path = `${OUT}/${name}.png`
+  await page.screenshot({ path, ...opts })
+  shots.push(path)
+}
+
+const step = async (label, fn) => {
+  try {
+    await fn()
+    console.log(`OK  ${label}`)
+  } catch (e) {
+    console.log(`FAIL ${label}: ${e.message.split('\n')[0]}`)
+    errors.push(`${label}: ${e.message.split('\n')[0]}`)
+    await shot(`FAIL-${label.replace(/\W+/g, '_')}`)
+  }
+}
+
+/* ── HOME ──────────────────────────────────────────────── */
+await step('home loads', async () => {
+  await page.goto(BASE + '/', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.hero__title')
+})
+await shot('01-home-hero')
+
+await step('hero door opens on scroll', async () => {
+  await page.mouse.wheel(0, 900)
+  await page.waitForTimeout(700)
+})
+await shot('02-home-hero-open')
+
+await step('finish chip changes hero door', async () => {
+  await page.locator('.hero__chip').nth(4).click()
+  await page.waitForTimeout(400)
+})
+
+await step('home sections render', async () => {
+  for (const sel of ['.marquee', '.props', '.featured', '.econ', '.process', '.quotes', '.faqteaser', '.cta']) {
+    if (!(await page.locator(sel).count())) throw new Error(`missing ${sel}`)
+  }
+})
+await page.locator('.featured').scrollIntoViewIfNeeded()
+await page.waitForTimeout(900)
+await shot('03-home-featured')
+await page.locator('.process').scrollIntoViewIfNeeded()
+await page.waitForTimeout(900)
+await shot('04-home-process')
+
+/* ── SHOP ──────────────────────────────────────────────── */
+await step('shop shows 12 doors', async () => {
+  await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.card')
+  const n = await page.locator('.card').count()
+  if (n !== 12) throw new Error(`expected 12 cards, got ${n}`)
+})
+await page.waitForTimeout(600)
+await shot('05-shop-all', { fullPage: true })
+
+await step('category filter works', async () => {
+  await page.getByRole('button', { name: 'Laminated', exact: true }).click()
+  await page.waitForTimeout(300)
+  const n = await page.locator('.card').count()
+  if (n !== 4) throw new Error(`expected 4 laminated, got ${n}`)
+  if (!page.url().includes('cat=Laminated')) throw new Error('url param missing')
+})
+
+/* ── PRODUCT ───────────────────────────────────────────── */
+await step('product page + configurator pricing', async () => {
+  await page.goto(BASE + '/door/meridian', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.pdp__price')
+  const p1 = await page.locator('.pdp__price').innerText()
+  if (!p1.includes('86,900')) throw new Error(`default price wrong (ebony default 84500+2400): ${p1}`)
+  // switch size to 6'6" x 2'6"
+  await page.locator('.cfg__size').first().click()
+  const p2 = await page.locator('.pdp__price').innerText()
+  if (p2 === p1) throw new Error('price did not change with size')
+  // switch finish to walnut (delta 0)
+  await page.locator('.cfg__tone').first().click()
+  const p3 = await page.locator('.pdp__price').innerText()
+  if (p3 === p2) throw new Error('price did not change with finish')
+})
+await shot('06-pdp-meridian')
+
+await step('add to cart shows toast and badge', async () => {
+  await page.locator('.cfg__size').nth(3).click() // back to 8x3
+  await page.locator('.cfg__tone').nth(4).click() // ebony
+  await page.getByRole('button', { name: /Add to cart/ }).click()
+  await page.waitForSelector('.toast')
+  const badge = await page.locator('.nav__badge').innerText()
+  if (badge !== '1') throw new Error(`badge ${badge}`)
+})
+
+await step('cart persists across reload', async () => {
+  await page.reload({ waitUntil: 'networkidle' })
+  const badge = await page.locator('.nav__badge').innerText()
+  if (badge !== '1') throw new Error(`badge after reload ${badge}`)
+})
+
+/* second product into cart */
+await step('add second product (flute, sage)', async () => {
+  await page.goto(BASE + '/door/flute', { waitUntil: 'networkidle' })
+  await page.getByRole('button', { name: /Add to cart/ }).click()
+  await page.waitForSelector('.toast')
+})
+
+/* ── CART DRAWER ───────────────────────────────────────── */
+await step('cart drawer opens with 2 lines', async () => {
+  await page.locator('.nav__cart').click()
+  await page.waitForSelector('.drawer')
+  const n = await page.locator('.drawer__line').count()
+  if (n !== 2) throw new Error(`lines ${n}`)
+})
+await shot('07-cart-drawer')
+
+await step('qty stepper works', async () => {
+  await page.locator('.qty button').nth(1).click() // + on first line
+  await page.waitForTimeout(200)
+  const badge = await page.locator('.nav__badge').innerText()
+  if (badge !== '3') throw new Error(`badge ${badge}`)
+})
+
+await step('drawer → checkout', async () => {
+  await page.getByRole('button', { name: 'Proceed to checkout' }).click()
+  await page.waitForURL('**/checkout')
+  await page.waitForSelector('.checkout__form')
+})
+await shot('08-checkout')
+
+/* ── CHECKOUT VALIDATION + ORDER ───────────────────────── */
+await step('validation blocks bad input', async () => {
+  await page.getByRole('button', { name: /Place order/ }).click()
+  await page.waitForSelector('.field__err')
+  const n = await page.locator('.field__err').count()
+  if (n < 4) throw new Error(`expected several errors, got ${n}`)
+})
+await shot('09-checkout-errors')
+
+await step('valid order opens WhatsApp + confirmation', async () => {
+  await page.fill('#f-name', 'Vivek Patel')
+  await page.fill('#f-phone', '98765 43210')
+  await page.fill('#f-address', '12, Timber Lane, Near City Mall')
+  await page.fill('#f-city', 'Ahmedabad')
+  await page.fill('#f-pincode', '380001')
+  await page.selectOption('#f-slot', { index: 1 })
+  await page.fill('#f-notes', 'Opening is 84.5 inches')
+  await page.getByRole('button', { name: /Place order/ }).click()
+  await page.waitForURL('**/order-confirmed')
+  const wa = await page.evaluate(() => window.__waUrl)
+  if (!wa) throw new Error('wa.me url not captured')
+  const decoded = decodeURIComponent(wa)
+  for (const frag of ['wa.me/919800000000', 'NEW ORDER — DW-', 'The Meridian', 'The Flute', 'Vivek Patel', '380001', 'Preferred visit']) {
+    if (!decoded.includes(frag)) throw new Error(`wa message missing: ${frag}`)
+  }
+  console.log('   wa.me OK:', decoded.slice(0, 120).replaceAll('\n', ' | '))
+})
+await shot('10-order-confirmed')
+
+await step('cart cleared after order', async () => {
+  const badge = await page.locator('.nav__badge').innerText()
+  if (badge !== '0') throw new Error(`badge ${badge}`)
+})
+
+/* ── FAQ / POLICIES / 404 ──────────────────────────────── */
+await step('faq accordion', async () => {
+  await page.goto(BASE + '/faq', { waitUntil: 'networkidle' })
+  await page.locator('.faq summary').first().click()
+  await page.waitForTimeout(200)
+})
+await shot('11-faq')
+
+await step('policies page', async () => {
+  await page.goto(BASE + '/policies', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.policies section')
+})
+
+await step('404 page', async () => {
+  await page.goto(BASE + '/nope', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.notfound__code')
+})
+
+/* ── ALL 12 DOOR DESIGNS GALLERY ───────────────────────── */
+await step('shop full-page gallery (art check)', async () => {
+  await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
+  await page.waitForTimeout(1200)
+})
+await shot('12-shop-gallery', { fullPage: true })
+
+/* ── MOBILE ────────────────────────────────────────────── */
+await step('mobile home + burger menu', async () => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(BASE + '/', { waitUntil: 'networkidle' })
+  await page.waitForTimeout(500)
+  await shot('13-mobile-home')
+  await page.locator('.nav__burger').click()
+  await page.waitForSelector('.nav__menu')
+  await shot('14-mobile-menu')
+})
+
+await step('mobile shop + pdp', async () => {
+  await page.goto(BASE + '/door/haveli', { waitUntil: 'networkidle' })
+  await page.waitForTimeout(500)
+  await shot('15-mobile-pdp')
+})
+
+/* ── report ────────────────────────────────────────────── */
+console.log('\n──── console noise ────')
+console.log(logs.length ? logs.slice(0, 20).join('\n') : '(none)')
+console.log('\n──── result ────')
+console.log(errors.length ? `FAILURES:\n${errors.join('\n')}` : 'ALL CHECKS PASSED')
+await browser.close()
+process.exit(errors.length ? 1 : 0)

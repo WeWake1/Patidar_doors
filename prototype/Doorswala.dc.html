@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// GENERATED from dc-runtime/src/*.ts — do not edit. Rebuild with `cd dc-runtime && bun run build`.
+"use strict";
+(() => {
+  var __defProp = Object.defineProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  // src/react.ts
+  function getReact() {
+    const R = window.React;
+    if (!R) throw new Error("dc-runtime: window.React is not available yet");
+    return R;
+  }
+  function getReactDOM() {
+    const RD = window.ReactDOM;
+    if (!RD) throw new Error("dc-runtime: window.ReactDOM is not available yet");
+    return RD;
+  }
+  var h = ((...args) => getReact().createElement(
+    ...args
+  ));
+
+  // src/parse.ts
+  function parseDcDocument(doc) {
+    const dc = doc.querySelector("x-dc");
+    if (!dc) return null;
+    const scriptEl = doc.querySelector("script[data-dc-script]");
+    const { props, preview } = parseDataProps(
+      scriptEl?.getAttribute("data-props") ?? null
+    );
+    return {
+      template: dc.innerHTML,
+      js: scriptEl ? scriptEl.textContent || "" : "",
+      props,
+      preview
+    };
+  }
+  function parseDcText(src) {
+    const openMatch = /\x3Cx-dc(?:\s[^>]*)?>/.exec(src);
+    if (!openMatch) return null;
+    const close = src.lastIndexOf("\x3C/x-dc>");
+    if (close === -1 || close < openMatch.index) return null;
+    const template = src.slice(openMatch.index + openMatch[0].length, close);
+    const doc = new DOMParser().parseFromString(src, "text/html");
+    const scriptEl = doc.querySelector("script[data-dc-script]");
+    const { props, preview } = parseDataProps(
+      scriptEl?.getAttribute("data-props") ?? null
+    );
+    return {
+      template,
+      js: scriptEl ? scriptEl.textContent || "" : "",
+      props,
+      preview
+    };
+  }
+  function parseDataProps(raw) {
+    if (!raw) return { props: null, preview: null };
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { props: null, preview: null };
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { props: null, preview: null };
+    }
+    const obj = parsed;
+    const preview = obj.$preview && typeof obj.$preview === "object" ? obj.$preview : null;
+    const rest = {};
+    for (const k of Object.keys(obj)) {
+      if (k[0] !== "$") rest[k] = obj[k];
+    }
+    return { props: Object.keys(rest).length ? rest : null, preview };
+  }
+  function dcNameFromPath(pathname) {
+    let p = pathname || "";
+    try {
+      p = decodeURIComponent(p);
+    } catch {
+    }
+    const base = p.split("/").pop() || "Root";
+    return base.replace(/\.dc\.html$/, "").replace(/\.html?$/, "") || "Root";
+  }
+
+  // src/boot.ts
+  var BASE_CSS = `
+    .sc-placeholder{background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    @keyframes sc-veil-pulse{0%,100%{opacity:.4}50%{opacity:1}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine .73s ease infinite}
+    html.sc-dc-streaming::after{content:'';position:fixed;inset:0;
+      z-index:2147483646;pointer-events:none;
+      box-shadow:inset 0 0 90px rgba(217,119,87,.16),inset 0 0 22px rgba(217,119,87,.1);
+      animation:sc-veil-pulse 1.36s ease-in-out infinite}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:rgba(0,0,0,.7);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:rgba(0,0,0,.5);background:rgba(0,0,0,.05);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts \u2014 keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      html, body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      section, article, figure, table { break-inside: avoid; }
+      *, *::before, *::after {
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  `;
+  var FULL_PAGE_CSS = "html,body{height:100%;margin:0}#dc-root,#dc-root>.sc-host{height:100%}";
+  function rootNameForDocument(doc, loc) {
+    let bootPath = loc.pathname || "";
+    if (!/\.dc\.html?$/i.test(safeDecode(bootPath))) {
+      try {
+        bootPath = new URL(doc.baseURI || "/").pathname;
+      } catch {
+      }
+    }
+    return dcNameFromPath(bootPath);
+  }
+  function safeDecode(s) {
+    try {
+      return decodeURIComponent(s);
+    } catch {
+      return s;
+    }
+  }
+  function boot(runtime, doc = document) {
+    const parsed = parseDcDocument(doc);
+    if (!parsed) return null;
+    const React = getReact();
+    const rootName = rootNameForDocument(doc, location);
+    runtime.markFetched(rootName);
+    runtime.adoptParsed(rootName, parsed);
+    fetch(location.href).then((res) => res.ok ? res.text() : "").then((t) => {
+      const raw = t ? parseDcText(t) : null;
+      if (raw?.template) runtime.updateHtml(rootName, raw.template);
+    }).catch(() => {
+    });
+    const dc = doc.querySelector("x-dc");
+    const hostEl = doc.createElement("div");
+    hostEl.id = "dc-root";
+    dc.replaceWith(hostEl);
+    if (!parsed.preview) {
+      const s = doc.createElement("style");
+      s.textContent = FULL_PAGE_CSS;
+      doc.head.appendChild(s);
+    }
+    const Root = runtime.getDC(rootName);
+    const entry = runtime.registry.get(rootName);
+    function StandaloneRoot() {
+      const [, setTick] = React.useState(0);
+      React.useEffect(() => {
+        const sub = () => setTick((n) => n + 1);
+        entry.subs.add(sub);
+        return () => {
+          entry.subs.delete(sub);
+        };
+      }, []);
+      return h(Root, entry.propOverrides || null);
+    }
+    const ReactDOM = getReactDOM();
+    if (ReactDOM.createRoot)
+      ReactDOM.createRoot(hostEl).render(h(StandaloneRoot));
+    else ReactDOM.render(h(StandaloneRoot), hostEl);
+    return rootName;
+  }
+
+  // src/expr.ts
+  var IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*/;
+  var NUMBER_RE = /^-?\d+(\.\d+)?$/;
+  function resolve(vals, src) {
+    const expr = String(src).trim();
+    if (!expr) return void 0;
+    if (expr[0] === "(" && expr[expr.length - 1] === ")" && parensWrapWhole(expr)) {
+      return resolve(vals, expr.slice(1, -1));
+    }
+    const eq = findTopLevelEquality(expr);
+    if (eq) {
+      const lv = resolve(vals, expr.slice(0, eq.index));
+      const rv = resolve(vals, expr.slice(eq.index + eq.op.length));
+      switch (eq.op) {
+        case "===":
+          return lv === rv;
+        case "!==":
+          return lv !== rv;
+        case "==":
+          return lv == rv;
+        default:
+          return lv != rv;
+      }
+    }
+    if (expr[0] === "!") return !resolve(vals, expr.slice(1));
+    if (expr === "true") return true;
+    if (expr === "false") return false;
+    if (expr === "null") return null;
+    if (expr === "undefined") return void 0;
+    if (NUMBER_RE.test(expr)) return Number(expr);
+    if (expr.length >= 2 && (expr[0] === '"' || expr[0] === "'") && expr[expr.length - 1] === expr[0]) {
+      return expr.slice(1, -1);
+    }
+    return resolvePath(vals, expr);
+  }
+  function parensWrapWhole(expr) {
+    let depth = 0;
+    for (let i = 0; i < expr.length - 1; i++) {
+      if (expr[i] === "(") depth++;
+      else if (expr[i] === ")") {
+        depth--;
+        if (depth === 0) return false;
+      }
+    }
+    return true;
+  }
+  function findTopLevelEquality(expr) {
+    let depth = 0;
+    for (let i = 0; i < expr.length; i++) {
+      const c = expr[i];
+      if (c === "[" || c === "(") depth++;
+      else if (c === "]" || c === ")") depth--;
+      else if (depth === 0 && (c === "=" || c === "!") && expr[i + 1] === "=") {
+        if (i > 0 && (expr[i - 1] === "=" || expr[i - 1] === "!")) continue;
+        if (!expr.slice(0, i).trim()) continue;
+        const op = expr[i + 2] === "=" ? c + "==" : c + "=";
+        return { index: i, op };
+      }
+    }
+    return null;
+  }
+  function resolvePath(vals, expr) {
+    const head = expr.match(IDENT_RE);
+    if (!head) return void 0;
+    let cur = vals == null ? void 0 : vals[head[0]];
+    let i = head[0].length;
+    while (i < expr.length) {
+      if (expr[i] === ".") {
+        const m = expr.slice(i + 1).match(IDENT_RE) || expr.slice(i + 1).match(/^\d+/);
+        if (!m) return void 0;
+        cur = cur == null ? void 0 : cur[m[0]];
+        i += 1 + m[0].length;
+      } else if (expr[i] === "[") {
+        let depth = 1;
+        let j = i + 1;
+        while (j < expr.length && depth > 0) {
+          if (expr[j] === "[") depth++;
+          else if (expr[j] === "]") {
+            depth--;
+            if (depth === 0) break;
+          }
+          j++;
+        }
+        if (depth !== 0) return void 0;
+        const key = resolve(vals, expr.slice(i + 1, j));
+        cur = cur == null ? void 0 : cur[key];
+        i = j + 1;
+      } else {
+        return void 0;
+      }
+    }
+    return cur;
+  }
+
+  // src/encode.ts
+  var CAMEL_ATTR = "sc-camel-";
+  var RAW_WRAP = {
+    select: "sc-raw-select",
+    table: "sc-raw-table",
+    tbody: "sc-raw-tbody",
+    thead: "sc-raw-thead",
+    tfoot: "sc-raw-tfoot",
+    tr: "sc-raw-tr",
+    td: "sc-raw-td",
+    th: "sc-raw-th",
+    caption: "sc-raw-caption"
+  };
+  var RAW_UNWRAP = Object.fromEntries(
+    Object.entries(RAW_WRAP).map(([k, v]) => [v, k])
+  );
+  var EVENT_MAP = {
+    onclick: "onClick",
+    onchange: "onChange",
+    oninput: "onInput",
+    onsubmit: "onSubmit",
+    onkeydown: "onKeyDown",
+    onkeyup: "onKeyUp",
+    onkeypress: "onKeyPress",
+    onmousedown: "onMouseDown",
+    onmouseup: "onMouseUp",
+    onmouseenter: "onMouseEnter",
+    onmouseleave: "onMouseLeave",
+    onfocus: "onFocus",
+    onblur: "onBlur",
+    ondoubleclick: "onDoubleClick",
+    oncontextmenu: "onContextMenu"
+  };
+  var ATTRS = `(?:[^>"']|"[^"]*"|'[^']*')*`;
+  var IMPORT_SELF_CLOSE_RE = new RegExp(
+    "<(x-import|dc-import)(" + ATTRS + ")/>",
+    "gi"
+  );
+  var CAMEL_ATTR_RE = /(\s)([a-z]+[A-Z][A-Za-z0-9]*)(\s*=)/g;
+  function encodeCase(html) {
+    html = html.replace(
+      IMPORT_SELF_CLOSE_RE,
+      (_, t, a) => "<" + t + a + "></" + t + ">"
+    );
+    html = html.replace(/<helmet(\s|>)/gi, "<sc-helmet$1");
+    html = html.replace(/<\/helmet\s*>/gi, "</sc-helmet>");
+    html = html.replace(
+      CAMEL_ATTR_RE,
+      (_, sp, name, eq) => sp + CAMEL_ATTR + name.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase()) + eq
+    );
+    for (const [real, alias] of Object.entries(RAW_WRAP)) {
+      html = html.replace(
+        new RegExp("(</?)" + real + "(?=[\\s>])", "gi"),
+        "$1" + alias
+      );
+    }
+    return html;
+  }
+  function kebabToCamel(s) {
+    return s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  }
+  function cssToObj(css) {
+    const o = {};
+    for (const decl of css.split(";")) {
+      const i = decl.indexOf(":");
+      if (i < 0) continue;
+      const prop = decl.slice(0, i).trim();
+      o[prop.startsWith("--") ? prop : kebabToCamel(prop)] = decl.slice(i + 1).trim();
+    }
+    return o;
+  }
+  function compileAttr(raw) {
+    const whole = raw.match(/^\s*\{\{([\s\S]+?)\}\}\s*$/);
+    if (whole) {
+      const path = whole[1];
+      return (vals) => resolve(vals, path);
+    }
+    if (raw.includes("{{")) {
+      const parts = raw.split(/\{\{([\s\S]+?)\}\}/g);
+      return (vals) => parts.map((s, i) => i & 1 ? resolve(vals, s) ?? "" : s).join("");
+    }
+    return () => raw;
+  }
+
+  // src/compile.ts
+  function collectProps(node, isComponent, host) {
+    const propGetters = [];
+    const pseudoClasses = [];
+    let hintSize = null;
+    for (const { name, value } of [...node.attributes]) {
+      if (name === "sc-name" || name === "data-dc-tpl") continue;
+      let key = name;
+      if (key.startsWith(CAMEL_ATTR))
+        key = kebabToCamel(key.slice(CAMEL_ATTR.length));
+      if (key === "hint-size") {
+        hintSize = value;
+        continue;
+      }
+      if (key.startsWith("style-")) {
+        pseudoClasses.push(host.pseudoClass(key.slice(6), value));
+        continue;
+      }
+      if (isComponent) {
+        if (key.includes("-")) key = kebabToCamel(key);
+      } else {
+        if (key === "class") key = "className";
+        else if (key === "for") key = "htmlFor";
+        else if (key.startsWith("on"))
+          key = EVENT_MAP[key] || "on" + key[2].toUpperCase() + key.slice(3);
+      }
+      propGetters.push([key, compileAttr(value)]);
+    }
+    return { propGetters, pseudoClasses, hintSize };
+  }
+  var HOST_STYLE_PROPS = /* @__PURE__ */ new Set([
+    "position",
+    "left",
+    "right",
+    "top",
+    "bottom",
+    "inset",
+    "width",
+    "height",
+    "z-index",
+    "transform"
+  ]);
+  function hostPositionStyle(style) {
+    const all = typeof style === "string" ? cssToObj(style) : style != null && typeof style === "object" ? style : null;
+    if (!all) return void 0;
+    const out = {};
+    for (const [k, v] of Object.entries(all)) {
+      const kebab = k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
+      if (HOST_STYLE_PROPS.has(kebab)) out[k] = v;
+    }
+    return Object.keys(out).length ? out : void 0;
+  }
+  function compileTemplate(html, host) {
+    const tpl = document.createElement("template");
+    //! nosemgrep: direct-inner-html-assignment
+    tpl.innerHTML = encodeCase(html);
+    let tplN = 0;
+    (function stamp(node) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        node.setAttribute("data-dc-tpl", String(tplN++));
+      }
+      for (const c of node.childNodes) stamp(c);
+    })(tpl.content);
+    const builders = walkChildren(tpl.content, host);
+    const render = ((vals, ctx) => builders.map((b, i) => b(vals || {}, ctx, i)));
+    render.__annotated = tpl.innerHTML;
+    return render;
+  }
+  function walkChildren(node, host) {
+    return [...node.childNodes].map((c) => walk(c, host)).filter((b) => b != null);
+  }
+  function walk(node, host) {
+    if (node.nodeType === Node.TEXT_NODE) return walkText(node);
+    if (node.nodeType !== Node.ELEMENT_NODE) return null;
+    const el = node;
+    const tag = el.tagName.toLowerCase();
+    if (tag === "sc-for") return walkFor(el, host);
+    if (tag === "sc-if") return walkIf(el, host);
+    if (tag === "x-import") return walkXImport(el, host);
+    if (tag === "sc-helmet") return host.helmet(el);
+    if (tag === "dc-import") return walkComponent(el, host);
+    return walkElement(el, host);
+  }
+  var warnedHoles = /* @__PURE__ */ new Set();
+  function warnUnresolved(ctx, what) {
+    const key = (ctx?.__name || "?") + "\0" + what;
+    if (warnedHoles.has(key)) return;
+    warnedHoles.add(key);
+    console.warn("[dc-runtime] " + (ctx?.__name || "template") + ": " + what);
+  }
+  function walkText(node) {
+    const txt = node.nodeValue ?? "";
+    if (!txt.includes("{{")) {
+      if (!txt.trim() && !txt.includes(" ")) return null;
+      return () => txt;
+    }
+    const parts = txt.split(/\{\{([\s\S]+?)\}\}/g);
+    return (vals, ctx, key) => h(
+      getReact().Fragment,
+      { key },
+      ...parts.map((p, i) => {
+        if (!(i & 1)) return p;
+        const v = resolve(vals, p);
+        if (v === void 0) {
+          if (!ctx?.__streamingNow) {
+            if (document.body?.hasAttribute("data-dc-editor-on")) {
+              return h(
+                "span",
+                { key: i, className: "sc-interp sc-unresolved" },
+                "{{ " + p.trim() + " }}"
+              );
+            }
+            warnUnresolved(
+              ctx,
+              "{{ " + p.trim() + " }} never resolved \u2014 rendered as empty"
+            );
+            return null;
+          }
+          return h(
+            "span",
+            { key: i, className: "sc-interp sc-missing" },
+            p.trim()
+          );
+        }
+        if (getReact().isValidElement(v) || Array.isArray(v)) {
+          return h(getReact().Fragment, { key: i }, v);
+        }
+        if (v === null || typeof v === "boolean") return null;
+        return h("span", { key: i, className: "sc-interp" }, String(v));
+      })
+    );
+  }
+  function walkFor(el, host) {
+    const listGet = compileAttr(el.getAttribute("list") || "");
+    const asName = el.getAttribute("as") || "item";
+    const hintN = parseInt(el.getAttribute("hint-placeholder-count") || "0", 10);
+    const kids = walkChildren(el, host);
+    const listSrc = el.getAttribute("list") || "";
+    return (vals, ctx, key) => {
+      let list = listGet(vals);
+      if (!Array.isArray(list)) {
+        if (!ctx?.__streamingNow) {
+          if (list !== void 0 && list !== null) {
+            warnUnresolved(
+              ctx,
+              'sc-for list="' + listSrc + '" is not an array (' + typeof list + ")"
+            );
+          }
+          list = [];
+        } else {
+          list = hintN > 0 ? Array(hintN).fill(void 0) : [];
+        }
+      }
+      return h(
+        getReact().Fragment,
+        { key },
+        list.map((item, i) => {
+          const sub = { ...vals, [asName]: item, $index: i };
+          return h(
+            getReact().Fragment,
+            { key: i },
+            kids.map((b, j) => b(sub, ctx, j))
+          );
+        })
+      );
+    };
+  }
+  function walkIf(el, host) {
+    const valGet = compileAttr(el.getAttribute("value") || "");
+    const hintRaw = el.getAttribute("hint-placeholder-val");
+    const hintGet = hintRaw != null ? compileAttr(hintRaw) : null;
+    const kids = walkChildren(el, host);
+    return (vals, ctx, key) => {
+      let v = valGet(vals);
+      if (v === void 0 && hintGet && ctx?.__streamingNow) v = hintGet(vals);
+      return v ? h(
+        getReact().Fragment,
+        { key },
+        kids.map((b, j) => b(vals, ctx, j))
+      ) : null;
+    };
+  }
+  function walkComponent(el, host) {
+    const name = el.getAttribute("name") || el.getAttribute("component") || "";
+    el.removeAttribute("name");
+    el.removeAttribute("component");
+    const tplId = el.getAttribute("data-dc-tpl");
+    const styleRaw = el.getAttribute("style");
+    el.removeAttribute("style");
+    const styleGet = styleRaw != null ? compileAttr(styleRaw) : null;
+    const { propGetters, hintSize } = collectProps(el, true, host);
+    const kids = walkChildren(el, host);
+    return (vals, ctx, key) => {
+      const props = {
+        key,
+        __hintSize: hintSize,
+        __tplId: tplId,
+        __hostStyle: styleGet ? hostPositionStyle(styleGet(vals)) : void 0
+      };
+      for (const [k, g] of propGetters) props[k] = g(vals);
+      if (kids.length) props.children = kids.map((b, j) => b(vals, ctx, j));
+      return h(host.component(name), props);
+    };
+  }
+  function walkXImport(el, host) {
+    const globalNameGet = compileAttr(
+      el.getAttribute("component-from-global-scope") || ""
+    );
+    const exportNameGet = compileAttr(
+      el.getAttribute("component") || el.getAttribute("name") || ""
+    );
+    const url = el.getAttribute("from") || el.getAttribute("src") || el.getAttribute("import") || "";
+    const kind = /\.(jsx|tsx)(\?|#|$)/i.test(url) ? "jsx" : "js";
+    const tplId = el.getAttribute("data-dc-tpl");
+    const styleRaw = el.getAttribute("style");
+    el.removeAttribute("style");
+    const styleGet = styleRaw != null ? compileAttr(styleRaw) : null;
+    const wrap = tplId != null || styleGet != null;
+    const { propGetters, hintSize } = collectProps(el, true, host);
+    const hasContent = el.children.length > 0 || !!(el.textContent || "").trim();
+    const kids = hasContent ? walkChildren(el, host) : [];
+    const urlBindable = url.includes("{{");
+    if (url && !urlBindable) host.loadExternal(kind, url);
+    const evalName = (g, vals) => {
+      const v = g(vals);
+      const s = v == null ? "" : String(v);
+      return s.includes("{{") ? "" : s;
+    };
+    return (vals, ctx, key) => {
+      const globalName = evalName(globalNameGet, vals);
+      const name = globalName || evalName(exportNameGet, vals);
+      const C = !name || urlBindable ? null : globalName ? host.resolveExternalGlobal(url, globalName) : host.resolveExternal(url, name);
+      const hostStyle = styleGet ? hostPositionStyle(styleGet(vals)) : void 0;
+      const wrapper = wrap ? {
+        key,
+        className: "sc-host-x",
+        "data-dc-tpl": tplId,
+        style: hostStyle || { display: "contents" }
+      } : null;
+      if (!C) {
+        const error = urlBindable ? "x-import `from` cannot contain {{ \u2026 }} \u2014 module URLs are resolved at parse time; use a literal URL" : host.resolveExternalError(url, name);
+        const ph = host.placeholder({
+          key: wrapper ? void 0 : key,
+          name,
+          hintSize,
+          error
+        });
+        return wrapper ? h("div", wrapper, ph) : ph;
+      }
+      const props = wrapper ? {} : { key };
+      for (const [k, g] of propGetters) {
+        if (k === "component" || k === "componentFromGlobalScope" || k === "name" || k === "from" || k === "src" || k === "import") {
+          continue;
+        }
+        props[k] = g(vals);
+      }
+      if (kids.length) props.children = kids.map((b, j) => b(vals, ctx, j));
+      return wrapper ? h("div", wrapper, h(C, props)) : h(C, props);
+    };
+  }
+  function walkElement(el, host) {
+    const realTag = RAW_UNWRAP[el.localName] || el.localName;
+    const tplId = el.getAttribute("data-dc-tpl");
+    const { propGetters, pseudoClasses } = collectProps(el, false, host);
+    const kids = walkChildren(el, host);
+    return (vals, ctx, key) => {
+      const props = { key, "data-dc-tpl": tplId };
+      for (const [k, g] of propGetters) {
+        let v = g(vals);
+        if (k === "style" && typeof v === "string") v = cssToObj(v);
+        if ((k === "value" || k === "checked") && v === void 0) {
+          v = k === "checked" ? false : "";
+        }
+        props[k] = v;
+      }
+      if (pseudoClasses.length) {
+        props.className = [props.className, ...pseudoClasses].filter(Boolean).join(" ");
+      }
+      return h(realTag, props, ...kids.map((b, j) => b(vals, ctx, j)));
+    };
+  }
+
+  // src/logic.ts
+  var StreamableLogic = class {
+    constructor(props) {
+      __publicField(this, "props");
+      __publicField(this, "state", {});
+      /** Back-pointer to the wrapper component, installed after construction. */
+      __publicField(this, "__host");
+      this.props = props || {};
+    }
+    setState(update, cb) {
+      this.__host && this.__host.__setLogicState(update, cb);
+    }
+    forceUpdate() {
+      this.__host && this.__host.forceUpdate();
+    }
+    componentDidMount() {
+    }
+    componentDidUpdate(_prevProps) {
+    }
+    componentWillUnmount() {
+    }
+    /** The flat object the template renders against (merged over props). */
+    renderVals() {
+      return {};
+    }
+  };
+  function evalDcLogic(src) {
+    //! nosemgrep: eval-and-function-constructor
+    const fn = new Function(
+      "DCLogic",
+      "StreamableLogic",
+      "React",
+      src + '\n;return (typeof Component!=="undefined"&&Component)||undefined;'
+    );
+    return fn(StreamableLogic, StreamableLogic, getReact());
+  }
+
+  // src/component.ts
+  function Placeholder({
+    name,
+    hintSize,
+    streaming,
+    error
+  }) {
+    const [w, hgt] = (hintSize || "100%,60px").split(",");
+    return h(
+      "div",
+      {
+        className: "sc-placeholder" + (streaming ? " sc-streaming" : ""),
+        style: { width: w.trim(), height: hgt && hgt.trim() },
+        title: name
+      },
+      error ? h(
+        "div",
+        { className: "sc-placeholder-error" },
+        (name ? name + ": " : "") + error
+      ) : null
+    );
+  }
+  function hintToMin(hint) {
+    if (!hint) return void 0;
+    const [w, hgt] = hint.split(",");
+    return { minWidth: w.trim(), minHeight: hgt && hgt.trim() };
+  }
+  function createComponentFactory(registry, ensureFetched) {
+    const React = getReact();
+    const AncestorContext = React.createContext([]);
+    class StreamableComponent extends React.Component {
+      constructor(props) {
+        super(props);
+        __publicField(this, "__name");
+        __publicField(this, "__sub");
+        __publicField(this, "__needsDidMount", false);
+        /** Snapshot of the registry's streaming flags taken at render time —
+         *  builders read it off the RenderCtx (this) to pick placeholder vs
+         *  render-nothing for unresolved values. */
+        __publicField(this, "__streamingNow", false);
+        __publicField(this, "logic");
+        this.__name = props.__name;
+        this.state = { __v: 0, __err: null };
+        this.__sub = () => {
+          this.__reconcileLogic();
+          if (this.state.__err) this.setState({ __err: null });
+          this.forceUpdate();
+        };
+        this.__makeLogic(registry.get(this.__name).Logic, null);
+        ensureFetched(this.__name);
+      }
+      /** Error-boundary hook: a render crash anywhere in this DC's subtree
+       *  (its own template, an x-import'd component, a child DC without its
+       *  own deeper boundary) lands here instead of unmounting the page. */
+      static getDerivedStateFromError(e) {
+        return { __err: e instanceof Error && e.message ? e.message : String(e) };
+      }
+      componentDidCatch(e, info) {
+        console.error(
+          "[dc-runtime] render error in <" + this.__name + ">:",
+          e,
+          info?.componentStack || ""
+        );
+      }
+      /** Instantiate the logic class (or the no-op base) and adopt `prevState`
+       *  over its initial state — used both at mount and on hot-swap. */
+      __makeLogic(Logic, prevState) {
+        const L = Logic || StreamableLogic;
+        try {
+          this.logic = new L(this.__userProps());
+        } catch (e) {
+          console.error(e);
+          registry.get(this.__name).logicError = this.__name + ": " + (e instanceof Error && e.message ? e.message : String(e));
+          this.logic = new StreamableLogic(
+            this.__userProps()
+          );
+        }
+        this.logic.__host = this;
+        if (prevState)
+          this.logic.state = { ...this.logic.state || {}, ...prevState };
+      }
+      /** The props the author's logic + template see — internal __-prefixed
+       *  wiring stripped. */
+      __userProps() {
+        const { __name, __hintSize, __tplId, __hostStyle, ...rest } = this.props;
+        return rest;
+      }
+      __setLogicState(update, cb) {
+        const prev = this.logic.state;
+        const patch = typeof update === "function" ? update(prev) : update;
+        this.logic.state = { ...prev, ...patch };
+        this.setState((s) => ({ __v: s.__v + 1 }), cb);
+      }
+      /** Swap the logic instance when the registry's Logic class changed
+       *  (streaming completion, hot reload). State carries over; didMount
+       *  re-fires after the swap commits so refs exist. */
+      __reconcileLogic() {
+        const Next = registry.get(this.__name).Logic;
+        const Cur = this.logic.constructor;
+        if (Next === Cur || !Next && Cur === StreamableLogic)
+          return;
+        try {
+          this.logic.componentWillUnmount();
+        } catch (e) {
+          console.error(e);
+        }
+        this.__makeLogic(Next, this.logic.state);
+        this.__needsDidMount = true;
+      }
+      componentDidMount() {
+        registry.get(this.__name).subs.add(this.__sub);
+        try {
+          this.logic.componentDidMount();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      componentDidUpdate(prevProps) {
+        this.logic.props = this.__userProps();
+        if (this.__needsDidMount) {
+          this.__needsDidMount = false;
+          try {
+            this.logic.componentDidMount();
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          try {
+            this.logic.componentDidUpdate(prevProps);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      componentWillUnmount() {
+        registry.get(this.__name).subs.delete(this.__sub);
+        try {
+          this.logic.componentWillUnmount();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      render() {
+        const r = registry.get(this.__name);
+        const cls = "sc-host" + (r.htmlStreaming ? " sc-streaming-html" : "") + (r.jsStreaming ? " sc-streaming-js" : "");
+        const hintStyle = r.htmlStreaming ? hintToMin(this.props.__hintSize) : void 0;
+        const hostStyle = this.props.__hostStyle || hintStyle ? { ...hintStyle || {}, ...this.props.__hostStyle || {} } : void 0;
+        const hostBase = {
+          className: cls,
+          style: hostStyle,
+          "data-sc-name": this.__name,
+          "data-dc-tpl": this.props.__tplId
+        };
+        const chain = Array.isArray(this.context) ? this.context : [];
+        if (chain.includes(this.__name)) {
+          const cycle = [
+            ...chain.slice(chain.indexOf(this.__name)),
+            this.__name
+          ].join(" \u2192 ");
+          return h(
+            "div",
+            { ...hostBase, className: cls + " sc-has-error" },
+            h(Placeholder, {
+              name: this.__name,
+              hintSize: this.props.__hintSize,
+              error: "circular import: " + cycle
+            })
+          );
+        }
+        if (this.state.__err) {
+          return h(
+            "div",
+            { ...hostBase, className: cls + " sc-has-error" },
+            h(
+              "div",
+              { className: "sc-logic-error" },
+              this.__name + ": " + this.state.__err
+            ),
+            h(Placeholder, {
+              name: this.__name,
+              hintSize: this.props.__hintSize,
+              error: this.state.__err
+            })
+          );
+        }
+        if (!r.tpl) {
+          return h(
+            "div",
+            hostBase,
+            h(Placeholder, { name: this.__name, hintSize: this.props.__hintSize })
+          );
+        }
+        const userProps = this.__userProps();
+        this.logic.props = userProps;
+        let vals = userProps;
+        let renderErr = r.logicError;
+        try {
+          vals = { ...userProps, ...this.logic.renderVals() || {} };
+        } catch (e) {
+          console.error(e);
+          renderErr = this.__name + ".renderVals(): " + (e instanceof Error && e.message ? e.message : String(e));
+        }
+        this.__streamingNow = !!(r.htmlStreaming || r.jsStreaming);
+        return h(
+          "div",
+          { ...hostBase, className: cls + (renderErr ? " sc-has-error" : "") },
+          renderErr && h("div", { className: "sc-logic-error" }, renderErr),
+          h(
+            AncestorContext.Provider,
+            { value: [...chain, this.__name] },
+            r.tpl(vals, this)
+          )
+        );
+      }
+    }
+    __publicField(StreamableComponent, "contextType", AncestorContext);
+    const named = /* @__PURE__ */ new Map();
+    function getDC(name) {
+      const hit = named.get(name);
+      if (hit) return hit;
+      function Dispatcher(p) {
+        const [, setTick] = React.useState(0);
+        React.useEffect(() => {
+          const sub = () => setTick((n) => n + 1);
+          registry.get(name).subs.add(sub);
+          return () => {
+            registry.get(name).subs.delete(sub);
+          };
+        }, []);
+        ensureFetched(name);
+        return h(StreamableComponent, { ...p, __name: name });
+      }
+      Dispatcher.displayName = name;
+      named.set(name, Dispatcher);
+      return Dispatcher;
+    }
+    return {
+      getDC,
+      StreamableComponent
+    };
+  }
+
+  // src/external.ts
+  var isCustomElementName = (n) => !n.includes(".") && n.includes("-");
+  function isRenderableType(g) {
+    if (typeof g === "function") return !isElementClass(g);
+    return typeof g === "object" && g !== null && typeof g.$$typeof === "symbol";
+  }
+  function resolveDottedPath(root, name) {
+    let cur = root;
+    for (const seg of name.split(".")) {
+      if (cur == null) return void 0;
+      cur = cur[seg];
+    }
+    return cur;
+  }
+  var BABEL_URL = "https://unpkg.com/@babel/standalone@7.26.4/babel.min.js";
+  var GLOBAL_POLL_INTERVAL_MS = 50;
+  var GLOBAL_POLL_TIMEOUT_MS = 3e4;
+  function createExternalModules(onResolved) {
+    const cache = /* @__PURE__ */ new Map();
+    let babelLoading = null;
+    const reportedMissing = /* @__PURE__ */ new Map();
+    const polling = /* @__PURE__ */ new Set();
+    function ensureBabel() {
+      if (window.Babel) return Promise.resolve();
+      if (babelLoading) return babelLoading;
+      babelLoading = new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = BABEL_URL;
+        s.crossOrigin = "anonymous";
+        s.onload = () => res();
+        s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      return babelLoading;
+    }
+    function load(kind, url) {
+      if (cache.has(url)) return;
+      cache.set(url, null);
+      console.info("[dc-runtime] x-import: loading", url, "(" + kind + ")");
+      const ready = kind === "jsx" ? ensureBabel() : Promise.resolve();
+      ready.then(() => fetch(url)).then((r) => {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      }).then((src) => {
+        const code = kind === "jsx" ? window.Babel.transform(src, {
+          filename: url,
+          presets: ["react", "typescript"]
+        }).code : src;
+        const module = { exports: {} };
+        const before = new Set(Object.keys(window));
+        //! nosemgrep: eval-and-function-constructor
+        new Function("React", "module", "exports", "require", code)(
+          getReact(),
+          module,
+          module.exports,
+          () => ({})
+        );
+        const globals = {};
+        for (const k of Object.keys(window)) {
+          if (!before.has(k) && typeof window[k] === "function") {
+            globals[k] = window[k];
+          }
+        }
+        cache.set(url, { mod: module.exports, globals });
+        console.info(
+          "[dc-runtime] x-import: loaded",
+          url,
+          "\u2014 exports:",
+          Object.keys(module.exports),
+          "window globals:",
+          Object.keys(globals)
+        );
+        onResolved();
+      }).catch((e) => {
+        cache.set(url, {
+          mod: {},
+          globals: {},
+          error: "failed to load: " + (e instanceof Error && e.message ? e.message : String(e))
+        });
+        console.error(
+          "[dc-runtime] x-import: FAILED to load",
+          url,
+          "(" + kind + ")",
+          e
+        );
+        onResolved();
+      });
+    }
+    function resolve2(url, name) {
+      const entry = cache.get(url);
+      if (!entry) return null;
+      const { mod, globals } = entry;
+      const C = mod && mod[name] || globals && globals[name] || typeof window !== "undefined" && window[name] || mod && mod.default;
+      if (typeof C === "function") return C;
+      const key = url + "\0" + name;
+      if (!reportedMissing.has(key)) {
+        reportedMissing.set(
+          key,
+          entry.error || 'no export named "' + name + '" (has: ' + Object.keys(mod).join(", ") + ")"
+        );
+        console.error(
+          "[dc-runtime] x-import: module",
+          url,
+          "loaded but has no component named",
+          JSON.stringify(name),
+          "\u2014 available exports:",
+          Object.keys(mod),
+          "window globals:",
+          Object.keys(globals),
+          ". The module must `module.exports = {" + name + "}` or set `window." + name + "`."
+        );
+      }
+      return null;
+    }
+    function waitForGlobal(name) {
+      if (polling.has(name)) return;
+      polling.add(name);
+      const started = Date.now();
+      const isCE = isCustomElementName(name);
+      const tick = () => {
+        const found = isCE ? customElements.get(name) : isRenderableType(resolveDottedPath(window, name));
+        if (found) {
+          polling.delete(name);
+          onResolved();
+          return;
+        }
+        if (Date.now() - started >= GLOBAL_POLL_TIMEOUT_MS) {
+          console.warn(
+            "[dc-runtime] x-import: global",
+            JSON.stringify(name),
+            "never appeared on window after " + GLOBAL_POLL_TIMEOUT_MS + "ms"
+          );
+          return;
+        }
+        setTimeout(tick, GLOBAL_POLL_INTERVAL_MS);
+      };
+      setTimeout(tick, GLOBAL_POLL_INTERVAL_MS);
+    }
+    function resolveGlobal(url, name) {
+      const isCE = isCustomElementName(name);
+      if (!url) {
+        if (isCE) {
+          if (customElements.get(name)) return name;
+          waitForGlobal(name);
+          return null;
+        }
+        const g2 = resolveDottedPath(window, name);
+        if (isRenderableType(g2)) return g2;
+        waitForGlobal(name);
+        return null;
+      }
+      const entry = cache.get(url);
+      if (!entry) return null;
+      if (isCE && customElements.get(name)) return name;
+      const g = entry.globals[name] ?? resolveDottedPath(window, name);
+      if (isRenderableType(g)) return g;
+      if (name.includes(".")) return null;
+      const key = url + "\0global\0" + name;
+      if (!reportedMissing.has(key)) {
+        reportedMissing.set(key, null);
+        if (isCE && !customElements.get(name)) {
+          console.warn(
+            "[dc-runtime] x-import:",
+            url,
+            "loaded but no custom element",
+            JSON.stringify(name),
+            "is registered and window." + name + " is not a function \u2014 rendering <" + name + "> as an unknown element."
+          );
+        }
+      }
+      return name;
+    }
+    function getError(url, name) {
+      const entry = cache.get(url);
+      if (entry?.error) return entry.error;
+      return reportedMissing.get(url + "\0" + name) || null;
+    }
+    return { load, resolve: resolve2, resolveGlobal, getError };
+  }
+  function isElementClass(g) {
+    try {
+      return typeof g === "function" && typeof HTMLElement !== "undefined" && g.prototype instanceof HTMLElement;
+    } catch {
+      return false;
+    }
+  }
+
+  // src/helmet.ts
+  function createHelmetManager(doc, isStreaming) {
+    const mounted = /* @__PURE__ */ new Set();
+    const live = /* @__PURE__ */ new Map();
+    function compile(node) {
+      const raw = [...node.children];
+      const helmetClosed = node.nextSibling != null || node.parentNode?.nextSibling != null;
+      return (_vals, ctx) => {
+        const name = ctx && ctx.__name || "";
+        const streaming = !!(name && isStreaming(name));
+        for (let i = 0; i < raw.length; i++) {
+          const child = raw[i];
+          const tag = child.tagName;
+          const mayBePartial = streaming && !helmetClosed && i === raw.length - 1;
+          if (tag === "SCRIPT") {
+            if (mayBePartial) continue;
+            const key = "SCRIPT|" + (child.getAttribute("src") || child.textContent || "");
+            if (mounted.has(key)) continue;
+            mounted.add(key);
+            const el = doc.createElement("script");
+            for (const { name: an, value } of [...child.attributes])
+              el.setAttribute(an, value);
+            if (child.textContent) el.textContent = child.textContent;
+            doc.head.appendChild(el);
+          } else if (tag === "LINK" || tag === "META") {
+            if (mayBePartial) continue;
+            const key = tag + "|" + (child.getAttribute("href") || child.getAttribute("src") || child.outerHTML);
+            if (mounted.has(key)) continue;
+            mounted.add(key);
+            doc.head.appendChild(child.cloneNode(true));
+          } else {
+            const key = name + "|" + i;
+            let el = live.get(key);
+            if (!el || el.tagName !== tag) {
+              if (el) el.remove();
+              el = doc.createElement(tag.toLowerCase());
+              live.set(key, el);
+              doc.head.appendChild(el);
+            }
+            for (const { name: an, value } of [...child.attributes]) {
+              if (el.getAttribute(an) !== value) el.setAttribute(an, value);
+            }
+            if (el.textContent !== child.textContent)
+              el.textContent = child.textContent;
+          }
+        }
+        return null;
+      };
+    }
+    return { compile };
+  }
+
+  // src/pseudo.ts
+  function createPseudoSheet(doc) {
+    let el = null;
+    const cache = /* @__PURE__ */ new Map();
+    let n = 0;
+    return (pseudo, css) => {
+      const k = pseudo + "|" + css;
+      const hit = cache.get(k);
+      if (hit) return hit;
+      if (!el) {
+        el = doc.createElement("style");
+        doc.head.appendChild(el);
+      }
+      const cls = "scp" + (n++).toString(36);
+      const sel = pseudo === "before" || pseudo === "after" ? "." + cls + "::" + pseudo : "." + cls + ":" + pseudo;
+      el.sheet.insertRule(sel + "{" + css + "}", el.sheet.cssRules.length);
+      cache.set(k, cls);
+      return cls;
+    };
+  }
+
+  // src/registry.ts
+  function createRegistry() {
+    const entries = /* @__PURE__ */ Object.create(null);
+    function get(name) {
+      return entries[name] || (entries[name] = {
+        html: "",
+        tpl: null,
+        Logic: null,
+        jsStreaming: false,
+        htmlStreaming: false,
+        ver: 0,
+        subs: /* @__PURE__ */ new Set(),
+        fetched: false
+      });
+    }
+    function bump(name) {
+      const r = get(name);
+      r.ver++;
+      for (const fn of r.subs) fn();
+    }
+    return {
+      entries,
+      get,
+      bump,
+      bumpAll() {
+        for (const n in entries) bump(n);
+      }
+    };
+  }
+
+  // src/runtime.ts
+  var COMPONENT_DIR = ".";
+  function createRuntime(doc = document) {
+    const registry = createRegistry();
+    const pseudoClass = createPseudoSheet(doc);
+    const helmet = createHelmetManager(
+      doc,
+      (name) => registry.get(name).htmlStreaming
+    );
+    const external = createExternalModules(() => registry.bumpAll());
+    const factory = createComponentFactory(registry, ensureFetched);
+    const host = {
+      component: (name) => factory.getDC(name),
+      placeholder: (props) => h(Placeholder, props),
+      helmet: (node) => helmet.compile(node),
+      loadExternal: (kind, url) => external.load(kind, url),
+      resolveExternal: (url, name) => external.resolve(url, name),
+      resolveExternalGlobal: (url, name) => external.resolveGlobal(url, name),
+      resolveExternalError: (url, name) => external.getError(url, name),
+      pseudoClass
+    };
+    function ensureFetched(name) {
+      const r = registry.get(name);
+      if (r.fetched) return;
+      r.fetched = true;
+      const url = COMPONENT_DIR + "/" + name + ".dc.html";
+      fetch(url).then((res) => {
+        if (!res.ok) {
+          console.error(
+            "[dc-runtime] sibling fetch for <" + name + "/> failed:",
+            url,
+            "returned",
+            res.status,
+            "\u2014 the reference renders as an empty placeholder."
+          );
+          return "";
+        }
+        return res.text();
+      }).then((t) => {
+        if (!t) return;
+        const parsed = parseDcText(t);
+        if (!parsed) {
+          console.error(
+            "[dc-runtime] sibling fetch for <" + name + "/>:",
+            url,
+            "has no \x3Cx-dc> block \u2014 not a Design Component."
+          );
+          return;
+        }
+        if (parsed.props) r.propsMeta = parsed.props;
+        if (parsed.preview) r.preview = parsed.preview;
+        if (parsed.template && !r.html) updateHtml(name, parsed.template);
+        if (parsed.js && !r.Logic) updateJs(name, parsed.js);
+      }).catch(
+        (e) => console.error(
+          "[dc-runtime] sibling fetch for <" + name + "/> threw:",
+          url,
+          e
+        )
+      );
+    }
+    function updateHtml(name, html) {
+      const r = registry.get(name);
+      r.html = html;
+      try {
+        r.tpl = compileTemplate(html, host);
+      } catch (e) {
+        console.error("[dc-runtime] template compile FAILED for", name, e);
+      }
+      registry.bump(name);
+    }
+    function updateJs(name, src) {
+      const r = registry.get(name);
+      const seq = r.jsSeq = (r.jsSeq || 0) + 1;
+      try {
+        const Cls = evalDcLogic(src);
+        if (r.jsSeq !== seq) return;
+        if (typeof Cls !== "function") {
+          r.logicError = name + ".dc.html: \x3Cscript data-dc-script> must define `class Component extends DCLogic`";
+        } else {
+          r.logicError = null;
+          r.Logic = Cls;
+        }
+      } catch (e) {
+        if (r.jsSeq !== seq) return;
+        console.error(
+          "[dc-runtime] logic class eval FAILED for",
+          name,
+          "\u2014 the template renders with props only.",
+          e
+        );
+        r.logicError = name + ": " + (e instanceof Error && e.message ? e.message : String(e));
+      }
+      registry.bump(name);
+    }
+    function setStreaming(name, kind, on) {
+      const r = registry.get(name);
+      if (kind === "html") r.htmlStreaming = !!on;
+      else r.jsStreaming = !!on;
+      let any = false;
+      for (const n in registry.entries) {
+        const e = registry.entries[n];
+        if (e && (e.htmlStreaming || e.jsStreaming)) {
+          any = true;
+          break;
+        }
+      }
+      doc.documentElement.classList.toggle("sc-dc-streaming", any);
+      registry.bump(name);
+    }
+    function dcUpdate(name, kind, content, streaming) {
+      if (streaming) registry.get(name).fetched = true;
+      if (kind === "html") {
+        setStreaming(name, "html", !!streaming);
+        updateHtml(name, content);
+      } else if (kind === "js") {
+        setStreaming(name, "js", !!streaming);
+        if (!streaming) updateJs(name, content);
+      } else if (kind === "props") {
+        const { props, preview } = parseDataProps(content);
+        const r = registry.get(name);
+        r.propsMeta = props ?? void 0;
+        r.preview = preview;
+        registry.bump(name);
+      }
+    }
+    function setProps(name, overrides) {
+      registry.get(name).propOverrides = overrides && typeof overrides === "object" ? { ...overrides } : null;
+      registry.bump(name);
+    }
+    function adoptParsed(name, parsed) {
+      if (!parsed) return;
+      const r = registry.get(name);
+      if (parsed.props) r.propsMeta = parsed.props;
+      if (parsed.preview) r.preview = parsed.preview;
+      if (parsed.template) updateHtml(name, parsed.template);
+      if (parsed.js) updateJs(name, parsed.js);
+    }
+    return {
+      registry,
+      getDC: factory.getDC,
+      updateHtml,
+      updateJs,
+      dcUpdate,
+      setProps,
+      adoptParsed,
+      markFetched: (name) => {
+        registry.get(name).fetched = true;
+      },
+      annotatedTemplate: (name) => {
+        const r = registry.get(name);
+        return r.tpl && r.tpl.__annotated || null;
+      },
+      templateSource: (name) => registry.get(name).html || null,
+      StreamableLogic
+    };
+  }
+
+  // src/index.ts
+  var REACT_URL = "https://unpkg.com/react@18.3.1/umd/react.production.min.js";
+  var REACT_SRI = "sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z";
+  var REACT_DOM_URL = "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js";
+  var REACT_DOM_SRI = "sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1";
+  function hideRawTemplate() {
+    const s = document.createElement("style");
+    s.textContent = "x-dc{display:none!important}";
+    document.head.appendChild(s);
+  }
+  function loadScript(src, integrity) {
+    return new Promise((resolve2, reject) => {
+      //! nosemgrep: create-script-element
+      const s = document.createElement("script");
+      s.src = src;
+      s.integrity = integrity;
+      s.crossOrigin = "anonymous";
+      s.async = false;
+      s.onload = () => resolve2();
+      s.onerror = () => reject(new Error(`failed to load ${src}`));
+      document.head.appendChild(s);
+    });
+  }
+  function loadReactUmd() {
+    const w = window;
+    if (w.React && w.ReactDOM) return Promise.resolve();
+    return Promise.all([
+      loadScript(REACT_URL, REACT_SRI),
+      loadScript(REACT_DOM_URL, REACT_DOM_SRI)
+    ]).then(() => void 0);
+  }
+  function init() {
+    const runtime = createRuntime(document);
+    let rootName = "Root";
+    const baseCss = document.createElement("style");
+    baseCss.textContent = BASE_CSS;
+    document.head.prepend(baseCss);
+    const notifyHost = () => {
+      if (window.parent === window) return;
+      const r = runtime.registry.entries[rootName];
+      try {
+        window.parent.postMessage(
+          {
+            type: "__dc_booted",
+            rootName,
+            propsMeta: r && r.propsMeta || null,
+            preview: r && r.preview || null
+          },
+          "*"
+        );
+      } catch {
+      }
+    };
+    const api = {
+      __dcUpdate: (name, kind, content, streaming) => {
+        runtime.dcUpdate(name, kind, content, streaming);
+        if (name === rootName && !streaming && kind === "props") notifyHost();
+      },
+      __dcSetProps: (name, overrides) => runtime.setProps(name, overrides),
+      /** Name of the component currently mounted as the page root — DC tools
+       *  push their template-stream here when targeting "the open page". */
+      __dcRootName: () => rootName,
+      /** Editor bridge — the encoded, `data-dc-tpl`-annotated template source.
+       *  The host editor parses this into its own template DOM so it can map a
+       *  rendered node (carrying the same `data-dc-tpl`) back to the source
+       *  node that emitted it. Returns the encoded form (`<sc-comp>`,
+       *  `sc-camel-*` attrs); the editor decodes on serialize. */
+      __dcAnnotatedTemplate: (name) => runtime.annotatedTemplate(name),
+      /** Editor bridge — the *original* (decoded) template source. */
+      __dcTemplateSource: (name) => runtime.templateSource(name),
+      __dcBoot: () => {
+        rootName = boot(runtime, document) ?? rootName;
+        notifyHost();
+      },
+      __dcRegistry: runtime.registry.entries,
+      getDC: (name) => runtime.getDC(name),
+      // `DCLogic` is the documented base class name; `StreamableLogic` is the
+      // implementation alias kept for any project that already references it.
+      DCLogic: runtime.StreamableLogic,
+      StreamableLogic: runtime.StreamableLogic
+    };
+    Object.assign(window, api);
+    if (document.readyState !== "loading") api.__dcBoot();
+    else document.addEventListener("DOMContentLoaded", () => api.__dcBoot());
+  }
+  hideRawTemplate();
+  loadReactUmd().then(init).catch((err) => {
+    console.error("[dc] failed to load React or boot:", err);
+    throw err;
+  });
+})();
+
+</script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&amp;family=Archivo:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    html,body{margin:0;padding:0;background:#F5F0E6}
+    *,*::before,*::after{box-sizing:border-box}
+    ::selection{background:rgba(169,139,79,.28)}
+    @keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadein{from{opacity:0}to{opacity:1}}
+    @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+  </style>
+</helmet>
+
+<div style="font-family:'Archivo',sans-serif;color:#211A12;background:#F5F0E6;min-height:100vh">
+
+  <!-- ============ NAV ============ -->
+  <nav style="position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:18px 4vw;background:rgba(245,240,230,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid #E6DCC6">
+    <button onClick="{{ goHome }}" style="display:flex;align-items:center;gap:12px;background:none;border:none;cursor:pointer;padding:0">
+      <span style="width:9px;height:9px;background:#A98B4F;transform:rotate(45deg);display:block"></span>
+      <span style="font:600 15px 'Archivo',sans-serif;letter-spacing:.32em;color:#211A12">DOORSWALA</span>
+    </button>
+    <div style="display:flex;align-items:center;gap:34px">
+      <button onClick="{{ goHome }}" style="{{ homeLinkStyle }}">Home</button>
+      <button onClick="{{ goShop }}" style="{{ shopLinkStyle }}">Shop doors</button>
+      <button onClick="{{ openCart }}" style="display:flex;align-items:center;gap:9px;background:#211A12;color:#F5F0E6;border:none;cursor:pointer;padding:10px 18px;font:500 12px 'Archivo',sans-serif;letter-spacing:.18em;text-transform:uppercase">
+        <span>Cart</span>
+        <span style="background:#A98B4F;color:#1C1610;font:600 11px 'Archivo',sans-serif;min-width:20px;height:20px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px">{{ cartCount }}</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============ HOME ============ -->
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Home">
+
+      <!-- HERO -->
+      <section data-screen-label="Home — Hero" style="height:185vh;position:relative">
+        <div style="position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;padding:104px 24px 0">
+          <div style="font:600 12px 'Archivo',sans-serif;letter-spacing:.38em;color:#8C6F3F;text-transform:uppercase;animation:rise .8s ease both">No middlemen&nbsp;&nbsp;·&nbsp;&nbsp;No showrooms&nbsp;&nbsp;·&nbsp;&nbsp;No markups</div>
+          <h1 style="margin:14px 0 0;font:500 clamp(58px,8vw,116px)/0.95 'Cormorant Garamond',serif;color:#211A12;text-align:center;letter-spacing:-0.015em;animation:rise .9s .08s ease both">Just <em style="font-style:italic;color:#A98B4F">doors</em>.</h1>
+          <p style="margin:18px 0 0;max-width:540px;text-align:center;font:400 16px/1.65 'Archivo',sans-serif;color:#6F6354;animation:rise .9s .16s ease both">Premium doors made to measure in our own factory, sold direct to your home — delivered and installed across India.</p>
+
+          <div style="margin-top:40px;display:flex;flex-direction:column;align-items:center;animation:rise 1s .26s ease both">
+            <div style="position:relative;width:min(320px,72vw);height:min(46vh,470px);perspective:1500px">
+              <!-- architrave / frame -->
+              <div style="position:absolute;inset:-16px;border:16px solid #3B2E1F;box-shadow:inset 0 0 0 2px rgba(245,240,230,.08), 0 30px 70px rgba(35,25,12,.25)"></div>
+              <!-- the world behind the door -->
+              <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 20%, #F6DFAC 0%, #DDB371 45%, #9A7440 100%);overflow:hidden">
+                <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg, rgba(60,40,15,.10) 0 2px, transparent 2px 46px)"></div>
+                <div style="{{ stepStyle }}">
+                  <div style="font:600 11px 'Archivo',sans-serif;letter-spacing:.34em;color:#5A4121;text-transform:uppercase">The showroom is open</div>
+                  <button onClick="{{ goShop }}" style="margin-top:16px;background:#241C13;color:#F0E3C2;border:none;cursor:pointer;padding:14px 26px;font:500 12px 'Archivo',sans-serif;letter-spacing:.24em;text-transform:uppercase">Step inside →</button>
+                </div>
+              </div>
+              <!-- the leaf -->
+              <div style="{{ leafStyle }}" onClick="{{ peekDoor }}" title="Click to open">
+                <div style="position:absolute;inset:9% 13%;border:1px solid rgba(0,0,0,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 1px 0 rgba(255,255,255,.08);pointer-events:none"></div>
+                <div style="position:absolute;inset:16% 19%;border:1px solid rgba(0,0,0,.18);pointer-events:none"></div>
+                <div style="position:absolute;right:7%;top:50%;width:5px;height:42px;border-radius:3px;background:linear-gradient(180deg,#D9BC7E,#A9854A);transform:translateY(-50%);box-shadow:0 1px 3px rgba(0,0,0,.4);pointer-events:none"></div>
+              </div>
+            </div>
+            <!-- floor shadow -->
+            <div style="width:min(360px,76vw);height:18px;margin-top:10px;background:radial-gradient(50% 100% at 50% 0%, rgba(35,25,12,.30), transparent 70%)"></div>
+
+            <!-- finish swatches -->
+            <div style="margin-top:18px;display:flex;align-items:center;gap:14px">
+              <sc-for list="{{ finishes }}" as="sw" hint-placeholder-count="4">
+                <button onClick="{{ sw.pick }}" title="{{ sw.name }}" style="{{ sw.chipStyle }}"></button>
+              </sc-for>
+              <span style="font:500 12px 'Archivo',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6F6354;margin-left:6px">{{ finishName }}</span>
+            </div>
+          </div>
+
+          <button onClick="{{ peekDoor }}" style="margin-top:auto;margin-bottom:26px;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;animation:fadein 1.4s .8s ease both">
+            <span style="font:500 11px 'Archivo',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#8a7a62">Scroll — the door opens</span>
+            <span style="color:#A98B4F;font-size:16px;animation:bob 1.8s ease-in-out infinite;display:block">↓</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- MARQUEE -->
+      <div style="background:#241C13;overflow:hidden;padding:15px 0;border-top:1px solid #3B2E1F">
+        <div style="display:flex;width:max-content;animation:marquee 32s linear infinite">
+          <span style="font:500 13px 'Archivo',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#C9A964;white-space:nowrap;padding-right:24px">Made to measure&nbsp;&nbsp;✦&nbsp;&nbsp;Factory direct&nbsp;&nbsp;✦&nbsp;&nbsp;Delivered &amp; installed&nbsp;&nbsp;✦&nbsp;&nbsp;10-year warranty&nbsp;&nbsp;✦&nbsp;&nbsp;Pan-India&nbsp;&nbsp;✦&nbsp;&nbsp;</span>
+          <span aria-hidden="true" style="font:500 13px 'Archivo',sans-serif;letter-spacing:.3em;text-transform:uppercase;color:#C9A964;white-space:nowrap;padding-right:24px">Made to measure&nbsp;&nbsp;✦&nbsp;&nbsp;Factory direct&nbsp;&nbsp;✦&nbsp;&nbsp;Delivered &amp; installed&nbsp;&nbsp;✦&nbsp;&nbsp;10-year warranty&nbsp;&nbsp;✦&nbsp;&nbsp;Pan-India&nbsp;&nbsp;✦&nbsp;&nbsp;</span>
+        </div>
+      </div>
+
+      <!-- VALUE PROPS -->
+      <section data-screen-label="Home — Value props" style="padding:110px 6vw;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:56px;max-width:1280px;margin:0 auto">
+        <div>
+          <div style="font:500 13px 'Archivo',sans-serif;letter-spacing:.26em;color:#A98B4F">01</div>
+          <h3 style="margin:14px 0 10px;font:500 30px/1.15 'Cormorant Garamond',serif;color:#211A12">Direct from our factory</h3>
+          <p style="margin:0;font:400 15px/1.7 'Archivo',sans-serif;color:#6F6354">No distributor, no retailer, no carpenter's cut. You buy a door at the maker's price — every rupee of margin we removed stays with you.</p>
+        </div>
+        <div>
+          <div style="font:500 13px 'Archivo',sans-serif;letter-spacing:.26em;color:#A98B4F">02</div>
+          <h3 style="margin:14px 0 10px;font:500 30px/1.15 'Cormorant Garamond',serif;color:#211A12">Made to your measurements</h3>
+          <p style="margin:0;font:400 15px/1.7 'Archivo',sans-serif;color:#6F6354">We measure your frame, then cut, laminate and finish each door to the millimetre. No on-site sawing, no compromises.</p>
+        </div>
+        <div>
+          <div style="font:500 13px 'Archivo',sans-serif;letter-spacing:.26em;color:#A98B4F">03</div>
+          <h3 style="margin:14px 0 10px;font:500 30px/1.15 'Cormorant Garamond',serif;color:#211A12">Delivered &amp; installed</h3>
+          <p style="margin:0;font:400 15px/1.7 'Archivo',sans-serif;color:#6F6354">White-glove delivery with installation by our own fitters. Your door is hung, aligned and finished before we leave.</p>
+        </div>
+      </section>
+
+      <!-- FEATURED COLLECTION -->
+      <section data-screen-label="Home — Collection" style="padding:0 6vw 120px;max-width:1280px;margin:0 auto">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:44px">
+          <div>
+            <div style="font:600 12px 'Archivo',sans-serif;letter-spacing:.34em;color:#8C6F3F;text-transform:uppercase">The collection</div>
+            <h2 style="margin:10px 0 0;font:500 clamp(36px,4.4vw,58px)/1.05 'Cormorant Garamond',serif;color:#211A12">Nine doors. One standard.</h2>
+          </div>
+          <button onClick="{{ goShop }}" style="background:none;border:none;border-bottom:1px solid #A98B4F;cursor:pointer;padding:6px 2px;font:500 13px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#211A12">View all doors →</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:28px">
+          <sc-for list="{{ featured }}" as="p" hint-placeholder-count="3">
+            <div style="background:#FBF7EF;border:1px solid #E6DCC6;display:flex;flex-direction:column;transition:transform .45s ease, box-shadow .45s ease" style-hover="transform:translateY(-5px);box-shadow:0 26px 50px rgba(35,25,12,.12)">
+              <div style="background:linear-gradient(180deg,#EFE7D6,#E8DEC7);padding:40px 0 34px;display:flex;justify-content:center;perspective:1100px">
+                <div style="position:relative;width:158px;height:282px">
+                  <div style="position:absolute;inset:-9px;border:9px solid #D3C4A4;box-shadow:0 18px 34px rgba(35,25,12,.18)"></div>
+                  <div style="position:absolute;inset:0;background:radial-gradient(100% 80% at 50% 20%, #F2D9A4, #C09858)"></div>
+                  <div style="position:absolute;inset:0;transform-origin:left center;transition:transform .7s cubic-bezier(.2,.7,.15,1);background:{{ p.bg }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.2), inset -10px 0 26px rgba(0,0,0,.14)" style-hover="transform:rotateY(-22deg)">
+                    <div style="position:absolute;right:8px;top:50%;width:4px;height:34px;border-radius:2px;background:{{ p.knob }};transform:translateY(-50%);box-shadow:0 1px 2px rgba(0,0,0,.35)"></div>
+                  </div>
+                </div>
+              </div>
+              <div style="padding:24px 26px 26px;display:flex;flex-direction:column;gap:6px">
+                <h3 style="margin:0;font:500 25px/1.1 'Cormorant Garamond',serif;color:#211A12">{{ p.name }}</h3>
+                <div style="font:400 13.5px 'Archivo',sans-serif;color:#6F6354">{{ p.tag }}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+                  <div style="font:600 16px 'Archivo',sans-serif;color:#211A12">{{ p.priceFmt }}</div>
+                  <button onClick="{{ p.add }}" style="background:none;border:1px solid #211A12;cursor:pointer;padding:10px 16px;font:500 11px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#211A12;transition:background .25s,color .25s" style-hover="background:#211A12;color:#F5F0E6">Add to cart</button>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- WHY DIRECT -->
+      <section data-screen-label="Home — Why direct" style="background:#241C13;padding:120px 6vw">
+        <div style="max-width:1100px;margin:0 auto">
+          <div style="font:600 12px 'Archivo',sans-serif;letter-spacing:.34em;color:#C9A964;text-transform:uppercase">The economics of a door</div>
+          <div style="margin-top:54px;font:500 12px 'Archivo',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8a7a62">The old way</div>
+          <div style="margin-top:14px;font:400 clamp(20px,2.6vw,30px)/1.5 'Cormorant Garamond',serif;color:#9b8c75;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline">
+            <span>Factory</span><span style="color:#5e503c">→</span>
+            <span style="text-decoration:line-through;text-decoration-color:#A98B4F;opacity:.6">Distributor</span><span style="color:#5e503c">→</span>
+            <span style="text-decoration:line-through;text-decoration-color:#A98B4F;opacity:.6">Wholesaler</span><span style="color:#5e503c">→</span>
+            <span style="text-decoration:line-through;text-decoration-color:#A98B4F;opacity:.6">Retailer</span><span style="color:#5e503c">→</span>
+            <span style="text-decoration:line-through;text-decoration-color:#A98B4F;opacity:.6">Carpenter</span><span style="color:#5e503c">→</span>
+            <span>Your home</span>
+          </div>
+          <div style="margin-top:64px;font:500 12px 'Archivo',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8a7a62">The Doorswala way</div>
+          <div style="margin-top:10px;font:500 clamp(44px,6.5vw,88px)/1.05 'Cormorant Garamond',serif;color:#D9B873">Factory → Your home.</div>
+          <p style="margin:30px 0 0;max-width:560px;font:400 15.5px/1.75 'Archivo',sans-serif;color:#B5A78E">Every layer between the maker and you adds margin, delay and handling damage. We removed all of them. You order online; we craft your door, deliver it and install it. The savings stay with you — the quality stays with us.</p>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section data-screen-label="Home — CTA" style="padding:140px 6vw;text-align:center">
+        <h2 style="margin:0;font:500 clamp(44px,6vw,84px)/1.05 'Cormorant Garamond',serif;color:#211A12">Your entrance <em style="font-style:italic;color:#A98B4F">awaits</em>.</h2>
+        <p style="margin:20px auto 0;max-width:460px;font:400 15.5px/1.7 'Archivo',sans-serif;color:#6F6354">Order in minutes. Measured, made and installed in weeks — not months.</p>
+        <button onClick="{{ goShop }}" style="margin-top:36px;background:#211A12;color:#F5F0E6;border:none;cursor:pointer;padding:18px 36px;font:500 13px 'Archivo',sans-serif;letter-spacing:.26em;text-transform:uppercase;transition:background .25s" style-hover="background:#A98B4F">Browse all doors</button>
+      </section>
+    </div>
+  </sc-if>
+
+  <!-- ============ SHOP ============ -->
+  <sc-if value="{{ isShop }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Shop — All doors" style="padding:150px 6vw 110px;max-width:1320px;margin:0 auto">
+      <div style="font:600 12px 'Archivo',sans-serif;letter-spacing:.34em;color:#8C6F3F;text-transform:uppercase">The collection</div>
+      <h1 style="margin:10px 0 0;font:500 clamp(44px,5.5vw,76px)/1.02 'Cormorant Garamond',serif;color:#211A12">All doors</h1>
+      <p style="margin:14px 0 0;max-width:520px;font:400 15px/1.7 'Archivo',sans-serif;color:#6F6354">Every door is made to order in your exact size and finish. Prices shown are for a standard 8′ × 3′ leaf, installation included.</p>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:38px 0 40px">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+          <button onClick="{{ c.pick }}" style="{{ c.style }}">{{ c.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:28px">
+        <sc-for list="{{ shopProducts }}" as="p" hint-placeholder-count="9">
+          <div style="background:#FBF7EF;border:1px solid #E6DCC6;display:flex;flex-direction:column;transition:transform .45s ease, box-shadow .45s ease" style-hover="transform:translateY(-5px);box-shadow:0 26px 50px rgba(35,25,12,.12)">
+            <div style="background:linear-gradient(180deg,#EFE7D6,#E8DEC7);padding:40px 0 34px;display:flex;justify-content:center;perspective:1100px">
+              <div style="position:relative;width:158px;height:282px">
+                <div style="position:absolute;inset:-9px;border:9px solid #D3C4A4;box-shadow:0 18px 34px rgba(35,25,12,.18)"></div>
+                <div style="position:absolute;inset:0;background:radial-gradient(100% 80% at 50% 20%, #F2D9A4, #C09858)"></div>
+                <div style="position:absolute;inset:0;transform-origin:left center;transition:transform .7s cubic-bezier(.2,.7,.15,1);background:{{ p.bg }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.2), inset -10px 0 26px rgba(0,0,0,.14)" style-hover="transform:rotateY(-22deg)">
+                  <div style="position:absolute;right:8px;top:50%;width:4px;height:34px;border-radius:2px;background:{{ p.knob }};transform:translateY(-50%);box-shadow:0 1px 2px rgba(0,0,0,.35)"></div>
+                </div>
+              </div>
+            </div>
+            <div style="padding:24px 26px 26px;display:flex;flex-direction:column;gap:6px">
+              <div style="font:500 11px 'Archivo',sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#A98B4F">{{ p.cat }}</div>
+              <h3 style="margin:0;font:500 25px/1.1 'Cormorant Garamond',serif;color:#211A12">{{ p.name }}</h3>
+              <div style="font:400 13.5px 'Archivo',sans-serif;color:#6F6354">{{ p.tag }}</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+                <div style="font:600 16px 'Archivo',sans-serif;color:#211A12">{{ p.priceFmt }}</div>
+                <button onClick="{{ p.add }}" style="background:none;border:1px solid #211A12;cursor:pointer;padding:10px 16px;font:500 11px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#211A12;transition:background .25s,color .25s" style-hover="background:#211A12;color:#F5F0E6">Add to cart</button>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ FOOTER ============ -->
+  <footer style="background:#1C1610;color:#B5A78E;padding:80px 6vw 36px">
+    <div style="max-width:1280px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:48px">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:9px;height:9px;background:#A98B4F;transform:rotate(45deg);display:block"></span>
+          <span style="font:600 15px 'Archivo',sans-serif;letter-spacing:.32em;color:#F0E3C2">DOORSWALA</span>
+        </div>
+        <p style="margin:18px 0 0;font:400 14px/1.7 'Archivo',sans-serif;max-width:300px">Premium doors, factory direct. Designed, made and installed by one company — ours.</p>
+      </div>
+      <div>
+        <div style="font:500 12px 'Archivo',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8a7a62;margin-bottom:16px">Doors</div>
+        <div style="display:flex;flex-direction:column;gap:10px;font:400 14px 'Archivo',sans-serif">
+          <button onClick="{{ goShop }}" style="background:none;border:none;color:#B5A78E;cursor:pointer;padding:0;text-align:left;font:400 14px 'Archivo',sans-serif">Laminated doors</button>
+          <button onClick="{{ goShop }}" style="background:none;border:none;color:#B5A78E;cursor:pointer;padding:0;text-align:left;font:400 14px 'Archivo',sans-serif">WPC doors</button>
+          <button onClick="{{ goShop }}" style="background:none;border:none;color:#B5A78E;cursor:pointer;padding:0;text-align:left;font:400 14px 'Archivo',sans-serif">Signature series</button>
+          <button onClick="{{ goShop }}" style="background:none;border:none;color:#B5A78E;cursor:pointer;padding:0;text-align:left;font:400 14px 'Archivo',sans-serif">Safety doors</button>
+        </div>
+      </div>
+      <div>
+        <div style="font:500 12px 'Archivo',sans-serif;letter-spacing:.26em;text-transform:uppercase;color:#8a7a62;margin-bottom:16px">Contact</div>
+        <div style="display:flex;flex-direction:column;gap:10px;font:400 14px/1.5 'Archivo',sans-serif">
+          <span>hello@doorswala.in</span>
+          <span>+91 98xxx xxxxx</span>
+          <span>Mon–Sat, 9am–7pm IST</span>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:1280px;margin:60px auto 0;padding-top:24px;border-top:1px solid #33291D;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:400 12.5px 'Archivo',sans-serif;color:#6e604c">
+      <span>© 2026 Doorswala. Made in India.</span>
+      <span>Free measurement visit · 10-year warranty</span>
+    </div>
+  </footer>
+
+  <!-- ============ CART DRAWER ============ -->
+  <sc-if value="{{ cartOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:90;background:rgba(24,17,9,.4);animation:fadein .25s ease both" onClick="{{ closeCart }}"></div>
+    <aside data-screen-label="Cart drawer" style="position:fixed;top:0;right:0;bottom:0;z-index:95;width:min(430px,94vw);background:#FBF7EF;box-shadow:-30px 0 70px rgba(24,17,9,.25);display:flex;flex-direction:column;animation:fadein .25s ease both">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:26px 28px;border-bottom:1px solid #E6DCC6">
+        <div style="font:500 26px 'Cormorant Garamond',serif;color:#211A12">Your cart</div>
+        <button onClick="{{ closeCart }}" style="background:none;border:none;cursor:pointer;font:400 22px 'Archivo',sans-serif;color:#6F6354;padding:4px">✕</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:10px 28px">
+        <sc-if value="{{ cartEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:60px 0;text-align:center">
+            <div style="font:500 22px 'Cormorant Garamond',serif;color:#211A12">Your cart is empty</div>
+            <p style="margin:10px 0 0;font:400 14px/1.6 'Archivo',sans-serif;color:#6F6354">Every great room starts at the door.</p>
+            <button onClick="{{ goShopFromCart }}" style="margin-top:22px;background:#211A12;color:#F5F0E6;border:none;cursor:pointer;padding:13px 24px;font:500 12px 'Archivo',sans-serif;letter-spacing:.22em;text-transform:uppercase">Browse doors</button>
+          </div>
+        </sc-if>
+        <sc-for list="{{ cartItems }}" as="it" hint-placeholder-count="1">
+          <div style="display:flex;gap:16px;align-items:center;padding:20px 0;border-bottom:1px solid #EEE5D2">
+            <div style="width:44px;height:80px;flex:none;background:{{ it.bg }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.2);border:3px solid #D3C4A4"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font:500 17px 'Cormorant Garamond',serif;color:#211A12">{{ it.name }}</div>
+              <div style="font:400 13px 'Archivo',sans-serif;color:#6F6354;margin-top:2px">{{ it.priceFmt }} each</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+                <div style="display:flex;align-items:center;gap:0;border:1px solid #D9CDB2">
+                  <button onClick="{{ it.dec }}" style="background:none;border:none;cursor:pointer;width:28px;height:28px;font:500 15px 'Archivo',sans-serif;color:#211A12">−</button>
+                  <span style="font:500 13px 'Archivo',sans-serif;min-width:24px;text-align:center">{{ it.qty }}</span>
+                  <button onClick="{{ it.inc }}" style="background:none;border:none;cursor:pointer;width:28px;height:28px;font:500 15px 'Archivo',sans-serif;color:#211A12">+</button>
+                </div>
+                <button onClick="{{ it.remove }}" style="background:none;border:none;cursor:pointer;font:400 12px 'Archivo',sans-serif;color:#8a7a62;text-decoration:underline;padding:0">Remove</button>
+              </div>
+            </div>
+            <div style="font:600 15px 'Archivo',sans-serif;color:#211A12">{{ it.lineFmt }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ cartHasItems }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 28px 30px;border-top:1px solid #E6DCC6;background:#F5F0E6">
+          <div style="display:flex;justify-content:space-between;font:500 14px 'Archivo',sans-serif;color:#6F6354"><span>Measurement visit &amp; installation</span><span style="color:#A98B4F">Included</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;align-items:baseline">
+            <span style="font:500 15px 'Archivo',sans-serif;color:#211A12">Subtotal</span>
+            <span style="font:600 22px 'Archivo',sans-serif;color:#211A12">{{ subtotalFmt }}</span>
+          </div>
+          <button onClick="{{ checkout }}" style="margin-top:18px;width:100%;background:#211A12;color:#F5F0E6;border:none;cursor:pointer;padding:17px 0;font:500 13px 'Archivo',sans-serif;letter-spacing:.26em;text-transform:uppercase;transition:background .25s" style-hover="background:#A98B4F">Place order</button>
+          <div style="margin-top:12px;text-align:center;font:400 12px 'Archivo',sans-serif;color:#8a7a62">Pay after the measurement visit · Cancel anytime before production</div>
+        </div>
+      </sc-if>
+    </aside>
+  </sc-if>
+
+  <!-- ============ TOAST ============ -->
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:120;background:#211A12;color:#F5F0E6;padding:14px 26px;font:500 13px 'Archivo',sans-serif;letter-spacing:.06em;box-shadow:0 16px 40px rgba(24,17,9,.3);animation:rise .35s ease both;display:flex;align-items:center;gap:10px">
+      <span style="width:7px;height:7px;background:#A98B4F;transform:rotate(45deg);display:block"></span>
+      <span>{{ toastMsg }}</span>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { page: 'home', finish: 0, prog: 0, cat: 'All', cart: [], cartOpen: false, toastMsg: null };
+
+  componentDidMount() {
+    this._onScroll = () => {
+      if (this._raf) return;
+      this._raf = requestAnimationFrame(() => {
+        this._raf = 0;
+        const h = Math.max(1, window.innerHeight * 0.85);
+        const p = Math.max(0, Math.min(1, window.scrollY / h));
+        if (Math.abs(p - this.state.prog) > 0.002) this.setState({ prog: p });
+      });
+    };
+    window.addEventListener('scroll', this._onScroll, { passive: true });
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this._onScroll);
+    clearTimeout(this._tt);
+  }
+
+  grain(base, dark, light) {
+    return `repeating-linear-gradient(93deg, ${base} 0px, ${light} 9px, ${base} 17px, ${dark} 27px, ${base} 38px)`;
+  }
+
+  get finishesData() {
+    const g = this.grain.bind(this);
+    return [
+      { name: 'Natural Walnut', bg: g('#6B5138', '#5A4129', '#7A5F42') },
+      { name: 'Smoked Oak', bg: g('#4A3A2B', '#3C2E21', '#584634') },
+      { name: 'Ivory Matte', bg: 'linear-gradient(175deg,#EFE7D7,#E2D7BF)' },
+      { name: 'Ebony & Brass', bg: 'linear-gradient(90deg, rgba(0,0,0,0) 0 70%, #B59257 70% 71.8%, rgba(0,0,0,0) 71.8%), ' + g('#241C15', '#1A140E', '#322822') },
+    ];
+  }
+
+  get productsData() {
+    const g = this.grain.bind(this);
+    const walnut = g('#6B5138', '#5A4129', '#7A5F42');
+    const teak = g('#8A6A45', '#785a38', '#9a7951');
+    const oak = g('#B79A72', '#a98c64', '#C4A981');
+    const panelLines = 'linear-gradient(90deg, rgba(0,0,0,0) 0 16%, rgba(0,0,0,.24) 16% 17.2%, rgba(255,255,255,.12) 17.2% 18.4%, rgba(0,0,0,0) 18.4% 44%, rgba(0,0,0,.24) 44% 45.2%, rgba(255,255,255,.12) 45.2% 46.4%, rgba(0,0,0,0) 46.4% 54%, rgba(0,0,0,.24) 54% 55.2%, rgba(255,255,255,.12) 55.2% 56.4%, rgba(0,0,0,0) 56.4% 82%, rgba(0,0,0,.24) 82% 83.2%, rgba(255,255,255,.12) 83.2% 84.4%, rgba(0,0,0,0) 84.4%)';
+    const grooves = 'repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 44px, rgba(0,0,0,.30) 44px 46px, rgba(255,255,255,.14) 46px 47px)';
+    return [
+      { id: 'luxor', name: 'Luxor Series Door', cat: 'Series', tag: 'Ebonised grain with a single brass inlay', price: 84500, knob: '#D9BC7E', bg: 'linear-gradient(90deg, rgba(0,0,0,0) 0 70%, #B59257 70% 71.8%, rgba(0,0,0,0) 71.8%), ' + g('#241C15', '#1A140E', '#322822') },
+      { id: 'grandeur', name: 'Grandeur Series Door', cat: 'Series', tag: 'Twin recessed panels in natural walnut', price: 118000, knob: '#D9BC7E', bg: panelLines + ', ' + walnut },
+      { id: 'double-lam', name: 'Double Laminated Door', cat: 'Laminated', tag: 'Book-matched two-tone laminate', price: 46500, knob: '#D9BC7E', bg: 'linear-gradient(90deg, rgba(0,0,0,0) 0 49.6%, rgba(0,0,0,.28) 49.6% 50.4%, #E5DAC2 50.4% 100%), ' + walnut },
+      { id: 'groove', name: 'Laminated Groove Door', cat: 'Laminated', tag: 'Hand-routed horizontal grooves', price: 38900, knob: '#D9BC7E', bg: grooves + ', ' + teak },
+      { id: 'wpc-lam', name: 'Laminated WPC Door', cat: 'WPC', tag: 'Solid WPC core, light oak laminate', price: 42800, knob: '#8a6f49', bg: oak },
+      { id: 'wpc-print', name: 'Printed WPC Door', cat: 'WPC', tag: 'Fine-line print, zero-warp core', price: 31200, knob: '#5e4a33', bg: 'repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 58px, rgba(0,0,0,.10) 58px 60px), repeating-linear-gradient(90deg, #B7A488 0 11px, #AE9B7F 11px 22px)' },
+      { id: 'pvc', name: 'PVC Laminated Door', cat: 'Laminated', tag: 'Moisture-proof ivory matte, for baths', price: 27500, knob: '#A98B4F', bg: 'linear-gradient(175deg,#EFE7D7,#E2D7BF)' },
+      { id: 'lam', name: 'Laminated Door', cat: 'Laminated', tag: 'Classic teak laminate, every day luxury', price: 24900, knob: '#D9BC7E', bg: teak },
+      { id: 'safety', name: 'Safety Door', cat: 'Safety', tag: 'Steel core in brushed graphite', price: 64000, knob: '#C9CCD1', bg: 'repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, rgba(0,0,0,0) 1px 4px), linear-gradient(120deg, #3C3C40, #2A2A2E 55%, #38383C)' },
+    ];
+  }
+
+  fmt(n) { return '₹' + n.toLocaleString('en-IN'); }
+
+  setPage(page) {
+    this.setState({ page, cartOpen: false });
+    window.scrollTo(0, 0);
+  }
+
+  showToast(msg) {
+    clearTimeout(this._tt);
+    this.setState({ toastMsg: msg });
+    this._tt = setTimeout(() => this.setState({ toastMsg: null }), 2400);
+  }
+
+  add(p) {
+    this.setState(s => {
+      const cart = s.cart.slice();
+      const i = cart.findIndex(x => x.id === p.id);
+      if (i >= 0) cart[i] = { ...cart[i], qty: cart[i].qty + 1 };
+      else cart.push({ id: p.id, name: p.name, price: p.price, bg: p.bg, qty: 1 });
+      return { cart };
+    });
+    this.showToast(p.name + ' added to cart');
+  }
+
+  changeQty(id, d) {
+    this.setState(s => {
+      const cart = s.cart
+        .map(x => x.id === id ? { ...x, qty: x.qty + d } : x)
+        .filter(x => x.qty > 0);
+      return { cart };
+    });
+  }
+
+  removeItem(id) {
+    this.setState(s => ({ cart: s.cart.filter(x => x.id !== id) }));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const FIN = this.finishesData;
+    const PRODUCTS = this.productsData;
+
+    const ease = 1 - Math.pow(1 - s.prog, 3);
+    const angle = ease * 86;
+    const fin = FIN[Math.min(s.finish, FIN.length - 1)];
+
+    const leafStyle = {
+      position: 'absolute', inset: 0, zIndex: 2,
+      transformOrigin: 'left center',
+      transform: `rotateY(${-angle}deg)`,
+      background: fin.bg,
+      boxShadow: `inset 0 0 0 1px rgba(0,0,0,.22), inset -14px 0 34px rgba(0,0,0,.16), ${6 + ease * 60}px ${8 + ease * 8}px ${26 + ease * 44}px rgba(28,20,10,${0.30 + ease * 0.1})`,
+      transition: 'background .5s ease',
+      cursor: angle < 40 ? 'pointer' : 'default',
+    };
+
+    const stepStyle = {
+      position: 'absolute', inset: 0,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      opacity: Math.min(1, ease * 1.7),
+      transform: `translateY(${(1 - ease) * 16}px)`,
+      pointerEvents: ease > 0.3 ? 'auto' : 'none',
+    };
+
+    const finishes = FIN.map((f, i) => ({
+      name: f.name,
+      pick: () => this.setState({ finish: i }),
+      chipStyle: {
+        width: '28px', height: '46px', borderRadius: '2px', padding: 0, cursor: 'pointer',
+        background: f.bg,
+        border: i === s.finish ? '2px solid #A98B4F' : '2px solid rgba(33,26,18,.18)',
+        boxShadow: i === s.finish ? '0 0 0 3px rgba(169,139,79,.28)' : 'none',
+        transition: 'box-shadow .2s, border-color .2s',
+      },
+    }));
+
+    const mapP = p => ({ ...p, priceFmt: this.fmt(p.price), add: () => this.add(p) });
+    const shopProducts = PRODUCTS.filter(p => s.cat === 'All' || p.cat === s.cat).map(mapP);
+    const featured = ['luxor', 'grandeur', 'groove'].map(id => PRODUCTS.find(p => p.id === id)).map(mapP);
+
+    const chips = ['All', 'Laminated', 'WPC', 'Series', 'Safety'].map(label => ({
+      label,
+      pick: () => this.setState({ cat: label }),
+      style: {
+        background: s.cat === label ? '#211A12' : 'none',
+        color: s.cat === label ? '#F5F0E6' : '#211A12',
+        border: '1px solid ' + (s.cat === label ? '#211A12' : '#C9BB9C'),
+        cursor: 'pointer', padding: '10px 20px',
+        font: "500 12px 'Archivo',sans-serif", letterSpacing: '.18em', textTransform: 'uppercase',
+        transition: 'background .2s, color .2s, border-color .2s',
+      },
+    }));
+
+    const cartItems = s.cart.map(it => ({
+      ...it,
+      priceFmt: this.fmt(it.price),
+      lineFmt: this.fmt(it.price * it.qty),
+      inc: () => this.changeQty(it.id, 1),
+      dec: () => this.changeQty(it.id, -1),
+      remove: () => this.removeItem(it.id),
+    }));
+    const cartCount = s.cart.reduce((a, x) => a + x.qty, 0);
+    const subtotal = s.cart.reduce((a, x) => a + x.qty * x.price, 0);
+
+    const navLink = active => ({
+      background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px',
+      font: "500 13px 'Archivo',sans-serif", letterSpacing: '.18em', textTransform: 'uppercase',
+      color: active ? '#211A12' : '#8a7a62',
+      borderBottom: active ? '1px solid #A98B4F' : '1px solid transparent',
+      transition: 'color .2s',
+    });
+
+    return {
+      isHome: s.page === 'home',
+      isShop: s.page === 'shop',
+      goHome: () => this.setPage('home'),
+      goShop: () => this.setPage('shop'),
+      goShopFromCart: () => this.setPage('shop'),
+      homeLinkStyle: navLink(s.page === 'home'),
+      shopLinkStyle: navLink(s.page === 'shop'),
+
+      leafStyle, stepStyle, finishes,
+      finishName: fin.name,
+      peekDoor: () => {
+        const target = window.scrollY < window.innerHeight * 0.4 ? window.innerHeight * 0.95 : 0;
+        window.scrollTo({ top: target, behavior: 'smooth' });
+      },
+
+      featured, shopProducts, chips,
+
+      cartOpen: s.cartOpen,
+      openCart: () => this.setState({ cartOpen: true }),
+      closeCart: () => this.setState({ cartOpen: false }),
+      cartItems,
+      cartCount,
+      cartEmpty: s.cart.length === 0,
+      cartHasItems: s.cart.length > 0,
+      subtotalFmt: this.fmt(subtotal),
+      checkout: () => this.showToast('Demo checkout — your fitters would be on their way!'),
+
+      hasToast: !!s.toastMsg,
+      toastMsg: s.toastMsg,
+    };
+  }
+}
+</script>
+</body>
+</html>
