@@ -1,4 +1,4 @@
-/* End-to-end verification of the Doorswala app using system Chrome (headless). */
+/* End-to-end verification of the Patidar Doors app using system Chrome (headless). */
 import { chromium } from 'playwright-core'
 
 const BASE = process.env.BASE ?? 'http://localhost:5199'
@@ -181,7 +181,7 @@ await step('valid order opens WhatsApp + confirmation', async () => {
   const wa = await page.evaluate(() => window.__waUrl)
   if (!wa) throw new Error('wa.me url not captured')
   const decoded = decodeURIComponent(wa)
-  for (const frag of ['wa.me/919800000000', 'NEW ORDER — DW-', 'The Meridian', 'The Flute', 'Vivek Patel', '380001', 'Preferred visit']) {
+  for (const frag of ['wa.me/919800000000', 'NEW ORDER — PD-', 'The Meridian', 'The Flute', 'Vivek Patel', '380001', 'Preferred visit']) {
     if (!decoded.includes(frag)) throw new Error(`wa message missing: ${frag}`)
   }
   console.log('   wa.me OK:', decoded.slice(0, 120).replaceAll('\n', ' | '))

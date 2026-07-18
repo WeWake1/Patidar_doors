@@ -8,10 +8,11 @@ export function Footer() {
         <div>
           <div className="footer__brand">
             <span className="diamond" aria-hidden="true" />
-            <span>DOORSWALA</span>
+            <span>PATIDAR DOORS</span>
           </div>
           <p className="footer__blurb">
-            Premium doors, factory direct. Designed, made and installed by one company — ours.
+            By {config.parentBrand} — timber, doors, ply and WPC from our own yard and factory.
+            See everything in person at our store in {config.city}.
           </p>
         </div>
         <div>

@@ -27,7 +27,8 @@ export interface LastOrder {
   lines: OrderLineSnapshot[]
 }
 
-const KEY = 'doorswala.lastOrder.v1'
+const KEY = 'patidar.lastOrder.v1'
+const OLD_KEY = 'doorswala.lastOrder.v1'
 
 export function saveLastOrder(order: LastOrder) {
   try {
@@ -39,7 +40,15 @@ export function saveLastOrder(order: LastOrder) {
 
 export function loadLastOrder(): LastOrder | null {
   try {
-    const raw = localStorage.getItem(KEY)
+    let raw = localStorage.getItem(KEY)
+    if (!raw) {
+      // Migrate from the pre-rebrand key.
+      raw = localStorage.getItem(OLD_KEY)
+      if (raw) {
+        localStorage.setItem(KEY, raw)
+        localStorage.removeItem(OLD_KEY)
+      }
+    }
     return raw ? (JSON.parse(raw) as LastOrder) : null
   } catch {
     return null

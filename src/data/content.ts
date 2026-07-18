@@ -5,6 +5,10 @@ export interface Faq {
 
 export const FAQS: Faq[] = [
   {
+    q: 'Can I see the doors and materials in person?',
+    a: 'Please do — that is what we are built for. Our store and factory carry every timber, door, ply and WPC line on this site. Walk in during working hours, touch the material, compare finishes side by side, and our team will help you shortlist. Everything you see online is a preview of what is on the floor.',
+  },
+  {
     q: 'How does the measurement visit work?',
     a: 'Once you place an order, our team calls within 24 hours to schedule a free visit. A fitter measures your frame to the millimetre, checks the wall and swing side, and confirms the final size with you on the spot. Production starts only after you approve the measurements — and you pay nothing until then.',
   },
@@ -74,8 +78,8 @@ export interface ProcessStep {
 export const PROCESS: ProcessStep[] = [
   {
     n: '01',
-    title: 'Order online',
-    body: 'Pick a design, size and finish. Your order books a free measurement visit — you pay nothing yet.',
+    title: 'Browse, then visit',
+    body: 'Shortlist online or walk into our store — see the timber, feel the finish, and book a free measurement visit. You pay nothing yet.',
   },
   {
     n: '02',

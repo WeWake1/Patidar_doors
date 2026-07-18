@@ -5,7 +5,7 @@ import { loadLastOrder } from '../lib/order'
 import { usePageMeta } from '../lib/usePageMeta'
 
 export function OrderConfirmed() {
-  usePageMeta('Order placed', 'Your Doorswala order has been placed.')
+  usePageMeta('Order placed', 'Your Patidar Doors order has been placed.')
   const order = loadLastOrder()
 
   if (!order) {

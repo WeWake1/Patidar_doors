@@ -1,4 +1,4 @@
-/* ═══════════════════ Doorswala design system ═══════════════════ */
+/* ═══════════════════ Patidar Doors design system ═══════════════════ */
 
 :root {
   --cream: #f5f0e6;
@@ -160,6 +160,13 @@ button { font-family: var(--sans); }
   padding: 0;
 }
 .nav__word { font: 600 15px var(--sans); letter-spacing: 0.32em; color: var(--ink); }
+.nav__wordmark { display: flex; flex-direction: column; gap: 1px; }
+.nav__sub {
+  font: 500 9px var(--sans);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--mut2);
+}
 .nav__links { display: flex; align-items: center; gap: 30px; }
 .nav__link {
   padding: 4px 2px;

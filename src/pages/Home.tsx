@@ -53,7 +53,7 @@ export function Home() {
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section className="hero">
         <div className="hero__sticky">
-          <div className="hero__kicker rise">No middlemen&nbsp;&nbsp;·&nbsp;&nbsp;No showrooms&nbsp;&nbsp;·&nbsp;&nbsp;No markups</div>
+          <div className="hero__kicker rise">Our yard&nbsp;&nbsp;·&nbsp;&nbsp;Our factory&nbsp;&nbsp;·&nbsp;&nbsp;Our store</div>
           <h1 className="hero__title rise rise--1">
             Just <em>doors</em>.
           </h1>
@@ -180,7 +180,7 @@ export function Home() {
             <span className="econ__arrow">→</span>
             <span>Your home</span>
           </div>
-          <div className="econ__label econ__label--after">The Doorswala way</div>
+          <div className="econ__label econ__label--after">The Patidar way</div>
           <div className="econ__punch">Factory → Your home.</div>
           <p className="econ__body">
             Every layer between the maker and you adds margin, delay and handling damage. We removed all of them. You

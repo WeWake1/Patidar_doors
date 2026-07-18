@@ -29,7 +29,8 @@ type CartAction =
   | { type: 'remove'; key: string }
   | { type: 'clear' }
 
-const STORAGE_KEY = 'doorswala.cart.v1'
+const STORAGE_KEY = 'patidar.cart.v1'
+const OLD_STORAGE_KEY = 'doorswala.cart.v1'
 
 function lineKey(productId: string, sizeId: string, toneId: string): string {
   return `${productId}|${sizeId}|${toneId}`
@@ -60,7 +61,15 @@ function reducer(state: CartState, action: CartAction): CartState {
 
 function loadInitial(): CartState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    let raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) {
+      // Migrate from the pre-rebrand key.
+      raw = localStorage.getItem(OLD_STORAGE_KEY)
+      if (raw) {
+        localStorage.setItem(STORAGE_KEY, raw)
+        localStorage.removeItem(OLD_STORAGE_KEY)
+      }
+    }
     if (!raw) return { lines: [] }
     const parsed = JSON.parse(raw) as CartState
     if (!Array.isArray(parsed.lines)) return { lines: [] }

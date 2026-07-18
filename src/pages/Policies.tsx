@@ -2,7 +2,7 @@ import { config } from '../config'
 import { usePageMeta } from '../lib/usePageMeta'
 
 export function Policies() {
-  usePageMeta('Warranty & policies', 'Doorswala warranty terms, delivery & installation, payment and cancellation policies.')
+  usePageMeta('Warranty & policies', 'Patidar Doors warranty terms, delivery & installation, payment and cancellation policies.')
   return (
     <div className="page-pad policies">
       <div className="kicker">The fine print, in plain words</div>
@@ -11,7 +11,7 @@ export function Policies() {
       <section>
         <h2>{config.warrantyYears}-year warranty</h2>
         <p>
-          Every Doorswala door carries a {config.warrantyYears}-year warranty against manufacturing defects: warping
+          Every Patidar door carries a {config.warrantyYears}-year warranty against manufacturing defects: warping
           beyond 3 mm across the leaf, delamination of the face, core defects, and failure of hardware supplied by us
           under normal domestic use.
         </p>

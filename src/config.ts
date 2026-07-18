@@ -1,15 +1,16 @@
 /**
- * ── Doorswala site configuration ──────────────────────────────────────────
+ * ── Patidar Doors site configuration ──────────────────────────────────────
  * Everything business-specific lives here. Change a value once and the whole
- * site (checkout, footer, WhatsApp button, policies) picks it up.
+ * site (checkout, footer, WhatsApp button, policies, visit page) picks it up.
  *
- * ⚠️ PLACEHOLDERS: replace `whatsappNumber`, `phoneDisplay` and `email`
- * with the real business details before going live.
+ * ⚠️ PLACEHOLDERS: replace `whatsappNumber`, `phoneDisplay`, `email`,
+ * `storeAddress` and `mapsUrl` with the real business details before go-live.
  */
 
 export const config = {
-  brand: 'Doorswala',
-  tagline: 'Premium doors, factory direct',
+  brand: 'Patidar Doors',
+  parentBrand: 'Patidar Timbers',
+  tagline: 'Timber, doors, ply & WPC — from our yard to your home',
 
   /** Digits only, with country code, no “+” — used to build wa.me links.
    *  PLACEHOLDER — replace with the real WhatsApp business number. */
@@ -19,10 +20,16 @@ export const config = {
   phoneDisplay: '+91 98xxx xxxxx',
 
   /** PLACEHOLDER — replace with the real inbox. */
-  email: 'hello@doorswala.in',
+  email: 'hello@patidardoors.in',
+
+  /** PLACEHOLDER — replace with the real shop address. */
+  storeAddress: 'Patidar Timbers, Timber Market Road, Ahmedabad, Gujarat',
+
+  /** PLACEHOLDER — replace with the real Google Maps share link. */
+  mapsUrl: 'https://maps.google.com/?q=Patidar+Timbers',
 
   hours: 'Mon–Sat, 9am–7pm IST',
-  city: 'Made in India',
+  city: 'Ahmedabad',
 
   /** Standard leaf the base prices refer to. */
   baseSizeLabel: '8′ × 3′',

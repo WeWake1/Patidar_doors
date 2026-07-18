@@ -1,11 +1,14 @@
-# Doorswala
+# Patidar Doors
 
-Production website for **Doorswala** — premium made-to-measure doors, factory direct,
-delivered and installed across India. Built with Vite + React + TypeScript.
+Website for **Patidar Doors** (D2C brand of **Patidar Timbers**) — teak timbers,
+made-to-measure doors, plywood and WPC, factory direct. The site showcases the
+full catalogue online and drives footfall to the physical store.
+Built with Vite + React + TypeScript.
 
-Home (scroll-to-open hero door) · Shop with category filters · 12 original door designs
-(SVG artwork recreated from trending Pinterest motifs) · per-door configurator
-(size × finish, live pricing) · persistent cart · WhatsApp checkout · FAQ & policies.
+Four themed "worlds" (Timbers · Doors · Ply · WPC) · portal hero (scroll opens the
+door and walks you into the store) · real product photography with signature
+hover-open door cards · per-door configurator (size × finish, live pricing) ·
+persistent cart · WhatsApp enquiries & checkout · FAQ & policies.
 
 ## Run it
 
@@ -29,10 +32,10 @@ BASE=http://localhost:5199 OUT=/tmp node scripts/verify.e2e.mjs
 
 All business details live in **`src/config.ts`** — currently placeholders:
 
-- `whatsappNumber` — orders are sent to this number via wa.me (digits only, e.g. `919876543210`)
-- `phoneDisplay`, `email`
+- `whatsappNumber` — orders/enquiries are sent to this number via wa.me (digits only, e.g. `919876543210`)
+- `phoneDisplay`, `email`, `storeAddress`, `mapsUrl`
 
-Change them once there; checkout, footer, floating button and policies all update.
+Change them once there; checkout, footer, floating button, visit page and policies all update.
 
 ## Deploy
 
@@ -47,11 +50,12 @@ Static site — any host works. `dist/` is the build output.
 ```
 src/
   config.ts             ← business details (EDIT THIS)
+  data/worlds.ts        ← the four category worlds (Timbers/Doors/Ply/WPC)
   data/products.ts      ← catalog, sizes, finishes, pricing
   data/content.ts       ← FAQs, testimonials, process copy
   components/DoorArt.tsx← the 12 SVG door designs
   cart/CartContext.tsx  ← cart state (localStorage-persisted)
-  pages/                ← Home, Shop, Product, Checkout, …
+  pages/                ← Home, world pages, Shop, Product, Checkout, …
 docs/design-research.md ← Pinterest-trend research behind the designs
 prototype/              ← original Claude-design prototype (reference only)
 scripts/verify.e2e.mjs  ← headless end-to-end smoke test

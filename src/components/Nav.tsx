@@ -20,9 +20,12 @@ export function Nav() {
   return (
     <>
       <nav className="nav">
-        <Link to="/" className="nav__brand" aria-label="Doorswala home">
+        <Link to="/" className="nav__brand" aria-label="Patidar Doors home">
           <span className="diamond" aria-hidden="true" />
-          <span className="nav__word">DOORSWALA</span>
+          <span className="nav__wordmark">
+            <span className="nav__word">PATIDAR DOORS</span>
+            <span className="nav__sub">by Patidar Timbers</span>
+          </span>
         </Link>
 
         <div className="nav__links">
