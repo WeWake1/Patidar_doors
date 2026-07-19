@@ -16,6 +16,7 @@ export function DoorScene({
   photo,
   hoverOpen = false,
   openDeg,
+  portalMode = false,
   className,
   children,
   onLeafClick,
@@ -25,6 +26,8 @@ export function DoorScene({
   photo?: ProductImage
   hoverOpen?: boolean
   openDeg?: number
+  /** scroll-driven hero: keep the shadow static so only transform animates */
+  portalMode?: boolean
   className?: string
   children?: ReactNode
   onLeafClick?: () => void
@@ -35,7 +38,9 @@ export function DoorScene({
       ? {
           transform: `rotateY(${-openDeg}deg)`,
           transition: 'none',
-          boxShadow: `${6 + t * 60}px ${8 + t * 8}px ${26 + t * 44}px rgba(28,20,10,${0.3 + t * 0.1})`,
+          ...(portalMode
+            ? {}
+            : { boxShadow: `${6 + t * 60}px ${8 + t * 8}px ${26 + t * 44}px rgba(28,20,10,${0.3 + t * 0.1})` }),
           cursor: onLeafClick && t < 0.5 ? 'pointer' : 'default',
         }
       : {}
