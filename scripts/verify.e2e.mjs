@@ -56,14 +56,16 @@ await step('home loads', async () => {
 })
 await shot('01-home-hero')
 
-await step('finish chip changes hero door', async () => {
-  await page.locator('.hero__chip').nth(4).click()
-  await page.waitForTimeout(400)
+await step('hero photo door renders (frame + leaf)', async () => {
+  await page.waitForSelector('.pdoor__unit')
+  await page.waitForSelector('.pdoor__leaf img')
 })
 
 await step('hero door opens on scroll (phase A)', async () => {
   await page.mouse.wheel(0, 900)
   await page.waitForTimeout(700)
+  const tf = await page.evaluate(() => getComputedStyle(document.querySelector('.pdoor__leaf')).transform)
+  if (tf === 'none') throw new Error('leaf transform not applied on scroll')
 })
 await shot('02-home-hero-open')
 

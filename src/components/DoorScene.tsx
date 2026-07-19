@@ -1,4 +1,3 @@
-import type { CSSProperties, ReactNode } from 'react'
 import type { ArtId, ProductImage, Tone } from '../data/products'
 import { useAjarInView } from '../lib/useAjarInView'
 import { DoorArt } from './DoorArt'
@@ -7,43 +6,22 @@ import { DoorArt } from './DoorArt'
  * A door leaf hung in an architrave with a warm-lit room behind it.
  * The leaf is either SVG artwork (`art` + `tone`) or a real photograph
  * (`photo`) — photos get a gentler hover swing (see .door-scene--photo).
- * `hoverOpen` swings the leaf on hover (cards); `openDeg` drives it
- * programmatically (hero). `children` render inside the doorway.
+ * `hoverOpen` swings the leaf on hover (cards); touch devices get the ajar
+ * treatment via useAjarInView. (The scroll-driven hero door is HeroDoorPhoto.)
  */
 export function DoorScene({
   art,
   tone,
   photo,
   hoverOpen = false,
-  openDeg,
-  portalMode = false,
   className,
-  children,
-  onLeafClick,
 }: {
   art?: ArtId
   tone?: Tone
   photo?: ProductImage
   hoverOpen?: boolean
-  openDeg?: number
-  /** scroll-driven hero: keep the shadow static so only transform animates */
-  portalMode?: boolean
   className?: string
-  children?: ReactNode
-  onLeafClick?: () => void
 }) {
-  const t = openDeg !== undefined ? Math.min(1, Math.max(0, openDeg / 86)) : 0
-  const leafStyle: CSSProperties =
-    openDeg !== undefined
-      ? {
-          transform: `rotateY(${-openDeg}deg)`,
-          transition: 'none',
-          ...(portalMode
-            ? {}
-            : { boxShadow: `${6 + t * 60}px ${8 + t * 8}px ${26 + t * 44}px rgba(28,20,10,${0.3 + t * 0.1})` }),
-          cursor: onLeafClick && t < 0.5 ? 'pointer' : 'default',
-        }
-      : {}
   const classes = [
     'door-scene',
     hoverOpen ? 'door-scene--hover' : '',
@@ -59,8 +37,7 @@ export function DoorScene({
       <div className="door-scene__room" aria-hidden="true">
         <div className="door-scene__room-lines" />
       </div>
-      {children}
-      <div className="door-scene__leaf" style={leafStyle} onClick={onLeafClick}>
+      <div className="door-scene__leaf">
         {photo ? (
           <img
             className="door-scene__photo"

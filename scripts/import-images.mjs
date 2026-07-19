@@ -6,6 +6,10 @@
  * slug-named files to public/images/doors/ plus a typed manifest at
  * src/data/images.gen.ts.
  *
+ * Also encodes the two fixed hero photos from "Hero/" (same door twice:
+ * maindoorwithframe.jpg = full unit, maindoor.jpg = the leaf cropped out of it)
+ * to public/images/hero/. HeroDoorPhoto.tsx hardcodes their crop geometry.
+ *
  * Deterministic: source files are processed in sorted filename order, so slugs
  * (main-01, main-02, … room-01, …) are stable as long as no files are
  * added/removed before existing ones. Re-run with `npm run images:build`.
@@ -70,6 +74,32 @@ for (const { dir, prefix } of SOURCES) {
     })
   }
   console.log(`${prefix}: ${n} images`)
+}
+
+/* Hero pair: fixed source names → fixed output names, native size (sources are
+   small), higher quality since this is the landing visual. Skips (keeping any
+   committed outputs) when the raw folder isn't on this machine. */
+const HERO_DIR = path.join(ROOT, 'Hero')
+const HERO_OUT = path.join(ROOT, 'public/images/hero')
+const HERO_FILES = [
+  { file: 'maindoorwithframe.jpg', out: 'hero-frame.webp' },
+  { file: 'maindoor.jpg', out: 'hero-leaf.webp' },
+]
+try {
+  await readdir(HERO_DIR)
+  await rm(HERO_OUT, { recursive: true, force: true })
+  await mkdir(HERO_OUT, { recursive: true })
+  for (const { file, out } of HERO_FILES) {
+    const buf = await readFile(path.join(HERO_DIR, file))
+    inBytes += buf.length
+    const enc = await sharp(buf).rotate().webp({ quality: 84 }).toBuffer()
+    await writeFile(path.join(HERO_OUT, out), enc)
+    outBytes += enc.length
+    const meta = await sharp(enc).metadata()
+    console.log(`hero: ${file} → ${out} (${meta.width}×${meta.height})`)
+  }
+} catch {
+  console.warn(`skip: ${HERO_DIR} not found (hero webp left as committed)`)
 }
 
 const ts = `/**

@@ -21,11 +21,22 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
 - **Photo pipeline**: raw photos live in gitignored `Main Doors/` + `Room Doors/`;
   `npm run images:build` (sharp) emits 480/960 webp to `public/images/doors/` + manifest
   `src/data/images.gen.ts`. Curation lives in `src/data/photoMap.ts`; `/dev/gallery`
-  (DEV builds) previews the manifest. ⚠️ Several raw photos carry third-party watermarks
-  (see photoMap.ts header) — they are unmapped; replace with client photography.
+  (DEV builds) previews the manifest. The same script also encodes the two fixed hero
+  shots from gitignored `/Hero/` (pattern is root-anchored — plain `Hero/` would also
+  ignore `public/images/hero/` on case-insensitive macOS) → committed
+  `public/images/hero/hero-{frame,leaf}.webp`; skips if the folder is absent.
+  ⚠️ Several raw photos carry third-party watermarks (see photoMap.ts header) — they are
+  unmapped; replace with client photography.
 - **Portal hero** (`src/components/HeroPortal.tsx`): 520vh (mobile 420vh) sticky track;
-  phases: door opens (0–.25) → scale push-through (.25–.55, transform+opacity only,
-  `portalMode` on DoorScene keeps the shadow static) → corridor of 4 world-doors (.55–.9).
+  phases: door opens (0–.25) → scale push-through (.25–.55, transform+opacity only) →
+  corridor of 4 world-doors (.55–.9). The hero door is `HeroDoorPhoto.tsx`: two photos of
+  the same real door — full framed unit + the leaf cropped from the identical shot —
+  with the leaf overlaid on its own pixels (crop box template-matched, hardcoded %s in the
+  component) and swung by rotateY over a warm aperture plane; `.pdoor` clips the swing
+  inside the photograph. No finish chips (removed with the SVG hero door).
+  ⚠️ `.portal__scene` sets an explicit width+height pair (via `--scene-h`), NOT
+  `aspect-ratio`: stable Safari resolves the flex item's content min-height to the img's
+  intrinsic 660px and squeezes the photo (Chrome/WebKit-trunk don't).
   Static fallback under `prefers-reduced-motion`. Progress helpers in `src/lib/useTrackProgress.ts`.
 - **Hover-open door**: CSS on `.door-scene--hover` (SVG −26°, photos −18° + edge-shade
   `::after`). Touch devices get `door-scene--ajar` via `src/lib/useAjarInView.ts`

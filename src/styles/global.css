@@ -383,34 +383,6 @@ button { font-family: var(--sans); }
   font: 400 16px/1.65 var(--sans);
   color: var(--mut);
 }
-.hero__finishes {
-  margin-top: 18px;
-  display: flex;
-  align-items: center;
-  gap: 13px;
-}
-.hero__chip {
-  width: 28px;
-  height: 46px;
-  border-radius: 2px;
-  padding: 0;
-  cursor: pointer;
-  border: 2px solid rgba(33, 26, 18, 0.18);
-  transition: box-shadow 0.2s, border-color 0.2s;
-}
-.hero__chip--on {
-  border-color: var(--brass);
-  box-shadow: 0 0 0 3px rgba(169, 139, 79, 0.28);
-}
-.hero__finish-name {
-  font: 500 12px var(--sans);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mut);
-  margin-left: 6px;
-  min-width: 130px;
-  text-align: left;
-}
 .hero__scrollcue {
   margin-top: auto;
   margin-bottom: 26px;
@@ -1019,7 +991,6 @@ button { font-family: var(--sans); }
 @media (max-width: 560px) {
   .field-row { flex-direction: column; gap: 18px; }
   .card__stage .door-scene { width: 40%; }
-  .hero__finish-name { min-width: 0; }
 }
 
 /* ── reduced motion ──────────────────────────────────────── */
@@ -1174,17 +1145,75 @@ button { font-family: var(--sans); }
 }
 .portal__copy { display: flex; flex-direction: column; align-items: center; }
 .portal__scene {
+  /* Explicit width+height pair at the photo's 520:660 ratio. Deriving one side
+     via aspect-ratio breaks in stable Safari: the flex item's content
+     min-height resolves to the img's intrinsic 660px and squeezes the photo. */
+  --scene-h: min(44.4vh, 464px);
   margin-top: 34px;
-  height: min(42vh, 440px);
-  aspect-ratio: 3 / 8;
+  height: var(--scene-h);
+  width: calc(var(--scene-h) * 520 / 660);
+  min-height: 0;
 }
-.portal__scene .door-scene { width: 100%; height: 100%; }
 .portal__glow {
   position: absolute;
   inset: 0;
   background: radial-gradient(80% 60% at 50% 45%, rgba(255, 236, 190, 0.5), transparent 75%);
 }
-.portal .hero__finishes { margin-top: 22px; }
+
+/* the photographed hero door (HeroDoorPhoto) — leaf overlaid on its own
+   pixels in the framed shot; geometry comes inline from the component */
+.pdoor {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 1400px;
+  /* near-edge-on the projected leaf overshoots the shot's top/bottom margin —
+     keep the swing inside the photograph (shadow lives here, outside the clip) */
+  overflow: hidden;
+  box-shadow: 0 26px 60px rgba(35, 25, 12, 0.28);
+}
+.pdoor__unit {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* box matches the photo ratio; guards hairline rounding */
+}
+.pdoor__aperture {
+  position: absolute;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 20%, #f6dfac 0%, #ddb371 45%, #9a7440 100%);
+  /* jamb shadow: the sliver that peeks around the closed leaf reads as the
+     door seam, and the open doorway gets a dark reveal at its edges */
+  box-shadow: inset 0 0 0 3px rgba(22, 14, 5, 0.55), inset 0 0 24px rgba(22, 14, 5, 0.38);
+}
+.pdoor__aperture::before {
+  /* faint wall panelling inside the room, echoes .door-scene__room-lines */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(60, 40, 15, 0.1) 0 2px, transparent 2px 46px);
+}
+.pdoor__leaf {
+  position: absolute;
+  z-index: 2;
+  transform-origin: left center;
+  backface-visibility: hidden;
+  box-shadow: 6px 8px 26px rgba(28, 20, 10, 0.3);
+  will-change: transform;
+}
+.pdoor__leaf img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.pdoor__shade {
+  /* pre-painted hinge-side shade, revealed as the leaf swings — opacity only */
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(20, 12, 4, 0.55), rgba(20, 12, 4, 0.12) 50%, transparent 80%);
+  opacity: 0;
+  pointer-events: none;
+}
 .portal .hero__scrollcue {
   position: absolute;
   bottom: 14px;
@@ -1279,7 +1308,6 @@ button { font-family: var(--sans); }
   gap: 48px;
   padding: 140px 6vw 60px;
 }
-.portal__scene--static { height: min(44vh, 460px); aspect-ratio: 3 / 8; }
 .portal__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -1335,7 +1363,7 @@ button { font-family: var(--sans); }
 @media (max-width: 720px) {
   .portal { height: 420vh; }
   .portal__zoom { padding-top: 96px; }
-  .portal__scene { height: min(38vh, 380px); }
+  .portal__scene { --scene-h: min(38vh, 109vw, 406px); }
   .portal__corridor { gap: 22px; padding-top: 108px; }
   .portal__doors {
     display: grid;

@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import type { ArtId, Tone, WorldId } from '../data/products'
 import { WOOD_TONES } from '../data/products'
 import { WORLDS } from '../data/worlds'
 import { easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
 import { DoorScene } from './DoorScene'
+import { HeroDoorPhoto } from './HeroDoorPhoto'
 
 /**
  * The portal hero: scroll swings the hero door open (phase A), pushes the
@@ -91,8 +92,6 @@ export function HeroPortal() {
   const p = useTrackProgress(trackRef)
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   const mobile = useMediaQuery('(max-width: 720px)')
-  const [finish, setFinish] = useState(1)
-  const tone = WOOD_TONES[finish]
 
   if (reduced) {
     return (
@@ -107,8 +106,10 @@ export function HeroPortal() {
               Teak timbers, made-to-measure doors, ply and WPC — all under one roof. Step through and pick your world.
             </p>
           </div>
-          <div className="portal__scene portal__scene--static">
-            <DoorScene art="classic" tone={tone} openDeg={40} />
+          <div className="portal__scene">
+            <HeroDoorPhoto openDeg={38}>
+              <div className="portal__glow" aria-hidden="true" />
+            </HeroDoorPhoto>
           </div>
         </div>
         <div className="portal__grid">
@@ -161,25 +162,9 @@ export function HeroPortal() {
           </div>
 
           <div className="portal__scene rise rise--3">
-            <DoorScene art="classic" tone={tone} openDeg={angle} onLeafClick={peek} portalMode>
+            <HeroDoorPhoto openDeg={angle} onLeafClick={peek}>
               <div className="portal__glow" aria-hidden="true" />
-            </DoorScene>
-          </div>
-
-          <div className="hero__finishes" style={{ opacity: copyOpacity }}>
-            {WOOD_TONES.map((wt, i) => (
-              <button
-                key={wt.id}
-                type="button"
-                title={wt.name}
-                aria-label={`Preview finish: ${wt.name}`}
-                tabIndex={copyOpacity > 0.5 ? 0 : -1}
-                className={`hero__chip${i === finish ? ' hero__chip--on' : ''}`}
-                style={{ background: `linear-gradient(160deg, ${wt.light}, ${wt.base} 55%, ${wt.dark})` }}
-                onClick={() => setFinish(i)}
-              />
-            ))}
-            <span className="hero__finish-name">{tone.name}</span>
+            </HeroDoorPhoto>
           </div>
         </div>
 

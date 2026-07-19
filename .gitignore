@@ -26,4 +26,5 @@ dist-ssr
 # Source photo originals (kept locally, processed copies go to public/images)
 Main Doors/
 Room Doors/
+/Hero/
 .claude/
