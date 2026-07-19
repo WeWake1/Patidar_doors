@@ -361,18 +361,6 @@ button { font-family: var(--sans); }
 .grid--3 { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
 
 /* ── hero ────────────────────────────────────────────────── */
-.hero { height: 185vh; position: relative; }
-.hero__sticky {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  overflow: hidden;
-  padding: 104px 24px 0;
-}
 .hero__kicker {
   font: 600 12px var(--sans);
   letter-spacing: 0.38em;
@@ -394,44 +382,6 @@ button { font-family: var(--sans); }
   text-align: center;
   font: 400 16px/1.65 var(--sans);
   color: var(--mut);
-}
-.hero__stage {
-  margin-top: 44px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.hero__scene { height: min(44vh, 460px); }
-.hero__step {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  text-align: center;
-  padding: 8px;
-}
-.hero__step-kicker {
-  font: 600 10px var(--sans);
-  letter-spacing: 0.22em;
-  color: #5a4121;
-  text-transform: uppercase;
-}
-.hero__step .btn {
-  margin-top: 14px;
-  padding: 12px 16px;
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  white-space: nowrap;
-}
-.hero__floor {
-  width: min(300px, 66vw);
-  height: 18px;
-  margin-top: 12px;
-  background: radial-gradient(50% 100% at 50% 0%, rgba(35, 25, 12, 0.3), transparent 70%);
 }
 .hero__finishes {
   margin-top: 18px;
@@ -1063,8 +1013,6 @@ button { font-family: var(--sans); }
   .nav__links { display: none; }
   .nav__burger { display: flex; }
   .nav { padding: 14px 5vw; }
-  .hero { height: 170vh; }
-  .hero__scene { height: min(40vh, 400px); }
   .page-pad { padding-top: 126px; }
   .pdp__specs { grid-template-columns: 1fr; }
 }

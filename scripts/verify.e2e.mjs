@@ -56,14 +56,34 @@ await step('home loads', async () => {
 })
 await shot('01-home-hero')
 
-await step('hero door opens on scroll', async () => {
+await step('finish chip changes hero door', async () => {
+  await page.locator('.hero__chip').nth(4).click()
+  await page.waitForTimeout(400)
+})
+
+await step('hero door opens on scroll (phase A)', async () => {
   await page.mouse.wheel(0, 900)
   await page.waitForTimeout(700)
 })
 await shot('02-home-hero-open')
 
-await step('finish chip changes hero door', async () => {
-  await page.locator('.hero__chip').nth(4).click()
+await step('portal corridor appears with 4 world doors (phase C)', async () => {
+  await page.evaluate(() => {
+    const el = document.querySelector('.portal')
+    window.scrollTo({ top: el.offsetTop + (el.offsetHeight - window.innerHeight) * 0.95, behavior: 'instant' })
+  })
+  await page.waitForTimeout(600)
+  const n = await page.locator('.world-door').count()
+  if (n !== 4) throw new Error(`expected 4 world doors, got ${n}`)
+})
+await shot('02b-portal-corridor')
+
+await step('corridor door walks into Timbers world', async () => {
+  await page.locator('.world-door--timbers').click()
+  await page.waitForURL('**/timbers')
+  await page.waitForSelector('[data-world="timbers"]')
+  await page.goBack()
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
   await page.waitForTimeout(400)
 })
 
@@ -106,6 +126,12 @@ await step('world pages render themed sections', async () => {
   }
 })
 await shot('05b-world-timbers')
+
+await step('photo doors render real images', async () => {
+  await page.goto(BASE + '/doors', { waitUntil: 'networkidle' })
+  const n = await page.locator('.card img[src*="/images/doors/"]').count()
+  if (n < 10) throw new Error(`expected ≥10 photo cards, got ${n}`)
+})
 
 await step('visit page renders', async () => {
   await page.goto(BASE + '/visit', { waitUntil: 'networkidle' })
