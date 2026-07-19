@@ -28,3 +28,9 @@ Main Doors/
 Room Doors/
 /Hero/
 .claude/
+
+# CMS credentials
+.env
+studio/.env
+studio/node_modules/
+studio/dist/

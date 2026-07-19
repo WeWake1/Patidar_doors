@@ -14,10 +14,20 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   Worlds/subcategories defined in `src/data/worlds.ts`.
 - **Data model** (`src/data/products.ts`): `Product.visual` is a union —
   `art` (SVG door + tone group), `photo` (real image, gets hover-open door treatment),
-  `material` (generated swatch in `MaterialArt.tsx` for timber/ply/wpc). `purchasable: false`
-  ⇒ "Enquire on WhatsApp" PDP instead of configurator/cart. Shaped for a future headless-CMS
-  (Sanity/Payload) swap — see the comment atop products.ts. Legacy `/door/:id` redirects to
-  `/product/:id`.
+  `material` (generated swatch in `MaterialArt.tsx` for timber/ply/wpc). `purchasable`
+  + `price` ⇒ size(+finish if art) configurator & cart; otherwise "Enquire on WhatsApp"
+  PDP. Legacy `/door/:id` redirects to `/product/:id`.
+- **CMS (Sanity)** — the client's admin dashboard. `studio/` is the Sanity Studio
+  (own package.json/node_modules, schema in `studio/schemas/product.ts`, desk grouped by
+  world). Build-time integration, site stays static: `npm run cms:fetch` writes published
+  docs → `src/data/catalog.gen.ts` (committed; empty when unconfigured) and the merge at
+  the bottom of products.ts lets CMS docs override local ids (never the 12 Designer
+  Studio ids) and append new slugs — WorldPage auto-appends client-invented `sub`
+  sections. `npm run cms:seed` pushes the local catalogue + curated images (idempotent,
+  needs `SANITY_WRITE_TOKEN`). Env in root `.env` / `studio/.env` (both gitignored,
+  `.example` files committed). Not yet provisioned: needs a Sanity account/login —
+  follow `docs/cms-setup.md` (seed → `sanity deploy` studio → Vercel deploy-hook webhook
+  so Publish rebuilds the site).
 - **Photo pipeline**: raw photos live in gitignored `Main Doors/` + `Room Doors/`;
   `npm run images:build` (sharp) emits 480/960 webp to `public/images/doors/` + manifest
   `src/data/images.gen.ts`. Curation lives in `src/data/photoMap.ts`; `/dev/gallery`
@@ -55,8 +65,8 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   phases, world pages, photo cards, redirect, full cart→wa.me flow, mobile. Keep it green.
 - React 19 StrictMode gotcha: rAF-throttled scroll handlers must reset their ref to 0 in
   effect cleanup (see `useTrackProgress`).
-- **Next phase (agreed with user)**: admin dashboard via headless CMS (Sanity or Payload)
-  so the client can add door photos/products themselves; the data layer is already URL-based.
+- CMS phase is built (see above) but awaits the user running the one-time provisioning
+  in `docs/cms-setup.md` (Sanity login/project id/seed/studio deploy/webhook).
 
 ## prototype/ (historical)
 

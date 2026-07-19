@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "verify:e2e": "node scripts/verify.e2e.mjs",
-    "images:build": "node scripts/import-images.mjs"
+    "images:build": "node scripts/import-images.mjs",
+    "cms:fetch": "node scripts/fetch-catalog.mjs",
+    "cms:seed": "node scripts/seed-sanity.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",

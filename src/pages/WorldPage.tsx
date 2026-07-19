@@ -13,7 +13,10 @@ import { usePageMeta } from '../lib/usePageMeta'
 export function WorldPage({ world }: { world: World }) {
   usePageMeta(world.name, `${world.tagline}. ${world.description}`)
   const products = productsIn(world.id)
-  const sections = world.subcategories
+  // Known sections first (worlds.ts order), then any new sections the client
+  // invented in the CMS, in first-seen order.
+  const extraSubs = [...new Set(products.map((p) => p.sub))].filter((s) => !world.subcategories.includes(s))
+  const sections = [...world.subcategories, ...extraSubs]
     .map((sub) => ({ sub, items: products.filter((p) => p.sub === sub) }))
     .filter((s) => s.items.length > 0)
 

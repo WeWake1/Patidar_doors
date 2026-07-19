@@ -90,7 +90,9 @@ function ProductInner({ product }: { product: ProductT }) {
   usePageMeta(product.name, product.tag)
 
   const world = getWorld(product.world)
-  const configurable = product.purchasable && product.visual.kind === 'art'
+  // Size×finish configurator for anything with a confirmed price — SVG art
+  // doors pick a finish too; CMS photo doors configure size only.
+  const configurable = product.purchasable && product.price !== undefined
   const tone = getTone(product, toneId)
   const price = priceFor(product, sizeId, tone.id)
   const related = PRODUCTS.filter((p) => p.id !== product.id)
@@ -111,9 +113,9 @@ function ProductInner({ product }: { product: ProductT }) {
       </nav>
 
       <div className="pdp__grid">
-        {configurable ? (
+        {product.visual.kind === 'art' ? (
           <div className="pdp__stage">
-            <DoorScene art={product.visual.kind === 'art' ? product.visual.art : 'classic'} tone={tone} hoverOpen className="pdp__scene" />
+            <DoorScene art={product.visual.art} tone={tone} hoverOpen className="pdp__scene" />
             <div className="pdp__stage-note">Hover the door — it opens.</div>
           </div>
         ) : (
@@ -161,27 +163,29 @@ function ProductInner({ product }: { product: ProductT }) {
               </div>
             </fieldset>
 
-            <fieldset className="cfg">
-              <legend>Finish</legend>
-              <div className="cfg__tones">
-                {tonesFor(product).map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    title={t.name}
-                    className={`cfg__tone${tone.id === t.id ? ' cfg__tone--on' : ''}`}
-                    style={{ background: `linear-gradient(160deg, ${t.light}, ${t.base} 55%, ${t.dark})` }}
-                    onClick={() => setToneId(t.id)}
-                    aria-pressed={tone.id === t.id}
-                    aria-label={`Finish: ${t.name}${t.delta ? `, adds ${fmtINR(t.delta)}` : ''}`}
-                  />
-                ))}
-              </div>
-              <div className="cfg__tone-name">
-                {tone.name}
-                {tone.delta > 0 && <span className="cfg__tone-delta"> +{fmtINR(tone.delta)}</span>}
-              </div>
-            </fieldset>
+            {tonesFor(product).length > 0 && (
+              <fieldset className="cfg">
+                <legend>Finish</legend>
+                <div className="cfg__tones">
+                  {tonesFor(product).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      title={t.name}
+                      className={`cfg__tone${tone.id === t.id ? ' cfg__tone--on' : ''}`}
+                      style={{ background: `linear-gradient(160deg, ${t.light}, ${t.base} 55%, ${t.dark})` }}
+                      onClick={() => setToneId(t.id)}
+                      aria-pressed={tone.id === t.id}
+                      aria-label={`Finish: ${t.name}${t.delta ? `, adds ${fmtINR(t.delta)}` : ''}`}
+                    />
+                  ))}
+                </div>
+                <div className="cfg__tone-name">
+                  {tone.name}
+                  {tone.delta > 0 && <span className="cfg__tone-delta"> +{fmtINR(tone.delta)}</span>}
+                </div>
+              </fieldset>
+            )}
 
             <button type="button" className="btn btn--dark btn--big btn--block" onClick={add}>
               Add to cart — {fmtINR(price)}

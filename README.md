@@ -18,7 +18,13 @@ npm run dev        # local dev server
 npm run build      # typecheck + production build → dist/
 npm run preview    # serve the production build locally
 npm run lint       # oxlint
+npm run images:build  # regenerate optimized photos + manifest (needs the raw photo folders)
+npm run cms:fetch  # pull the published Sanity catalogue into the bundle (no-op if unconfigured)
+npm run cms:seed   # one-time: push local catalogue + photos to Sanity (docs/cms-setup.md)
 ```
+
+The client edits products in the Sanity Studio (`studio/` — deploy with
+`cd studio && npx sanity deploy`). Setup walkthrough: `docs/cms-setup.md`.
 
 End-to-end smoke test (drives real Chrome headlessly through browse → configure →
 cart → checkout → WhatsApp order):

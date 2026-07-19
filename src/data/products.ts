@@ -2,15 +2,12 @@
  * Catalog, finishes, sizes and pricing for all four worlds
  * (Timbers · Doors · Ply · WPC).
  *
- * ── Future CMS shape (phase 2: Sanity/Payload) ────────────────────────────
- * This module is deliberately plain serializable data so it can be swapped
- * for a CMS fetch without touching components:
- *   world document:   { id, name, tagline, description, subcategories[] }
- *   product document: { slug(id), name, world→ref, sub, tag, story?, specs[],
- *                       visual (art | photo w/ image assets | material),
- *                       purchasable, price?, priceUnit? }
- * Photo visuals reference images by URL, so pointing them at a CMS CDN is a
- * data-layer-only change.
+ * ── CMS (Sanity) ──────────────────────────────────────────────────────────
+ * The client manages the catalogue in the Sanity Studio (studio/). At build
+ * time `npm run cms:fetch` writes published documents to catalog.gen.ts and
+ * PRODUCTS below merges them over this local base (see the merge at the
+ * bottom). Local data doubles as the seed (scripts/seed-sanity.mjs) and the
+ * fallback when no CMS is configured. Setup: docs/cms-setup.md.
  *
  * ⚠️ Product copy (tags/stories/specs) is drafted placeholder text — verify
  * every line with the client before launch.
@@ -19,6 +16,7 @@
  * most-pinned door motifs of 2025–26. See docs/design-research.md.
  */
 
+import { CMS_PRODUCTS } from './catalog.gen'
 import { photoVisualFor } from './photoMap'
 
 export type WorldId = 'timbers' | 'doors' | 'ply' | 'wpc'
@@ -710,7 +708,21 @@ const WPC_PRODUCTS: Product[] = [
   },
 ]
 
-export const PRODUCTS: Product[] = [...DESIGNER_DOORS, ...FACTORY_DOORS, ...TIMBER_PRODUCTS, ...PLY_PRODUCTS, ...WPC_PRODUCTS]
+/**
+ * Local catalogue merged with the CMS (catalog.gen.ts, written by
+ * `npm run cms:fetch`): a CMS product with a matching id replaces the local
+ * entry, brand-new slugs are appended, and the 12 Designer Studio doors are
+ * never overridden (their SVG art + cart pricing live in code).
+ */
+const LOCAL_PRODUCTS: Product[] = [...DESIGNER_DOORS, ...FACTORY_DOORS, ...TIMBER_PRODUCTS, ...PLY_PRODUCTS, ...WPC_PRODUCTS]
+const DESIGNER_IDS = new Set(DESIGNER_DOORS.map((p) => p.id))
+const LOCAL_IDS = new Set(LOCAL_PRODUCTS.map((p) => p.id))
+const CMS_OVERRIDES = new Map(CMS_PRODUCTS.filter((p) => !DESIGNER_IDS.has(p.id)).map((p) => [p.id, p]))
+
+export const PRODUCTS: Product[] = [
+  ...LOCAL_PRODUCTS.map((p) => CMS_OVERRIDES.get(p.id) ?? p),
+  ...CMS_PRODUCTS.filter((p) => !LOCAL_IDS.has(p.id) && !DESIGNER_IDS.has(p.id)),
+]
 
 /* ═══════════════ helpers ═════════════════════════════════════════════════ */
 
