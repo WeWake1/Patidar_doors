@@ -131,7 +131,8 @@ await shot('05b-world-timbers')
 
 await step('photo doors render real images', async () => {
   await page.goto(BASE + '/doors', { waitUntil: 'networkidle' })
-  const n = await page.locator('.card img[src*="/images/doors/"]').count()
+  // local pipeline images or Sanity CDN images, depending on CMS state
+  const n = await page.locator('.card img[src*="/images/doors/"], .card img[src*="cdn.sanity.io"]').count()
   if (n < 10) throw new Error(`expected ≥10 photo cards, got ${n}`)
 })
 

@@ -94,7 +94,8 @@ for (const p of PRODUCTS) {
   if (DESIGNER_IDS.has(p.id)) continue
   order += 1
   const doc = {
-    _id: `product.${p.id}`,
+    // NB: dashes, not dots — Sanity hides dot-namespaced ids from public queries
+    _id: `product-${p.id}`,
     _type: 'product',
     name: p.name,
     slug: { _type: 'slug', current: p.id },

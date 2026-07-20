@@ -25,9 +25,12 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   Studio ids) and append new slugs — WorldPage auto-appends client-invented `sub`
   sections. `npm run cms:seed` pushes the local catalogue + curated images (idempotent,
   needs `SANITY_WRITE_TOKEN`). Env in root `.env` / `studio/.env` (both gitignored,
-  `.example` files committed). Not yet provisioned: needs a Sanity account/login —
-  follow `docs/cms-setup.md` (seed → `sanity deploy` studio → Vercel deploy-hook webhook
-  so Publish rebuilds the site).
+  `.example` files committed). Provisioned 2026-07-20: project
+  `sn4590lo`, dataset `production` (public), seeded (37 products/42 images), studio live at
+  https://patidar-doors-admin.sanity.studio (appId pinned in studio/sanity.cli.ts).
+  ⚠️ Seed ids are `product-<slug>` — never dot-namespaced ids (Sanity hides `x.y` ids from
+  public queries). Remaining: Vercel deploy + deploy-hook webhook (docs/cms-setup.md §6),
+  invite the client as Editor at manage.sanity.io.
 - **Photo pipeline**: raw photos live in gitignored `Main Doors/` + `Room Doors/`;
   `npm run images:build` (sharp) emits 480/960 webp to `public/images/doors/` + manifest
   `src/data/images.gen.ts`. Curation lives in `src/data/photoMap.ts`; `/dev/gallery`
@@ -65,8 +68,8 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   phases, world pages, photo cards, redirect, full cart→wa.me flow, mobile. Keep it green.
 - React 19 StrictMode gotcha: rAF-throttled scroll handlers must reset their ref to 0 in
   effect cleanup (see `useTrackProgress`).
-- CMS phase is built (see above) but awaits the user running the one-time provisioning
-  in `docs/cms-setup.md` (Sanity login/project id/seed/studio deploy/webhook).
+- CMS is live; only the Vercel webhook (needs the site deployed to Vercel first) and the
+  client's Editor invite remain — docs/cms-setup.md §6.
 
 ## prototype/ (historical)
 

@@ -16,6 +16,13 @@ How products merge (see the bottom of `src/data/products.ts`):
 - "Sell online" toggle + price ⇒ size configurator + cart; otherwise the PDP
   shows **Enquire on WhatsApp**.
 
+## Provisioning status (done 2026-07-20)
+
+Steps 1–5 below are **complete**: project `sn4590lo`, public `production` dataset,
+catalogue seeded, studio live at **https://patidar-doors-admin.sanity.studio**.
+Still to do: step 6 (Vercel webhook — after the site itself is deployed to Vercel) and
+inviting the client (manage.sanity.io → Members → invite as **Editor**).
+
 ## One-time setup (you, ~15 minutes)
 
 1. **Create the Sanity project** (free tier):
