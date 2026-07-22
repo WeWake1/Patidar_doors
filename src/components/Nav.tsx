@@ -24,7 +24,7 @@ export function Nav() {
     <>
       <nav className="nav">
         <Link to="/" className="nav__brand" aria-label="Patidar Doors home">
-          <span className="diamond" aria-hidden="true" />
+          <img className="nav__mark" src="/images/logo/patidar-mark.png" alt="" aria-hidden="true" width="34" height="30" />
           <span className="nav__wordmark">
             <span className="nav__word">PATIDAR DOORS</span>
             <span className="nav__sub">by Patidar Timbers</span>

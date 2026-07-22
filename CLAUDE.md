@@ -33,6 +33,15 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   unique uuids anyway). RLS uses `exists(admins…)`, not `auth.role()` (which can be null).
   Remaining: create the client's admin user + add to `admins`, disable public signup,
   Vercel build cmd + Supabase→Vercel deploy webhook (docs §"Auto-rebuild").
+- **Brand logo**: the official mark is the "PP" monogram + "DOORS • PLYWOODS • BOARDS"
+  lockup. Vector master: `brand/patidar-logo.pdf` (source of truth for re-exports/print).
+  Web derivatives in `public/images/logo/` — full lockup `patidar-logo{,-cream}-{1200,600}.png`
+  and monogram `patidar-mark{,-cream}.png` (dark ink `--ink` for light bg, cream `#f0e3c2`
+  for dark bg; transparent PNGs keyed white→alpha from the PDF). Used: nav brand mark
+  (`.nav__mark`, dark) + wordmark text kept; footer brand (`.footer__mark`, cream);
+  favicon `public/favicon-32.png` + `apple-touch-icon.png` (cream monogram on `--deep`
+  rounded square); social `public/images/logo/og-image.png` (1200×630, wired in index.html
+  og:image/twitter:image). Replaced the old hand-drawn `favicon.svg`.
 - **Photo pipeline**: raw photos live in gitignored `Main Doors/` + `Room Doors/`;
   `npm run images:build` (sharp) emits 480/960 webp to `public/images/doors/` + manifest
   `src/data/images.gen.ts`. Curation lives in `src/data/photoMap.ts`; `/dev/gallery`

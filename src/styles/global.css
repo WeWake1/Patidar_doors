@@ -159,6 +159,7 @@ button { font-family: var(--sans); }
   text-decoration: none;
   padding: 0;
 }
+.nav__mark { height: 30px; width: auto; display: block; flex: none; }
 .nav__word { font: 600 15px var(--sans); letter-spacing: 0.32em; color: var(--ink); }
 .nav__wordmark { display: flex; flex-direction: column; gap: 1px; }
 .nav__sub {
@@ -941,6 +942,7 @@ button { font-family: var(--sans); }
   gap: 48px;
 }
 .footer__brand { display: flex; align-items: center; gap: 12px; font: 600 15px var(--sans); letter-spacing: 0.32em; color: #f0e3c2; }
+.footer__mark { height: 27px; width: auto; display: block; flex: none; }
 .footer__blurb { margin: 18px 0 0; font: 400 14px/1.7 var(--sans); max-width: 300px; }
 .footer__head {
   font: 500 12px var(--sans);
