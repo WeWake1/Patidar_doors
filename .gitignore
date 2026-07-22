@@ -35,3 +35,6 @@ studio/.env
 studio/node_modules/
 studio/dist/
 studio/.sanity/
+
+# local MCP server config (may hold tokens)
+.mcp.json

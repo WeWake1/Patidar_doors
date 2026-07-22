@@ -1,10 +1,8 @@
 import { Link } from 'react-router-dom'
 import type { Product } from '../data/products'
-import { defaultToneId, getTone } from '../data/products'
 import { getWorld } from '../data/worlds'
 import { fmtINR } from '../lib/format'
-import { DoorScene } from './DoorScene'
-import { MaterialArt } from './MaterialArt'
+import { ProductVisual } from './ProductVisual'
 
 export function ProductCard({ product }: { product: Product }) {
   const world = getWorld(product.world)
@@ -13,15 +11,11 @@ export function ProductCard({ product }: { product: Product }) {
     <Link to={`/product/${product.id}`} className="card">
       {visual.kind === 'material' ? (
         <div className="card__stage card__stage--material">
-          <MaterialArt material={visual.material} base={visual.base} dark={visual.dark} light={visual.light} className="card__material" />
+          <ProductVisual product={product} />
         </div>
       ) : (
         <div className="card__stage">
-          {visual.kind === 'photo' ? (
-            <DoorScene photo={visual.cover} hoverOpen />
-          ) : (
-            <DoorScene art={visual.art} tone={getTone(product, defaultToneId(product))} hoverOpen />
-          )}
+          <ProductVisual product={product} />
         </div>
       )}
       <div className="card__body">

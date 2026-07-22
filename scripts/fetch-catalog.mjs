@@ -1,20 +1,27 @@
 /**
- * Pull the published catalogue from Sanity into the site bundle.
+ * Pull the published catalogue from Supabase into the site bundle.
  *
- * Reads SANITY_PROJECT_ID / SANITY_DATASET (and optional SANITY_READ_TOKEN for
- * private datasets) from the environment or a root `.env` file, queries the
- * public CDN API, converts documents to the site's Product shape, and writes
- * src/data/catalog.gen.ts. With no project configured it writes an empty
- * catalog and exits 0 — the site then runs purely on the local data files.
+ * Reads VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY from the environment or a
+ * root `.env`, queries the public PostgREST API, converts rows to the site's
+ * Product shape, and writes src/data/catalog.gen.ts. With no project
+ * configured it writes an empty catalog and exits 0 — the site then runs on
+ * the local data files alone.
  *
- * Run: npm run cms:fetch   (Vercel build: `npm run cms:fetch && npm run build`)
+ * Run: npm run catalog:fetch   (Vercel build: `npm run catalog:fetch && npm run build`)
  */
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const OUT = path.join(ROOT, 'src/data/catalog.gen.ts')
-const API_VERSION = 'v2025-02-19'
+
+// Default material swatch per world, for products with no photo yet.
+const MATERIAL = {
+  timbers: { kind: 'material', material: 'timber', base: '#8A6845', dark: '#6E5236', light: '#A57F55' },
+  ply: { kind: 'material', material: 'ply', base: '#C9AE85', dark: '#8A7355', light: '#E2CDA8' },
+  wpc: { kind: 'material', material: 'wpc', base: '#B8C4C0', dark: '#7E8F8A', light: '#DDE5E2' },
+  doors: { kind: 'art', art: 'classic', tones: 'wood', defaultTone: 'teak' },
+}
 
 async function loadEnv() {
   try {
@@ -39,72 +46,72 @@ export const CMS_PRODUCTS: Product[] = []
 `
 }
 
-/** Sanity image URL → responsive ProductImage (CDN handles resize/webp). */
 function toImage(img, alt) {
-  if (!img?.url || !img.w || !img.h) return undefined
-  const v = (w) => `${img.url}?w=${w}&fm=webp&q=75`
-  return { src: v(480), srcSet: `${v(480)} 480w, ${v(960)} 960w`, alt, w: img.w, h: img.h }
+  if (!img?.src_480) return undefined
+  return {
+    src: img.src_480,
+    srcSet: `${img.src_480} 480w, ${img.src_960 ?? img.src_480} 960w`,
+    alt,
+    w: img.width ?? 0,
+    h: img.height ?? 0,
+  }
 }
 
-function toVisual(doc) {
-  const cover = toImage(doc.cover, doc.name)
+function toVisual(row) {
+  const images = (row.images ?? []).slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  const coverRow = images.find((i) => i.role === 'cover') ?? images[0]
+  const cover = toImage(coverRow, row.name)
   if (cover) {
-    const gallery = (doc.gallery ?? []).map((g) => toImage(g, doc.name)).filter(Boolean)
-    return { kind: 'photo', cover, gallery }
+    const gallery = images
+      .filter((i) => i !== coverRow)
+      .map((i) => toImage(i, row.name))
+      .filter(Boolean)
+    return { kind: 'photo', cover, gallery, presentation: row.presentation ?? 'showcase' }
   }
-  const s = doc.swatch
-  if (s?.material && s.base && s.dark && s.light) {
-    return { kind: 'material', material: s.material, base: s.base, dark: s.dark, light: s.light }
-  }
-  // no photo, no swatch — neutral door placeholder
-  return { kind: 'art', art: 'classic', tones: 'wood', defaultTone: 'teak' }
+  return MATERIAL[row.world] ?? MATERIAL.doors
 }
 
 await loadEnv()
-const projectId = process.env.SANITY_PROJECT_ID
-const dataset = process.env.SANITY_DATASET || 'production'
+const url = process.env.VITE_SUPABASE_URL
+const key = process.env.VITE_SUPABASE_ANON_KEY
 
-if (!projectId) {
-  await writeFile(OUT, emptyCatalog('No SANITY_PROJECT_ID configured — site uses local data only.'))
-  console.log('cms:fetch — no SANITY_PROJECT_ID; wrote empty catalog (local data only)')
+if (!url || !key) {
+  await writeFile(OUT, emptyCatalog('No VITE_SUPABASE_URL configured — site uses local data only.'))
+  console.log('catalog:fetch — no Supabase config; wrote empty catalog (local data only)')
   process.exit(0)
 }
 
-const query = /* groq */ `*[_type == "product" && defined(slug.current)] | order(world asc, sub asc, order asc, name asc) {
-  "id": slug.current, name, world, sub, tag, story, specs, purchasable, price, priceUnit, order,
-  "cover": cover{ "url": asset->url, "w": asset->metadata.dimensions.width, "h": asset->metadata.dimensions.height },
-  "gallery": gallery[]{ "url": asset->url, "w": asset->metadata.dimensions.width, "h": asset->metadata.dimensions.height },
-  swatch
-}`
-
-const url = `https://${projectId}.apicdn.sanity.io/${API_VERSION}/data/query/${dataset}?query=${encodeURIComponent(query)}&perspective=published`
-const headers = process.env.SANITY_READ_TOKEN ? { Authorization: `Bearer ${process.env.SANITY_READ_TOKEN}` } : {}
-const res = await fetch(url, { headers })
+const select =
+  'slug,name,world,tag,story,specs,purchasable,price,price_unit,presentation,sort_order,' +
+  'subcategory:subcategories(name,slug,sort_order),' +
+  'images:product_images(role,src_480,src_960,width,height,sort_order)'
+const query = `${url}/rest/v1/products?select=${encodeURIComponent(select)}&published=eq.true&order=world.asc,sort_order.asc,name.asc`
+const res = await fetch(query, { headers: { apikey: key, Authorization: `Bearer ${key}` } })
 if (!res.ok) {
-  console.error(`cms:fetch failed: ${res.status} ${await res.text()}`)
+  console.error(`catalog:fetch failed: ${res.status} ${await res.text()}`)
   process.exit(1)
 }
-const { result } = await res.json()
+const rows = await res.json()
 
-const products = result
-  .filter((d) => d.id && d.name && d.world && d.sub && d.tag)
-  .map((d) => ({
-    id: d.id,
-    name: d.name,
-    world: d.world,
-    sub: d.sub,
-    tag: d.tag,
-    ...(d.story ? { story: d.story } : {}),
-    specs: d.specs ?? [],
-    visual: toVisual(d),
-    purchasable: Boolean(d.purchasable && d.price),
-    ...(d.price ? { price: d.price } : {}),
-    ...(d.priceUnit ? { priceUnit: d.priceUnit } : {}),
+const products = rows
+  .filter((r) => r.slug && r.name && r.world && r.subcategory?.name && r.tag)
+  .map((r) => ({
+    id: r.slug,
+    name: r.name,
+    world: r.world,
+    sub: r.subcategory.name,
+    tag: r.tag,
+    ...(r.story ? { story: r.story } : {}),
+    specs: r.specs ?? [],
+    visual: toVisual(r),
+    purchasable: Boolean(r.purchasable && r.price),
+    ...(r.price ? { price: r.price } : {}),
+    ...(r.price_unit ? { priceUnit: r.price_unit } : {}),
   }))
 
 const ts = `/**
  * GENERATED by scripts/fetch-catalog.mjs — do not edit by hand.
- * Fetched from Sanity project ${projectId}/${dataset} at ${new Date().toISOString()}.
+ * Fetched from Supabase at ${new Date().toISOString()} (${products.length} products).
  * CMS products override local ones by id (except Designer Studio) and new
  * slugs are appended — see the merge in products.ts.
  */
@@ -113,4 +120,4 @@ import type { Product } from './products'
 export const CMS_PRODUCTS: Product[] = ${JSON.stringify(products, null, 2)}
 `
 await writeFile(OUT, ts)
-console.log(`cms:fetch — wrote ${products.length} products from ${projectId}/${dataset}`)
+console.log(`catalog:fetch — wrote ${products.length} products from Supabase`)

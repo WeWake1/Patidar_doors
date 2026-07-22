@@ -1,29 +1,30 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * Touch-device stand-in for the hover-open door: on `(hover: none)` devices a
- * single shared IntersectionObserver adds `door-scene--ajar` while the card's
- * center crosses the middle ~30% band of the viewport, so doors drift open as
- * you scroll past them. No-op on hover devices and under reduced motion.
+ * Touch-device stand-in for hover effects: on `(hover: none)` devices a shared
+ * IntersectionObserver adds an "active" class while the card's centre crosses
+ * the middle ~30% band of the viewport, so the effect (door swing, or showcase
+ * zoom) plays as you scroll past. No-op on hover devices and under reduced
+ * motion. `activeClass` defaults to the door swing.
  */
 
-let observer: IntersectionObserver | null = null
+const observers = new Map<string, IntersectionObserver>()
 
-function getObserver(): IntersectionObserver {
-  if (!observer) {
-    observer = new IntersectionObserver(
+function getObserver(activeClass: string): IntersectionObserver {
+  let obs = observers.get(activeClass)
+  if (!obs) {
+    obs = new IntersectionObserver(
       (entries) => {
-        for (const e of entries) {
-          e.target.classList.toggle('door-scene--ajar', e.isIntersecting)
-        }
+        for (const e of entries) e.target.classList.toggle(activeClass, e.isIntersecting)
       },
       { rootMargin: '-35% 0% -35% 0%' },
     )
+    observers.set(activeClass, obs)
   }
-  return observer
+  return obs
 }
 
-export function useAjarInView<T extends HTMLElement>(enabled: boolean) {
+export function useAjarInView<T extends HTMLElement>(enabled: boolean, activeClass = 'door-scene--ajar') {
   const ref = useRef<T>(null)
   useEffect(() => {
     if (!enabled) return
@@ -31,12 +32,12 @@ export function useAjarInView<T extends HTMLElement>(enabled: boolean) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const el = ref.current
     if (!el) return
-    const obs = getObserver()
+    const obs = getObserver(activeClass)
     obs.observe(el)
     return () => {
       obs.unobserve(el)
-      el.classList.remove('door-scene--ajar')
+      el.classList.remove(activeClass)
     }
-  }, [enabled])
+  }, [enabled, activeClass])
   return ref
 }

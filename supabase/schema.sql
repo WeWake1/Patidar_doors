@@ -1,0 +1,4 @@
+-- Patidar Doors — Supabase catalogue schema (applied to project yevrjgmgbguwvluemtsw).
+-- Reference copy of the migrations run via the Supabase MCP; see docs/admin-setup.md.
+-- Tables: subcategories, products (FK subcategory), product_images.
+-- RLS: anyone reads published; authenticated staff write. Buckets: catalog (public), originals (staff).

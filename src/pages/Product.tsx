@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useCart } from '../cart/CartContext'
 import { DoorScene } from '../components/DoorScene'
 import { MaterialArt } from '../components/MaterialArt'
+import { PhotoShowcase } from '../components/PhotoShowcase'
 import { ProductCard } from '../components/ProductCard'
 import { useToast } from '../components/Toast'
 import { config, whatsappLink } from '../config'
@@ -31,10 +32,17 @@ function ProductStage({ product }: { product: ProductT }) {
     )
   }
   if (visual.kind === 'photo') {
+    const swing = (visual.presentation ?? 'swing') === 'swing'
     return (
       <div className="pdp__stage">
-        <DoorScene photo={visual.cover} hoverOpen className="pdp__scene" />
-        <div className="pdp__stage-note">Hover the door — it opens.</div>
+        {swing ? (
+          <>
+            <DoorScene photo={visual.cover} hoverOpen className="pdp__scene" />
+            <div className="pdp__stage-note">Hover the door — it opens.</div>
+          </>
+        ) : (
+          <PhotoShowcase photo={visual.cover} className="pdp__scene" />
+        )}
         {visual.gallery && visual.gallery.length > 0 && (
           <div className="pdp__gallery">
             {visual.gallery.map((g) => (

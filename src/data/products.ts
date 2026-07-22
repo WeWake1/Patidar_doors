@@ -117,8 +117,16 @@ export interface ProductImage {
  */
 export type Visual =
   | { kind: 'art'; art: ArtId; tones: ToneGroup; defaultTone: string }
-  | { kind: 'photo'; cover: ProductImage; gallery?: ProductImage[] }
+  | { kind: 'photo'; cover: ProductImage; gallery?: ProductImage[]; presentation?: PhotoPresentation }
   | { kind: 'material'; material: 'timber' | 'ply' | 'wpc'; base: string; dark: string; light: string }
+
+/**
+ * How a photo card behaves on hover/scroll:
+ *  - swing:    the door-open animation (clean, straight-on, isolated leaf)
+ *  - showcase: a gentle zoom/lift (in-situ room photos that would look wrong swung)
+ * Absent ⇒ 'swing' (the original curated behaviour).
+ */
+export type PhotoPresentation = 'swing' | 'showcase'
 
 export interface Product {
   id: string
