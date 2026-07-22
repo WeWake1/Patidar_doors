@@ -66,7 +66,7 @@ function toVisual(row) {
       .filter((i) => i !== coverRow)
       .map((i) => toImage(i, row.name))
       .filter(Boolean)
-    return { kind: 'photo', cover, gallery, presentation: row.presentation ?? 'showcase' }
+    return { kind: 'photo', cover, gallery, presentation: row.presentation ?? 'swing' }
   }
   return MATERIAL[row.world] ?? MATERIAL.doors
 }

@@ -4,9 +4,8 @@
  * reference; idempotent (upsert by slug, images replaced per product).
  *
  * Migrated photos keep pointing at the committed /images/doors/* files and are
- * seeded as presentation='showcase' (safe for any shot) — promote the clean
- * straight-on ones to 'swing' in the admin, where the live preview shows how
- * each looks.
+ * seeded as presentation='swing' (the signature door-open hover). Flip any that
+ * look wrong swung to 'showcase' in the admin (live preview shows how each looks).
  *
  * Writes supabase/seed.sql — run it once via the Supabase dashboard SQL editor
  * (or `supabase db execute`). Re-running is safe (idempotent upserts).
@@ -86,7 +85,7 @@ for (const p of managed) {
   const subSel = `(select id from subcategories where world = ${q(p.world)} and slug = ${q(subSlug)})`
   lines.push(
     `insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)\n` +
-      `  values (${q(p.id)}, ${q(p.name)}, ${q(p.world)}, ${subSel}, ${q(p.tag)}, ${q(p.story ?? null)}, ${jsonb(p.specs)}, ${p.purchasable && p.price ? 'true' : 'false'}, ${price}, ${priceUnit}, 'showcase', ${order})\n` +
+      `  values (${q(p.id)}, ${q(p.name)}, ${q(p.world)}, ${subSel}, ${q(p.tag)}, ${q(p.story ?? null)}, ${jsonb(p.specs)}, ${p.purchasable && p.price ? 'true' : 'false'}, ${price}, ${priceUnit}, 'swing', ${order})\n` +
       `  on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,\n` +
       `    tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,\n` +
       `    price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;`,

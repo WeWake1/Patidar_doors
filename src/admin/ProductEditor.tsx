@@ -26,7 +26,7 @@ const BLANK: DbProduct = {
   purchasable: false,
   price: null,
   price_unit: 'leaf',
-  presentation: 'showcase',
+  presentation: 'swing',
   sort_order: 500,
   published: true,
   images: [],

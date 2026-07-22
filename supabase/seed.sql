@@ -33,7 +33,7 @@ insert into subcategories (world, name, slug, sort_order) values ('wpc', 'WPC Do
   on conflict (world, slug) do update set name = excluded.name, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('burma-teak-door', 'Burma Teak Door', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'Solid Burma teak, panel by panel — the heirloom door', null, '["Solid Burma teak throughout","Traditional panel construction","Ready for polish of your choice","Made to your frame size"]'::jsonb, false, null, 'leaf', 'showcase', 10)
+  values ('burma-teak-door', 'Burma Teak Door', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'Solid Burma teak, panel by panel — the heirloom door', null, '["Solid Burma teak throughout","Traditional panel construction","Ready for polish of your choice","Made to your frame size"]'::jsonb, false, null, 'leaf', 'swing', 10)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -46,7 +46,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'burma-teak-door'), 'gallery', '/images/doors/main-42-480.webp', '/images/doors/main-42-960.webp', 942, 1674, 2);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('burma-border-teak-door', 'Burma Border Teak Door', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'Border teak build with the classic teak face', null, '["Burma-border teak sections","Solid panel or glazed layouts","Seasoned to resist warping","Made to your frame size"]'::jsonb, false, null, 'leaf', 'showcase', 20)
+  values ('burma-border-teak-door', 'Burma Border Teak Door', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'Border teak build with the classic teak face', null, '["Burma-border teak sections","Solid panel or glazed layouts","Seasoned to resist warping","Made to your frame size"]'::jsonb, false, null, 'leaf', 'swing', 20)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -57,7 +57,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'burma-border-teak-door'), 'gallery', '/images/doors/main-10-480.webp', '/images/doors/main-10-960.webp', 926, 1540, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('teak-osc-2nds', '2nds Teak OSC Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'One-side-clear teak seconds — real teak, real value', null, '["One side clear (OSC) teak grade","Minor natural marks on reverse face","The economical way into solid teak","Limited stock, per-piece pricing"]'::jsonb, false, null, 'leaf', 'showcase', 30)
+  values ('teak-osc-2nds', '2nds Teak OSC Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'One-side-clear teak seconds — real teak, real value', null, '["One side clear (OSC) teak grade","Minor natural marks on reverse face","The economical way into solid teak","Limited stock, per-piece pricing"]'::jsonb, false, null, 'leaf', 'swing', 30)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -68,7 +68,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'teak-osc-2nds'), 'gallery', '/images/doors/main-05-480.webp', '/images/doors/main-05-960.webp', 1080, 1920, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('gana-teak-polish-door', 'Gana Teak Polish Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'Ghana teak, delivered pre-polished and ready to hang', null, '["Ghana teak, factory polish finish","No on-site polishing needed","Consistent sheen across the leaf","Made to your frame size"]'::jsonb, false, null, 'leaf', 'showcase', 40)
+  values ('gana-teak-polish-door', 'Gana Teak Polish Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'Ghana teak, delivered pre-polished and ready to hang', null, '["Ghana teak, factory polish finish","No on-site polishing needed","Consistent sheen across the leaf","Made to your frame size"]'::jsonb, false, null, 'leaf', 'swing', 40)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -79,7 +79,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'gana-teak-polish-door'), 'gallery', '/images/doors/main-02-480.webp', '/images/doors/main-02-960.webp', 1024, 1024, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('architect-teak-door', 'Architect Teak Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'Architect-spec teak doors built to drawing', null, '["Built to architect drawings & sections","Custom panels, glazing & grooves","Site-matched polish samples","Project & bulk friendly"]'::jsonb, false, null, 'leaf', 'showcase', 50)
+  values ('architect-teak-door', 'Architect Teak Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'teak-doors'), 'Architect-spec teak doors built to drawing', null, '["Built to architect drawings & sections","Custom panels, glazing & grooves","Site-matched polish samples","Project & bulk friendly"]'::jsonb, false, null, 'leaf', 'swing', 50)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -94,7 +94,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'architect-teak-door'), 'gallery', '/images/doors/main-49-480.webp', '/images/doors/main-49-960.webp', 1080, 1920, 3);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('honne-ab-door', 'Honne A & B Grade Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'hardwood-doors'), 'Dense honne hardwood doors in A and B grades', null, '["Australian/Malaysian honne builds","A & B grades to suit budget","Heavy, solid, secure feel","Made to your frame size"]'::jsonb, false, null, 'leaf', 'showcase', 60)
+  values ('honne-ab-door', 'Honne A & B Grade Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'hardwood-doors'), 'Dense honne hardwood doors in A and B grades', null, '["Australian/Malaysian honne builds","A & B grades to suit budget","Heavy, solid, secure feel","Made to your frame size"]'::jsonb, false, null, 'leaf', 'swing', 60)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -105,7 +105,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'honne-ab-door'), 'gallery', '/images/doors/main-33-480.webp', '/images/doors/main-33-960.webp', 1080, 1920, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('mahagony-ab-door', 'Mahagony A & B Grade Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'hardwood-doors'), 'Rich mahogany doors, two grades, one look', null, '["Plantation mahogany construction","A & B grades available","Takes deep polish beautifully","Made to your frame size"]'::jsonb, false, null, 'leaf', 'showcase', 70)
+  values ('mahagony-ab-door', 'Mahagony A & B Grade Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'hardwood-doors'), 'Rich mahogany doors, two grades, one look', null, '["Plantation mahogany construction","A & B grades available","Takes deep polish beautifully","Made to your frame size"]'::jsonb, false, null, 'leaf', 'swing', 70)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -116,7 +116,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'mahagony-ab-door'), 'gallery', '/images/doors/main-22-480.webp', '/images/doors/main-22-960.webp', 720, 960, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('veneer-designer-door', 'Veneer Designer Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'veneer-doors'), 'Natural veneer faces in designer layouts', null, '["Natural wood veneer skins","Designer groove & inlay patterns","Solid engineered core","Polish or PU finish options"]'::jsonb, false, null, 'leaf', 'showcase', 80)
+  values ('veneer-designer-door', 'Veneer Designer Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'veneer-doors'), 'Natural veneer faces in designer layouts', null, '["Natural wood veneer skins","Designer groove & inlay patterns","Solid engineered core","Polish or PU finish options"]'::jsonb, false, null, 'leaf', 'swing', 80)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -127,7 +127,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'veneer-designer-door'), 'gallery', '/images/doors/main-13-480.webp', '/images/doors/main-13-960.webp', 1024, 1536, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('veneer-cng-door', 'Veneer CNG Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'veneer-doors'), 'CNC-carved grooves through natural veneer', null, '["CNC-routed face patterns","Natural veneer over solid core","Crisp, repeatable detailing","Made to your frame size"]'::jsonb, false, null, 'leaf', 'showcase', 90)
+  values ('veneer-cng-door', 'Veneer CNG Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'veneer-doors'), 'CNC-carved grooves through natural veneer', null, '["CNC-routed face patterns","Natural veneer over solid core","Crisp, repeatable detailing","Made to your frame size"]'::jsonb, false, null, 'leaf', 'swing', 90)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -140,7 +140,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'veneer-cng-door'), 'gallery', '/images/doors/main-38-480.webp', '/images/doors/main-38-960.webp', 271, 500, 2);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('laminate-cng-door', 'Laminate CNG Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'laminate-coated'), 'CNC pattern work on tough laminate faces', null, '["CNC-routed laminate face","Scratch & stain resistant","Solid engineered core","Wide shade card available"]'::jsonb, false, null, 'leaf', 'showcase', 100)
+  values ('laminate-cng-door', 'Laminate CNG Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'laminate-coated'), 'CNC pattern work on tough laminate faces', null, '["CNC-routed laminate face","Scratch & stain resistant","Solid engineered core","Wide shade card available"]'::jsonb, false, null, 'leaf', 'swing', 100)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -151,7 +151,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'laminate-cng-door'), 'gallery', '/images/doors/room-45-480.webp', '/images/doors/room-45-960.webp', 1000, 1000, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('laminate-designer-door', 'Laminate Designer Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'laminate-coated'), 'Designer laminates — grain, colour and texture', null, '["1 mm high-pressure laminate","Wood, solid & textured shades","Moisture-guard edge banding","Made to your frame size"]'::jsonb, false, null, 'leaf', 'showcase', 110)
+  values ('laminate-designer-door', 'Laminate Designer Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'laminate-coated'), 'Designer laminates — grain, colour and texture', null, '["1 mm high-pressure laminate","Wood, solid & textured shades","Moisture-guard edge banding","Made to your frame size"]'::jsonb, false, null, 'leaf', 'swing', 110)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -164,7 +164,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'laminate-designer-door'), 'gallery', '/images/doors/room-35-480.webp', '/images/doors/room-35-960.webp', 808, 1610, 2);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('microcoat-door', 'Lamination / MicroCoated Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'laminate-coated'), 'Micro-coated skins — smooth, sealed, economical', null, '["Micro-lamination coated face","Uniform finish, easy to clean","Economical for full projects","Multiple shades available"]'::jsonb, false, null, 'leaf', 'showcase', 120)
+  values ('microcoat-door', 'Lamination / MicroCoated Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'laminate-coated'), 'Micro-coated skins — smooth, sealed, economical', null, '["Micro-lamination coated face","Uniform finish, easy to clean","Economical for full projects","Multiple shades available"]'::jsonb, false, null, 'leaf', 'swing', 120)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -175,7 +175,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'microcoat-door'), 'gallery', '/images/doors/room-24-480.webp', '/images/doors/room-24-960.webp', 2667, 4292, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('primer-door', 'Primer Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'laminate-coated'), 'Primer-finished flush doors, ready for your paint', null, '["Factory primer coat, paint-ready","Smooth sanded flush face","Pick any site-painted colour","Project & bulk friendly"]'::jsonb, false, null, 'leaf', 'showcase', 130)
+  values ('primer-door', 'Primer Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'laminate-coated'), 'Primer-finished flush doors, ready for your paint', null, '["Factory primer coat, paint-ready","Smooth sanded flush face","Pick any site-painted colour","Project & bulk friendly"]'::jsonb, false, null, 'leaf', 'swing', 130)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -186,7 +186,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'primer-door'), 'gallery', '/images/doors/room-22-480.webp', '/images/doors/room-22-960.webp', 1080, 1350, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('korean-membrane-door', 'Korean Membrane Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'membrane-doors'), 'Imported Korean membrane — deeper texture, tighter wrap', null, '["Imported Korean membrane foil","Seamless wrap over routed face","Rich texture & matte options","Made to your frame size"]'::jsonb, false, null, 'leaf', 'showcase', 140)
+  values ('korean-membrane-door', 'Korean Membrane Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'membrane-doors'), 'Imported Korean membrane — deeper texture, tighter wrap', null, '["Imported Korean membrane foil","Seamless wrap over routed face","Rich texture & matte options","Made to your frame size"]'::jsonb, false, null, 'leaf', 'swing', 140)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -199,7 +199,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'korean-membrane-door'), 'gallery', '/images/doors/room-28-480.webp', '/images/doors/room-28-960.webp', 2147, 4000, 2);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('membrane-door', 'Membrane Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'membrane-doors'), 'Seamless membrane-wrapped designs in many shades', null, '["Membrane foil over MDF face","Seamless, groove-friendly wrap","Wide design & shade range","Made to your frame size"]'::jsonb, false, null, 'leaf', 'showcase', 150)
+  values ('membrane-door', 'Membrane Doors', 'doors', (select id from subcategories where world = 'doors' and slug = 'membrane-doors'), 'Seamless membrane-wrapped designs in many shades', null, '["Membrane foil over MDF face","Seamless, groove-friendly wrap","Wide design & shade range","Made to your frame size"]'::jsonb, false, null, 'leaf', 'swing', 150)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -214,127 +214,127 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'membrane-door'), 'gallery', '/images/doors/room-05-480.webp', '/images/doors/room-05-960.webp', 2642, 5373, 3);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('burmese-teak', 'Burmese Teak', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'teak'), 'The benchmark — tight grain, natural oils, decades of life', null, '["Imported Burma teak logs, sawn in-house","High natural oil content — termite & rot resistant","Ideal for main doors, frames & carving","Sold per cubic foot, cut to order"]'::jsonb, false, null, 'cft', 'showcase', 160)
+  values ('burmese-teak', 'Burmese Teak', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'teak'), 'The benchmark — tight grain, natural oils, decades of life', null, '["Imported Burma teak logs, sawn in-house","High natural oil content — termite & rot resistant","Ideal for main doors, frames & carving","Sold per cubic foot, cut to order"]'::jsonb, false, null, 'cft', 'swing', 160)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('burma-border-teak', 'Burma Border Teak', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'teak'), 'Border-grade Burma teak — the classic look, keener price', null, '["Burma-border teak, graded and seasoned","Straight grain, warm golden tone","Doors, frames, windows & furniture","Sold per cubic foot, cut to order"]'::jsonb, false, null, 'cft', 'showcase', 170)
+  values ('burma-border-teak', 'Burma Border Teak', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'teak'), 'Border-grade Burma teak — the classic look, keener price', null, '["Burma-border teak, graded and seasoned","Straight grain, warm golden tone","Doors, frames, windows & furniture","Sold per cubic foot, cut to order"]'::jsonb, false, null, 'cft', 'swing', 170)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('gana-teak', 'Gana Teak Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'teak'), 'African teak with bold figure — strong and stable', null, '["Ghana teak, kiln-seasoned","Pronounced grain figure","Good stability across seasons","Sold per cubic foot, cut to order"]'::jsonb, false, null, 'cft', 'showcase', 180)
+  values ('gana-teak', 'Gana Teak Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'teak'), 'African teak with bold figure — strong and stable', null, '["Ghana teak, kiln-seasoned","Pronounced grain figure","Good stability across seasons","Sold per cubic foot, cut to order"]'::jsonb, false, null, 'cft', 'swing', 180)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('commercial-teak', 'Commercial Teak Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'teak'), 'Everyday teak for frames and general woodwork', null, '["Budget-friendly teak grade","Frames, shutters & general carpentry","Machined to your sizes","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'showcase', 190)
+  values ('commercial-teak', 'Commercial Teak Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'teak'), 'Everyday teak for frames and general woodwork', null, '["Budget-friendly teak grade","Frames, shutters & general carpentry","Machined to your sizes","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'swing', 190)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('australian-honne', 'Australian Honne Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'honne'), 'Dense reddish hardwood — takes polish beautifully', null, '["Imported Australian honne","High density, excellent screw-holding","Doors, frames & heavy sections","Sold per cubic foot, cut to order"]'::jsonb, false, null, 'cft', 'showcase', 200)
+  values ('australian-honne', 'Australian Honne Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'honne'), 'Dense reddish hardwood — takes polish beautifully', null, '["Imported Australian honne","High density, excellent screw-holding","Doors, frames & heavy sections","Sold per cubic foot, cut to order"]'::jsonb, false, null, 'cft', 'swing', 200)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('malaysian-honne', 'Malaysian Honne Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'honne'), 'Workhorse hardwood for frames and structure', null, '["Malaysian honne (kapur family)","Uniform texture, easy to machine","Frames, beams & windows","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'showcase', 210)
+  values ('malaysian-honne', 'Malaysian Honne Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'honne'), 'Workhorse hardwood for frames and structure', null, '["Malaysian honne (kapur family)","Uniform texture, easy to machine","Frames, beams & windows","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'swing', 210)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('redsal', 'Redsal Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'sal'), 'Load-bearing red sal — the builder’s hardwood', null, '["Seasoned red sal","Very high strength & durability","Structural work, frames, rafters","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'showcase', 220)
+  values ('redsal', 'Redsal Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'sal'), 'Load-bearing red sal — the builder’s hardwood', null, '["Seasoned red sal","Very high strength & durability","Structural work, frames, rafters","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'swing', 220)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('whitesal', 'Whitesal Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'sal'), 'Light-toned sal for frames and utility work', null, '["Seasoned white sal","Straight sections, economical","Frames & general construction","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'showcase', 230)
+  values ('whitesal', 'Whitesal Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'sal'), 'Light-toned sal for frames and utility work', null, '["Seasoned white sal","Straight sections, economical","Frames & general construction","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'swing', 230)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('mahagony', 'Mahagony Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'hardwood-neem'), 'Deep reddish-brown, fine grain — furniture royalty', null, '["Plantation mahogany, kiln-dried","Fine, even grain — carves & polishes well","Furniture, panelling, doors","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'showcase', 240)
+  values ('mahagony', 'Mahagony Wood', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'hardwood-neem'), 'Deep reddish-brown, fine grain — furniture royalty', null, '["Plantation mahogany, kiln-dried","Fine, even grain — carves & polishes well","Furniture, panelling, doors","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'swing', 240)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('neem-premium', 'Neem Premium', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'hardwood-neem'), 'Naturally pest-resistant, select grade', null, '["Select-grade seasoned neem","Naturally insect-repellent timber","Doors, frames & shelving","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'showcase', 250)
+  values ('neem-premium', 'Neem Premium', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'hardwood-neem'), 'Naturally pest-resistant, select grade', null, '["Select-grade seasoned neem","Naturally insect-repellent timber","Doors, frames & shelving","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'swing', 250)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('neem-regular', 'Neem Regular', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'hardwood-neem'), 'Honest, economical hardwood for everyday work', null, '["Standard-grade seasoned neem","Economical all-rounder","Utility doors & frames","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'showcase', 260)
+  values ('neem-regular', 'Neem Regular', 'timbers', (select id from subcategories where world = 'timbers' and slug = 'hardwood-neem'), 'Honest, economical hardwood for everyday work', null, '["Standard-grade seasoned neem","Economical all-rounder","Utility doors & frames","Sold per cubic foot"]'::jsonb, false, null, 'cft', 'swing', 260)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('xtreme-ply', 'XTREME Ply & B/B', 'ply', (select id from subcategories where world = 'ply' and slug = 'plywood'), 'Flagship ply and blockboard for hard-working interiors', null, '["Plywood + blockboard range","Dense, gap-free core","Uniform thickness, low warp","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'showcase', 270)
+  values ('xtreme-ply', 'XTREME Ply & B/B', 'ply', (select id from subcategories where world = 'ply' and slug = 'plywood'), 'Flagship ply and blockboard for hard-working interiors', null, '["Plywood + blockboard range","Dense, gap-free core","Uniform thickness, low warp","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'swing', 270)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('xplor-ply', 'XPLOR Ply', 'ply', (select id from subcategories where world = 'ply' and slug = 'plywood'), 'Dependable commercial ply for everyday furniture', null, '["Commercial MR grade","Smooth calibrated faces","Furniture & panelling","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'showcase', 280)
+  values ('xplor-ply', 'XPLOR Ply', 'ply', (select id from subcategories where world = 'ply' and slug = 'plywood'), 'Dependable commercial ply for everyday furniture', null, '["Commercial MR grade","Smooth calibrated faces","Furniture & panelling","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'swing', 280)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('xlent-ply', 'XLENT Ply', 'ply', (select id from subcategories where world = 'ply' and slug = 'plywood'), 'Step-up ply with tighter cores and cleaner faces', null, '["Premium MR grade","Screw-holding certified","Kitchens & wardrobes","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'showcase', 290)
+  values ('xlent-ply', 'XLENT Ply', 'ply', (select id from subcategories where world = 'ply' and slug = 'plywood'), 'Step-up ply with tighter cores and cleaner faces', null, '["Premium MR grade","Screw-holding certified","Kitchens & wardrobes","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'swing', 290)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('xlent-710-ply', 'XLENT 710 Ply', 'ply', (select id from subcategories where world = 'ply' and slug = '710-marine-grade'), 'Boiling-waterproof 710 for kitchens and bathrooms', null, '["IS:710 BWP marine grade","72-hour boil tested","Kitchens, baths, exteriors","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'showcase', 300)
+  values ('xlent-710-ply', 'XLENT 710 Ply', 'ply', (select id from subcategories where world = 'ply' and slug = '710-marine-grade'), 'Boiling-waterproof 710 for kitchens and bathrooms', null, '["IS:710 BWP marine grade","72-hour boil tested","Kitchens, baths, exteriors","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'swing', 300)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('xtron-calibrated', 'XTRON Calibrated Ply', 'ply', (select id from subcategories where world = 'ply' and slug = 'calibrated'), 'Machine-calibrated thickness for flawless laminates', null, '["European calibration line","±0.2 mm thickness tolerance","Zero undulation under laminate","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'showcase', 310)
+  values ('xtron-calibrated', 'XTRON Calibrated Ply', 'ply', (select id from subcategories where world = 'ply' and slug = 'calibrated'), 'Machine-calibrated thickness for flawless laminates', null, '["European calibration line","±0.2 mm thickness tolerance","Zero undulation under laminate","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'swing', 310)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('xtron-club-prime-710', 'XTRON CLUB PRIME 710', 'ply', (select id from subcategories where world = 'ply' and slug = '710-marine-grade'), 'Club-grade 710 with hardwood throughout', null, '["IS:710 BWP, full hardwood core","Chemically treated, borer-proof","Heavy-duty furniture & marine use","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'showcase', 320)
+  values ('xtron-club-prime-710', 'XTRON CLUB PRIME 710', 'ply', (select id from subcategories where world = 'ply' and slug = '710-marine-grade'), 'Club-grade 710 with hardwood throughout', null, '["IS:710 BWP, full hardwood core","Chemically treated, borer-proof","Heavy-duty furniture & marine use","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'swing', 320)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('xtron-signature-710', 'XTRON SIGNATURE 710', 'ply', (select id from subcategories where world = 'ply' and slug = '710-marine-grade'), 'The signature sheet — our best core, our best face', null, '["Flagship IS:710 BWP grade","A+ faces both sides","Lifetime warranty programme","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'showcase', 330)
+  values ('xtron-signature-710', 'XTRON SIGNATURE 710', 'ply', (select id from subcategories where world = 'ply' and slug = '710-marine-grade'), 'The signature sheet — our best core, our best face', null, '["Flagship IS:710 BWP grade","A+ faces both sides","Lifetime warranty programme","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'swing', 330)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('xtorq-bb', 'XTORQ B/B Pine & H/W', 'ply', (select id from subcategories where world = 'ply' and slug = 'blockboard'), 'Pine and hardwood blockboards that stay dead straight', null, '["Seasoned pine / hardwood battens","No sag on long spans","Wardrobe shutters & panels","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'showcase', 340)
+  values ('xtorq-bb', 'XTORQ B/B Pine & H/W', 'ply', (select id from subcategories where world = 'ply' and slug = 'blockboard'), 'Pine and hardwood blockboards that stay dead straight', null, '["Seasoned pine / hardwood battens","No sag on long spans","Wardrobe shutters & panels","Standard 8′×4′ sheets"]'::jsonb, false, null, 'sheet', 'swing', 340)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('wpc-sheets', 'WPC Solid Sheets', 'wpc', (select id from subcategories where world = 'wpc' and slug = 'wpc-sheets'), '100% waterproof boards — 6 mm to 18 mm, two densities', null, '["Thicknesses: 18 / 16 / 12 / 8 / 6 mm","Densities: 0.45 & 0.55","Waterproof, termite-proof, fire-retardant","Screws, routs & paints like wood"]'::jsonb, false, null, 'sheet', 'showcase', 350)
+  values ('wpc-sheets', 'WPC Solid Sheets', 'wpc', (select id from subcategories where world = 'wpc' and slug = 'wpc-sheets'), '100% waterproof boards — 6 mm to 18 mm, two densities', null, '["Thicknesses: 18 / 16 / 12 / 8 / 6 mm","Densities: 0.45 & 0.55","Waterproof, termite-proof, fire-retardant","Screws, routs & paints like wood"]'::jsonb, false, null, 'sheet', 'swing', 350)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('wpc-cnc-door', '28 mm CNC WPC Doors', 'wpc', (select id from subcategories where world = 'wpc' and slug = 'wpc-doors'), 'CNC-carved WPC doors — zero swelling, ever', null, '["28 mm solid WPC leaf","CNC-carved face designs","Bathroom & utility safe — 100% waterproof","Paint or PU finish options"]'::jsonb, false, null, 'leaf', 'showcase', 360)
+  values ('wpc-cnc-door', '28 mm CNC WPC Doors', 'wpc', (select id from subcategories where world = 'wpc' and slug = 'wpc-doors'), 'CNC-carved WPC doors — zero swelling, ever', null, '["28 mm solid WPC leaf","CNC-carved face designs","Bathroom & utility safe — 100% waterproof","Paint or PU finish options"]'::jsonb, false, null, 'leaf', 'swing', 360)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
@@ -345,7 +345,7 @@ insert into product_images (product_id, role, src_480, src_960, width, height, s
   values ((select id from products where slug = 'wpc-cnc-door'), 'gallery', '/images/doors/room-23-480.webp', '/images/doors/room-23-960.webp', 3808, 5704, 1);
 
 insert into products (slug, name, world, subcategory_id, tag, story, specs, purchasable, price, price_unit, presentation, sort_order)
-  values ('wpc-digital-veneer-door', 'Digital Veneer WPC Doors', 'wpc', (select id from subcategories where world = 'wpc' and slug = 'wpc-doors'), '28 & 30 mm WPC with photo-real digital veneer faces', null, '["28 mm & 30 mm leaves","Digital-printed veneer textures","Waterproof core, UV-stable print","Wood looks without wood worries"]'::jsonb, false, null, 'leaf', 'showcase', 370)
+  values ('wpc-digital-veneer-door', 'Digital Veneer WPC Doors', 'wpc', (select id from subcategories where world = 'wpc' and slug = 'wpc-doors'), '28 & 30 mm WPC with photo-real digital veneer faces', null, '["28 mm & 30 mm leaves","Digital-printed veneer textures","Waterproof core, UV-stable print","Wood looks without wood worries"]'::jsonb, false, null, 'leaf', 'swing', 370)
   on conflict (slug) do update set name = excluded.name, world = excluded.world, subcategory_id = excluded.subcategory_id,
     tag = excluded.tag, story = excluded.story, specs = excluded.specs, purchasable = excluded.purchasable,
     price = excluded.price, price_unit = excluded.price_unit, sort_order = excluded.sort_order;
