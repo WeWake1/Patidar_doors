@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { CartProvider } from './cart/CartContext'
 import { CartDrawer } from './components/CartDrawer'
@@ -40,36 +40,59 @@ function WorldRoute({ id }: { id: string }) {
   return <WorldPage key={id} world={world} />
 }
 
+// The admin is a separate, auth-gated app — lazy-loaded so supabase-js and the
+// cropper stay out of the public store bundle.
+const AdminApp = lazy(() => import('./admin/AdminApp'))
+
+/** The public storefront, with its nav/footer/cart chrome. */
+function Storefront() {
+  return (
+    <>
+      <ScrollToTop />
+      <Nav />
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/timbers" element={<WorldRoute id="timbers" />} />
+          <Route path="/doors" element={<WorldRoute id="doors" />} />
+          <Route path="/ply" element={<WorldRoute id="ply" />} />
+          <Route path="/wpc" element={<WorldRoute id="wpc" />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/product/:id" element={<Product />} />
+          <Route path="/door/:id" element={<LegacyDoorRedirect />} />
+          <Route path="/visit" element={<Visit />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order-confirmed" element={<OrderConfirmed />} />
+          <Route path="/faq" element={<Faq />} />
+          <Route path="/policies" element={<Policies />} />
+          {import.meta.env.DEV && <Route path="/dev/gallery" element={<DevGallery />} />}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      <Footer />
+      <CartDrawer />
+      <WhatsAppFloat />
+    </>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
         <CartProvider>
           <DoorArtDefs />
-          <ScrollToTop />
-          <Nav />
-          <main>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/timbers" element={<WorldRoute id="timbers" />} />
-              <Route path="/doors" element={<WorldRoute id="doors" />} />
-              <Route path="/ply" element={<WorldRoute id="ply" />} />
-              <Route path="/wpc" element={<WorldRoute id="wpc" />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/product/:id" element={<Product />} />
-              <Route path="/door/:id" element={<LegacyDoorRedirect />} />
-              <Route path="/visit" element={<Visit />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/order-confirmed" element={<OrderConfirmed />} />
-              <Route path="/faq" element={<Faq />} />
-              <Route path="/policies" element={<Policies />} />
-              {import.meta.env.DEV && <Route path="/dev/gallery" element={<DevGallery />} />}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Footer />
-          <CartDrawer />
-          <WhatsAppFloat />
+          <Routes>
+            <Route
+              path="/admin/*"
+              element={
+                <Suspense fallback={<div className="ax-pad">Loading admin…</div>}>
+                  <AdminApp />
+                </Suspense>
+              }
+            />
+            <Route path="*" element={<Storefront />} />
+          </Routes>
         </CartProvider>
       </ToastProvider>
     </BrowserRouter>

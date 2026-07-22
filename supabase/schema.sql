@@ -1,4 +1,20 @@
--- Patidar Doors — Supabase catalogue schema (applied to project yevrjgmgbguwvluemtsw).
--- Reference copy of the migrations run via the Supabase MCP; see docs/admin-setup.md.
--- Tables: subcategories, products (FK subcategory), product_images.
--- RLS: anyone reads published; authenticated staff write. Buckets: catalog (public), originals (staff).
+-- Patidar Doors — Supabase catalogue schema (project yevrjgmgbguwvluemtsw).
+-- Reference copy of the migrations applied via the Supabase MCP. See docs/admin-setup.md.
+--
+-- Tables:
+--   subcategories (world, name, slug, sort_order) — unique(world, slug)
+--   products (slug unique, world, subcategory_id FK, tag, story, specs jsonb,
+--             purchasable, price, price_unit, presentation swing|showcase,
+--             sort_order, published) + touch_updated_at trigger
+--   product_images (product_id FK cascade, role cover|gallery, src_480, src_960,
+--                   width, height, original_path, crop jsonb, sort_order)
+--   admins (user_id FK auth.users) — write allow-list
+--
+-- Storage buckets: catalog (public), originals (private).
+--
+-- RLS: anyone reads published products + all subcategories/images; only users in
+-- `admins` may write any catalogue table or storage bucket. Policies use
+-- exists(select 1 from admins where user_id = auth.uid()) — NOT auth.role().
+--
+-- Full DDL was applied as migrations; use `npm run catalog:seed` → supabase/seed.sql
+-- to (re)populate data.

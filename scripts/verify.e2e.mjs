@@ -131,14 +131,19 @@ await shot('05b-world-timbers')
 
 await step('photo doors render real images', async () => {
   await page.goto(BASE + '/doors', { waitUntil: 'networkidle' })
-  // local pipeline images or Sanity CDN images, depending on CMS state
-  const n = await page.locator('.card img[src*="/images/doors/"], .card img[src*="cdn.sanity.io"]').count()
+  // local pipeline images or Supabase storage images, depending on CMS state
+  const n = await page.locator('.card img[src*="/images/doors/"], .card img[src*="supabase.co"]').count()
   if (n < 10) throw new Error(`expected ≥10 photo cards, got ${n}`)
 })
 
 await step('visit page renders', async () => {
   await page.goto(BASE + '/visit', { waitUntil: 'networkidle' })
   await page.waitForSelector('.visit__grid')
+})
+
+await step('admin login screen loads (auth-gated)', async () => {
+  await page.goto(BASE + '/admin', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.ax-login__box', { timeout: 10000 })
 })
 
 /* ── PRODUCT ───────────────────────────────────────────── */

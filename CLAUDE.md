@@ -13,24 +13,26 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   `[data-world]` token scopes (`--w-bg/-ink/-accent/…`) in `src/styles/worlds.css`.
   Worlds/subcategories defined in `src/data/worlds.ts`.
 - **Data model** (`src/data/products.ts`): `Product.visual` is a union —
-  `art` (SVG door + tone group), `photo` (real image, gets hover-open door treatment),
-  `material` (generated swatch in `MaterialArt.tsx` for timber/ply/wpc). `purchasable`
-  + `price` ⇒ size(+finish if art) configurator & cart; otherwise "Enquire on WhatsApp"
-  PDP. Legacy `/door/:id` redirects to `/product/:id`.
-- **CMS (Sanity)** — the client's admin dashboard. `studio/` is the Sanity Studio
-  (own package.json/node_modules, schema in `studio/schemas/product.ts`, desk grouped by
-  world). Build-time integration, site stays static: `npm run cms:fetch` writes published
-  docs → `src/data/catalog.gen.ts` (committed; empty when unconfigured) and the merge at
-  the bottom of products.ts lets CMS docs override local ids (never the 12 Designer
-  Studio ids) and append new slugs — WorldPage auto-appends client-invented `sub`
-  sections. `npm run cms:seed` pushes the local catalogue + curated images (idempotent,
-  needs `SANITY_WRITE_TOKEN`). Env in root `.env` / `studio/.env` (both gitignored,
-  `.example` files committed). Provisioned 2026-07-20: project
-  `sn4590lo`, dataset `production` (public), seeded (37 products/42 images), studio live at
-  https://patidar-doors-admin.sanity.studio (appId pinned in studio/sanity.cli.ts).
-  ⚠️ Seed ids are `product-<slug>` — never dot-namespaced ids (Sanity hides `x.y` ids from
-  public queries). Remaining: Vercel deploy + deploy-hook webhook (docs/cms-setup.md §6),
-  invite the client as Editor at manage.sanity.io.
+  `art` (SVG door + tone group), `photo` (real image; `presentation: 'swing'`
+  door-opens-animation vs `'showcase'` zoom/lift for in-situ shots), `material`
+  (generated swatch in `MaterialArt.tsx` for timber/ply/wpc). `ProductVisual.tsx` is the
+  single map visual→component (cards, PDP, admin preview all use it). `PhotoShowcase.tsx`
+  = the non-swinging photo treatment. `purchasable` + `price` ⇒ size(+finish if art)
+  configurator & cart; otherwise "Enquire on WhatsApp" PDP. Legacy `/door/:id` → `/product/:id`.
+- **CMS = Supabase + custom `/admin`** (replaced Sanity 2026-07-22 — the generic studio
+  gave no crop control, so door photos looked wrong swinging). Project `yevrjgmgbguwvluemtsw`.
+  Tables `subcategories`/`products`(FK→subcategory)/`product_images`, `admins` allow-list;
+  buckets `catalog`(public)/`originals`(private); RLS = anyone reads published, only
+  allow-listed admins write. Admin app in `src/admin/` (lazy-loaded under `/admin`, off the
+  public bundle; Supabase auth; product editor with react-easy-crop → canvas webp 480/960
+  → Storage; live `ProductVisual` preview). Build-time still static: `npm run catalog:fetch`
+  → `catalog.gen.ts` (same merge — Designer Studio protected, new slugs/sections append).
+  `npm run catalog:seed` writes `supabase/seed.sql`. Env: root `.env` (VITE_SUPABASE_URL,
+  VITE_SUPABASE_ANON_KEY = publishable key). Setup/security/webhook in `docs/admin-setup.md`.
+  ⚠️ storage uploads must NOT pass `upsert:true` (hits the UPDATE policy → RLS 403; paths are
+  unique uuids anyway). RLS uses `exists(admins…)`, not `auth.role()` (which can be null).
+  Remaining: create the client's admin user + add to `admins`, disable public signup,
+  Vercel build cmd + Supabase→Vercel deploy webhook (docs §"Auto-rebuild").
 - **Photo pipeline**: raw photos live in gitignored `Main Doors/` + `Room Doors/`;
   `npm run images:build` (sharp) emits 480/960 webp to `public/images/doors/` + manifest
   `src/data/images.gen.ts`. Curation lives in `src/data/photoMap.ts`; `/dev/gallery`
@@ -68,8 +70,9 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   phases, world pages, photo cards, redirect, full cart→wa.me flow, mobile. Keep it green.
 - React 19 StrictMode gotcha: rAF-throttled scroll handlers must reset their ref to 0 in
   effect cleanup (see `useTrackProgress`).
-- CMS is live; only the Vercel webhook (needs the site deployed to Vercel first) and the
-  client's Editor invite remain — docs/cms-setup.md §6.
+- Admin backend built + verified end-to-end (create/upload/crop/save into Supabase);
+  remaining go-live steps in docs/admin-setup.md (client user + admins allow-list, disable
+  signup, Vercel webhook).
 
 ## prototype/ (historical)
 

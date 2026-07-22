@@ -1,0 +1,76 @@
+# Admin setup — Supabase + the /admin dashboard
+
+The client manages the catalogue in a **custom admin at `/admin`** (part of this
+site, lazy-loaded, auth-gated). It's backed by **Supabase** (Postgres + Storage +
+Auth). The public site stays static: at build time `npm run catalog:fetch` pulls
+the published catalogue into `src/data/catalog.gen.ts`, and a webhook rebuilds
+the site whenever the client saves.
+
+Provisioned project: `yevrjgmgbguwvluemtsw` (org/project created by you; move to
+the client's account later). Schema + policies live in `supabase/schema.sql` /
+`supabase/seed.sql` as reference; they were applied via migrations.
+
+## How it fits together
+
+- **Tables** — `subcategories`, `products` (FK → subcategory, so renaming a
+  section cascades), `product_images`. `admins` allow-lists who may write.
+- **Storage** — `catalog` (public, the processed webp the site loads) and
+  `originals` (private, raw uploads kept for re-cropping).
+- **RLS** — anyone reads published products; **only allow-listed admins write**.
+- **Presentation** — each photo product is *swing* (door-opens animation, for
+  clean straight-on leaf shots) or *showcase* (gentle zoom, for in-situ room
+  photos). The admin's live preview shows both so the client picks what looks right.
+- **Merge** (`src/data/products.ts`) — a CMS product replaces the local one of the
+  same slug; new slugs/sections append; the 12 Designer Studio SVG doors are never
+  overridden.
+
+## One-time setup
+
+1. **Env** — copy `.env.example` → `.env`:
+   ```
+   VITE_SUPABASE_URL=https://yevrjgmgbguwvluemtsw.supabase.co
+   VITE_SUPABASE_ANON_KEY=sb_publishable_…   # publishable key, safe to ship
+   ```
+   (Find keys at supabase.com/dashboard → project → Settings → API.)
+
+2. **Create the admin login** — supabase.com/dashboard → Authentication → Users →
+   **Add user** → email + password, tick **Auto Confirm**.
+
+3. **Allow-list that user to write** — Authentication → Users → copy their **User
+   UID**, then SQL editor:
+   ```sql
+   insert into public.admins (user_id, note) values ('THE-USER-UID', 'owner');
+   ```
+   Until a user is in `admins`, the dashboard loads but saving is blocked (secure
+   default).
+
+4. **🔒 Disable public signup** — Authentication → Providers → Email → turn OFF
+   "Allow new users to sign up". The site has no signup UI; this closes the raw
+   endpoint so nobody can self-register.
+
+5. **Sign in** at `/admin` and confirm you can add/edit a product.
+
+## Auto-rebuild on save (Vercel)
+
+1. Vercel → project → Settings → Environment Variables: add `VITE_SUPABASE_URL`
+   and `VITE_SUPABASE_ANON_KEY`.
+2. Settings → Build & Development → Build Command:
+   `npm run catalog:fetch && npm run build`.
+3. Settings → Git → Deploy Hooks → create one, copy the URL.
+4. Supabase → Database → Webhooks → create a webhook on `products`,
+   `subcategories`, `product_images` (insert/update/delete) that POSTs to that
+   Deploy Hook URL. Saving in the admin now redeploys the site in ~a minute.
+
+## Day-to-day (the client)
+
+`/admin` → sign in → **+ New product** → name, world, section (or **+ New**
+section inline), one-liner, specs → **+ Add main photo** → drop a photo, frame it
+to the door shape in the cropper (live preview beside it) → pick Swing/Showcase →
+**Save**. The site updates itself.
+
+## Re-seeding / reference
+
+`npm run catalog:seed` regenerates `supabase/seed.sql` from the local data (idempotent
+upserts) — run it in the Supabase SQL editor if you ever need to reset. Migrated
+photos point at the committed `/images/doors/*` files; new admin uploads live in
+Supabase Storage.
