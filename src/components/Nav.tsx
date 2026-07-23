@@ -45,7 +45,22 @@ export function Nav() {
 
         <div className="nav__actions">
           <button type="button" className="nav__cart" onClick={openCart} aria-label={`Open cart, ${count} items`}>
-            <span>Cart</span>
+            <svg
+              className="nav__cart-icon"
+              viewBox="0 0 24 24"
+              width="17"
+              height="17"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6 8h12l-1 11.2a1.6 1.6 0 0 1-1.6 1.4H8.6A1.6 1.6 0 0 1 7 19.2L6 8Z" />
+              <path d="M9 8.5V6a3 3 0 0 1 6 0v2.5" />
+            </svg>
+            <span className="nav__cart-label">Cart</span>
             <span className="nav__badge">{count}</span>
           </button>
           <button
