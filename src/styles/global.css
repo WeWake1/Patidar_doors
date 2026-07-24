@@ -1304,31 +1304,127 @@ button { font-family: var(--sans); }
   gap: clamp(26px, 4.5vw, 70px);
 }
 
-/* one clickable world-door */
-.world-door {
+/* one clickable world — a spinning glass globe with its material inside */
+.world-globe {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  width: clamp(110px, 12vw, 170px);
+  gap: 16px;
+  width: clamp(116px, 13vw, 176px);
   text-decoration: none;
   text-align: center;
 }
-.world-door .door-scene { width: 100%; }
-.world-door__label {
+/* the glass sphere */
+.globe {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  isolation: isolate;
+  perspective: 520px;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 246, 224, 0.34), rgba(90, 66, 38, 0.28) 42%, rgba(24, 17, 10, 0.9) 100%);
+  box-shadow:
+    inset 0 2px 10px rgba(255, 240, 210, 0.24),
+    inset 0 -18px 32px rgba(0, 0, 0, 0.55),
+    0 0 46px -10px var(--wd, var(--brass)),
+    0 20px 40px -20px rgba(0, 0, 0, 0.8);
+  transition: box-shadow 0.4s ease, transform 0.4s ease;
+}
+/* the material, floating + gently turning in the middle */
+.globe__mat {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+  animation: globeFloat 6.5s ease-in-out infinite;
+}
+.globe__mat svg { display: block; width: 100%; height: 100%; }
+.globe__mat--material {
+  width: 58%;
+  aspect-ratio: 4 / 3;
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255, 240, 210, 0.16);
+}
+.globe__mat--door {
+  width: 32%;
+  aspect-ratio: 3 / 7;
+  border-radius: 3px 3px 2px 2px;
+  overflow: hidden;
+}
+/* rotating specular sweep — reads as the globe turning.
+   Must be a circle itself: a transformed child escapes the parent's
+   circular overflow clip, so a square here leaks its bounding box. */
+.globe__glass {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 248, 228, 0.16) 26deg,
+    transparent 70deg,
+    transparent 190deg,
+    rgba(255, 248, 228, 0.09) 216deg,
+    transparent 260deg
+  );
+  mix-blend-mode: screen;
+  animation: globeSpin 13s linear infinite;
+}
+/* fixed top-left highlight + rim — gives the glass its roundness */
+.globe__shine {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(38% 30% at 30% 24%, rgba(255, 252, 244, 0.6), transparent 62%),
+    radial-gradient(60% 50% at 74% 82%, color-mix(in srgb, var(--wd, #c9a964) 45%, transparent), transparent 66%);
+  box-shadow: inset 0 0 0 1px rgba(255, 240, 210, 0.18), inset 0 0 22px rgba(0, 0, 0, 0.4);
+}
+.world-globe:hover .globe,
+.world-globe:focus-visible .globe {
+  transform: translateY(-4px);
+  box-shadow:
+    inset 0 2px 10px rgba(255, 240, 210, 0.3),
+    inset 0 -18px 32px rgba(0, 0, 0, 0.5),
+    0 0 60px -6px var(--wd, var(--brass)),
+    0 26px 46px -18px rgba(0, 0, 0, 0.85);
+}
+.world-globe__label {
   font: 600 14px var(--sans);
   letter-spacing: 0.3em;
   color: #f0e3c2;
   border-bottom: 2px solid var(--wd, var(--brass));
   padding-bottom: 6px;
 }
-.world-door__hint {
+.world-globe__hint {
   font: 400 11.5px/1.45 var(--sans);
   color: rgba(240, 227, 194, 0.62);
   max-width: 170px;
   min-height: 34px;
 }
-.world-door:hover .world-door__label { color: #fff; border-bottom-width: 3px; }
+.world-globe:hover .world-globe__label,
+.world-globe:focus-visible .world-globe__label { color: #fff; border-bottom-width: 3px; }
+
+@keyframes globeSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes globeFloat {
+  0%   { transform: translate(-50%, -50%) translateY(5px) rotateY(-20deg); }
+  50%  { transform: translate(-50%, -50%) translateY(-5px) rotateY(20deg); }
+  100% { transform: translate(-50%, -50%) translateY(5px) rotateY(-20deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .globe__glass { animation: none; }
+  .globe__mat { animation: none; transform: translate(-50%, -50%); }
+}
 
 /* reduced-motion static fallback */
 .portal--static { height: auto; }
@@ -1349,10 +1445,8 @@ button { font-family: var(--sans); }
   margin: 0 auto;
   padding: 30px 6vw 80px;
 }
-.portal--static .world-door { width: auto; }
-.portal--static .world-door__label,
-.portal--static .world-door__hint { color: var(--ink); }
-.portal--static .world-door__hint { color: var(--mut); }
+.portal--static .world-globe__label { color: var(--ink); }
+.portal--static .world-globe__hint { color: var(--mut); }
 
 /* ── home: world tiles strip ─────────────────────────────── */
 .worldstrip { padding: 90px 6vw 30px; max-width: 1320px; margin: 0 auto; }
@@ -1404,8 +1498,8 @@ button { font-family: var(--sans); }
     gap: 20px 34px;
     width: min(88vw, 420px);
   }
-  .world-door { width: min(34vw, 13vh); justify-self: center; }
-  .world-door__hint { display: none; }
+  .world-globe { width: min(36vw, 148px); gap: 12px; justify-self: center; }
+  .world-globe__hint { display: none; }
 }
 
 /* ═══════════════ mobile polish — magnificent on a phone ═══════════════════

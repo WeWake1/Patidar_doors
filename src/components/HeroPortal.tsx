@@ -4,8 +4,9 @@ import type { ArtId, Tone, WorldId } from '../data/products'
 import { WOOD_TONES } from '../data/products'
 import { WORLDS } from '../data/worlds'
 import { easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
-import { DoorScene } from './DoorScene'
+import { DoorArt } from './DoorArt'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
+import { MaterialArt } from './MaterialArt'
 
 /**
  * The portal hero: scroll swings the hero door open (phase A), pushes the
@@ -24,32 +25,44 @@ const t = (id: string, name: string, base: string, dark: string, light: string, 
   delta: 0,
 })
 
-const WORLD_DOORS: Array<{ id: WorldId; art: ArtId; tone: Tone }> = [
-  { id: 'timbers', art: 'haveli', tone: t('w-timbers', 'Amber Teak', '#8a6234', '#6b4a24', '#a87c46') },
-  { id: 'doors', art: 'meridian', tone: WOOD_TONES[4] },
-  { id: 'ply', art: 'linea', tone: t('w-ply', 'Terracotta', '#b0725a', '#93583f', '#c78a70') },
-  { id: 'wpc', art: 'flute', tone: t('w-wpc', 'Teal', '#2f7e72', '#215c53', '#47968a', false) },
+/**
+ * Each world is a spinning glass globe with its material floating inside:
+ * timber/ply/wpc use the generated MaterialArt swatch, doors a miniature
+ * DoorArt leaf. `tone` also tints the globe's rim glow + label (via --wd).
+ */
+type Globe =
+  | { id: WorldId; kind: 'door'; art: ArtId; tone: Tone }
+  | { id: WorldId; kind: 'material'; material: 'timber' | 'ply' | 'wpc'; tone: Tone }
+
+const WORLD_GLOBES: Globe[] = [
+  { id: 'timbers', kind: 'material', material: 'timber', tone: t('w-timbers', 'Amber Teak', '#8a6234', '#6b4a24', '#a87c46') },
+  { id: 'doors', kind: 'door', art: 'meridian', tone: WOOD_TONES[4] },
+  { id: 'ply', kind: 'material', material: 'ply', tone: t('w-ply', 'Terracotta', '#b0725a', '#93583f', '#c78a70') },
+  { id: 'wpc', kind: 'material', material: 'wpc', tone: t('w-wpc', 'Teal', '#2f7e72', '#215c53', '#47968a', false) },
 ]
 
-function WorldDoor({
-  id,
-  art,
-  tone,
-  style,
-  tabbable,
-}: {
-  id: WorldId
-  art: ArtId
-  tone: Tone
-  style?: React.CSSProperties
-  tabbable: boolean
-}) {
-  const world = WORLDS.find((w) => w.id === id)!
+function WorldGlobe({ globe, style, tabbable }: { globe: Globe; style?: React.CSSProperties; tabbable: boolean }) {
+  const world = WORLDS.find((w) => w.id === globe.id)!
   return (
-    <Link to={`/${id}`} className={`world-door world-door--${id}`} style={style} tabIndex={tabbable ? 0 : -1}>
-      <DoorScene art={art} tone={tone} hoverOpen />
-      <span className="world-door__label">{world.short}</span>
-      <span className="world-door__hint">{world.tagline}</span>
+    <Link
+      to={`/${globe.id}`}
+      className={`world-globe world-globe--${globe.id}`}
+      style={{ ...style, '--wd': globe.tone.base } as React.CSSProperties}
+      tabIndex={tabbable ? 0 : -1}
+    >
+      <span className="globe" aria-hidden="true">
+        <span className="globe__shine" />
+        <span className={`globe__mat globe__mat--${globe.kind}`}>
+          {globe.kind === 'door' ? (
+            <DoorArt art={globe.art} tone={globe.tone} />
+          ) : (
+            <MaterialArt material={globe.material} base={globe.tone.base} dark={globe.tone.dark} light={globe.tone.light} />
+          )}
+        </span>
+        <span className="globe__glass" />
+      </span>
+      <span className="world-globe__label">{world.short}</span>
+      <span className="world-globe__hint">{world.tagline}</span>
     </Link>
   )
 }
@@ -71,12 +84,12 @@ function Corridor({ p, interactive }: { p: number; interactive: boolean }) {
         <h2>Choose your world</h2>
       </div>
       <div className="portal__doors">
-        {WORLD_DOORS.map((d, i) => {
+        {WORLD_GLOBES.map((g, i) => {
           const s = seg(p, 0.56 + i * 0.07, 0.66 + i * 0.07)
           return (
-            <WorldDoor
-              key={d.id}
-              {...d}
+            <WorldGlobe
+              key={g.id}
+              globe={g}
               tabbable={interactive}
               style={{ opacity: s, transform: `translateY(${(1 - s) * 48}px)` }}
             />
@@ -113,8 +126,8 @@ export function HeroPortal() {
           </div>
         </div>
         <div className="portal__grid">
-          {WORLD_DOORS.map((d) => (
-            <WorldDoor key={d.id} {...d} tabbable />
+          {WORLD_GLOBES.map((g) => (
+            <WorldGlobe key={g.id} globe={g} tabbable />
           ))}
         </div>
       </section>
