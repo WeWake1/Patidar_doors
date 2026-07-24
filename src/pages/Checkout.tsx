@@ -4,6 +4,7 @@ import { useCart } from '../cart/CartContext'
 import { config, whatsappLink } from '../config'
 import { fmtINR, makeOrderId } from '../lib/format'
 import { saveLastOrder, type OrderCustomer } from '../lib/order'
+import { smoothScrollTo } from '../lib/smoothScroll'
 import { usePageMeta } from '../lib/usePageMeta'
 
 const SLOTS = [
@@ -66,7 +67,8 @@ export function Checkout() {
     const errs = validate(form)
     setErrors(errs)
     if (Object.keys(errs).length > 0) {
-      document.querySelector('.field--error input, .field--error textarea')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      const el = document.querySelector<HTMLElement>('.field--error input, .field--error textarea')
+      if (el) smoothScrollTo(el, { offset: -(window.innerHeight - el.getBoundingClientRect().height) / 2 })
       return
     }
 

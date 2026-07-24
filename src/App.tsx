@@ -8,6 +8,7 @@ import { Nav } from './components/Nav'
 import { ToastProvider } from './components/Toast'
 import { WhatsAppFloat } from './components/WhatsAppFloat'
 import { getWorld } from './data/worlds'
+import { smoothScrollTo, useSmoothScroll } from './lib/smoothScroll'
 import { Checkout } from './pages/Checkout'
 import { DevGallery } from './pages/DevGallery'
 import { Faq } from './pages/Faq'
@@ -23,7 +24,10 @@ import { WorldPage } from './pages/WorldPage'
 function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => {
-    window.scrollTo(0, 0)
+    // Immediate — going through Lenis (not a raw scrollTo) keeps its
+    // internal target-scroll state in sync so the next wheel tick doesn't
+    // snap back to wherever the previous page had scrolled to.
+    smoothScrollTo(0, { immediate: true })
   }, [pathname])
   return null
 }
@@ -46,6 +50,7 @@ const AdminApp = lazy(() => import('./admin/AdminApp'))
 
 /** The public storefront, with its nav/footer/cart chrome. */
 function Storefront() {
+  useSmoothScroll()
   return (
     <>
       <ScrollToTop />
