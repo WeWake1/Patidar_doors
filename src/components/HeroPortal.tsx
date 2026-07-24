@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { ArtId, Tone, WorldId } from '../data/products'
 import { WOOD_TONES } from '../data/products'
 import { WORLDS } from '../data/worlds'
+import { smoothScrollTo } from '../lib/smoothScroll'
 import { easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
 import { DoorScene } from './DoorScene'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
@@ -134,7 +135,7 @@ export function HeroPortal() {
     const top = el.offsetTop
     const total = el.offsetHeight - window.innerHeight
     const target = p < 0.15 ? top + total * 0.3 : p < 0.5 ? top + total : top
-    window.scrollTo({ top: target, behavior: 'smooth' })
+    smoothScrollTo(target)
   }
 
   return (
