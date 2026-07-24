@@ -8,6 +8,7 @@ import { easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '
 import { DoorArt } from './DoorArt'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
 import { MaterialArt } from './MaterialArt'
+import LightRays from './reactbits/LightRays'
 
 /**
  * The portal hero: scroll swings the hero door open (phase A), pushes the
@@ -152,8 +153,28 @@ export function HeroPortal() {
   }
 
   return (
-    <section className="portal" ref={trackRef}>
+    <section className="portal portal--dark" ref={trackRef}>
       <div className="portal__sticky">
+        {/* LightRays backdrop — only the opening phase; fades out before the corridor. */}
+        <div
+          className="portal__rays"
+          style={{ opacity: zoomOpacity, visibility: zoomOpacity === 0 ? 'hidden' : 'visible' }}
+          aria-hidden="true"
+        >
+          <LightRays
+            raysOrigin="top-center"
+            raysColor="#f2d18a"
+            raysSpeed={0.9}
+            lightSpread={0.7}
+            rayLength={2}
+            fadeDistance={1.2}
+            followMouse
+            mouseInfluence={0.08}
+            noiseAmount={0.08}
+            distortion={0.04}
+          />
+        </div>
+
         <Corridor p={p} interactive={corridorInteractive} />
 
         <div

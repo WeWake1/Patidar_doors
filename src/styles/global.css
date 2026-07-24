@@ -342,6 +342,15 @@ button { font-family: var(--sans); }
 .door-scene--ajar.door-scene--photo .door-scene__leaf { transform: rotateY(-15deg); }
 .door-scene--ajar .door-scene__leaf::after { opacity: 1; }
 
+/* GlareHover overlay on the leaf — decorative, so it never intercepts the
+   swing-hover or the card link. Its glint is driven by the door's own state
+   rather than the component's :hover (the wrapper is pointer-events:none). */
+.door-scene__glare { position: absolute; inset: 0; pointer-events: none; }
+.door-scene--hover:hover .door-scene__glare::before,
+.door-scene--ajar .door-scene__glare::before {
+  background-position: 100% 100%, 0 0;
+}
+
 /* ── product card ────────────────────────────────────────── */
 .card {
   background: var(--cream2);
@@ -1035,6 +1044,7 @@ button { font-family: var(--sans); }
   .marquee__track { animation: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .door-scene__leaf { transition: none; }
+  .door-scene__glare { display: none; }
   .card { transition: none; }
 }
 
@@ -1163,6 +1173,24 @@ button { font-family: var(--sans); }
   overflow: hidden;
   background: var(--cream);
 }
+
+/* Dark opening phase — a warm night backdrop so the LightRays glow reads.
+   Scoped to the animated portal only; the reduced-motion .portal--static hero
+   keeps its light cream treatment. */
+.portal--dark .portal__sticky { background: #17110b; }
+.portal__rays {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(115% 78% at 50% -6%, rgba(120, 88, 42, 0.55) 0%, rgba(40, 30, 18, 0.4) 42%, transparent 72%);
+  will-change: opacity;
+}
+.portal__rays .light-rays-container { z-index: 0; }
+.portal--dark .hero__kicker { color: var(--gold-l); }
+.portal--dark .hero__title { color: var(--cream); }
+.portal--dark .hero__title em { color: var(--gold-l); }
+.portal--dark .hero__sub { color: #d9ccb2; }
+.portal--dark .hero__scrollcue span:first-child { color: #b8a988; }
 
 /* phase A/B — the zooming layer (transform + opacity only) */
 .portal__zoom {
