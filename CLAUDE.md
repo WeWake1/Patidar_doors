@@ -79,8 +79,18 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   Lenis and sets `body.has-overlay` (wa-float hides, toast moves off the CTA).
   · `Nav.tsx` publishes its measured height as `--nav-h`; the menu sheet and the
   overlay toast position off it instead of hard-coded offsets.
-  · `.portal__sticky` uses `100svh` — with `100vh` the scroll cue hides under the
-  mobile URL bar.
+  · `.portal__sticky` is `100dvh` — it has to track the mobile URL bar in **both**
+  directions. `100vh`(=lvh) hides the scroll cue under the bar while it shows; `100svh`
+  leaves a strip of bare page exactly the bar's height once it retracts. `--scene-h`
+  deliberately stays on `svh` (stable), so the bar moving resizes the pane but never
+  the door. `.portal--dark` carries the backdrop colour too, so no rounding gap can
+  flash cream.
+  · the mobile `--scene-h` ends in `calc(100svh - 390px)`: that term caps the door by
+  the space actually left after the copy block and the scroll-cue band, so a narrow
+  phone that wraps the sub-heading shrinks the door instead of pushing it onto the cue.
+  · absolutely positioned centred things use `left:0;right:0` + `width:fit-content;
+  margin:0 auto`, never `left:50%` + `translateX(-50%)` — the latter shrink-to-fits
+  inside only half the width and wraps the text (it did exactly that to the scroll cue).
 - **SVG art**: 12 catalog designs + hero `classic` in `src/components/DoorArt.tsx`
   (original artwork — do not replace with Pinterest photos; see `docs/design-research.md`).
   Shared filters in `<DoorArtDefs/>` (mounted once in App, also used by MaterialArt);

@@ -477,7 +477,9 @@ button { font-family: var(--sans); }
   justify-content: center;
 }
 .hero__kicker-part { white-space: nowrap; }
-.hero__kicker-sep { padding: 0 0.6em 0 0.5em; opacity: 0.7; }
+/* symmetric — letter-spacing already adds the same trailing gap after the last
+   letter of the phrase and after the dot itself */
+.hero__kicker-sep { padding: 0 0.55em; opacity: 0.7; }
 .hero__title {
   margin: 14px 0 0;
   font: 500 clamp(54px, 8vw, 112px) / 0.95 var(--serif);
@@ -1299,9 +1301,11 @@ button { font-family: var(--sans); }
   position: sticky;
   top: 0;
   height: 100vh;
-  /* small-viewport height: with a mobile URL bar showing, 100vh is taller than
-     what you can see, and the scroll cue pinned to its bottom hides underneath */
-  height: 100svh;
+  /* Dynamic viewport height — the pane has to track the mobile URL bar in BOTH
+     directions. 100vh (= lvh) hides the scroll cue under the bar while it is
+     showing; 100svh leaves a strip of bare page exactly the bar's height once it
+     retracts. Only dvh follows the live viewport. */
+  height: 100dvh;
   overflow: hidden;
   background: var(--cream);
 }
@@ -1309,6 +1313,9 @@ button { font-family: var(--sans); }
 /* Dark opening phase — a warm night backdrop so the LightRays glow reads.
    Scoped to the animated portal only; the reduced-motion .portal--static hero
    keeps its light cream treatment. */
+/* the track carries the colour too, so any sub-pixel rounding under the sticky
+   pane can never flash the cream page background through */
+.portal--dark,
 .portal--dark .portal__sticky { background: #17110b; }
 .portal__rays {
   position: absolute;
@@ -1410,9 +1417,19 @@ button { font-family: var(--sans); }
 }
 .portal .hero__scrollcue {
   position: absolute;
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  /* Span the full width and centre by flex, rather than left:50% + translate:
+     an absolutely positioned box shrink-to-fits within the space *after* its
+     left offset, so at 50% the label only ever gets half the pane and
+     "Scroll — step inside" wraps to two lines on a phone. */
+  left: 0;
+  right: 0;
+  /* fit-content resolves against the full width above, so the label still gets
+     one line — but the button stays only as wide as its text instead of
+     becoming a full-width invisible tap target across the foot of the hero */
+  width: fit-content;
+  margin: 0 auto;
+  padding: 8px 18px;
   z-index: 3;
   animation: none; /* fill-mode:both would override the scroll-driven inline opacity */
 }
@@ -1665,9 +1682,19 @@ button { font-family: var(--sans); }
   /* A phone scrolls in short swipes: 420vh of door-opening was four of them
      before any content. 300vh keeps all three phases, ~two swipes apart. */
   .portal { height: 300vh; }
-  .portal__zoom { padding-top: 96px; }
-  .portal__scene { --scene-h: min(38vh, 109vw, 406px); }
-  .portal__scene { --scene-h: min(42svh, 109vw, 406px); }
+  /* the bottom pad reserves the scroll-cue band so the door can't sit on it */
+  .portal__zoom { padding: 88px 20px 80px; }
+  .portal__scene { --scene-h: min(44vh, 100vw, 380px); }
+  .portal__scene {
+    /* The calc term is the one that actually bites: it caps the door by the
+       space genuinely left after the top pad, the copy block and the cue band,
+       so a narrow phone that wraps the sub-heading to a fourth line shrinks the
+       door instead of pushing it down through the cue. That guard is what lets
+       the 44svh be generous on roomy phones. max() floors it so an unusually
+       short viewport can't compute a negative height. */
+    --scene-h: max(170px, min(44svh, 100vw, 380px, calc(100svh - 390px)));
+    flex: none;
+  }
   .portal__corridor { gap: 22px; padding-top: 108px; }
   .portal__doors {
     display: grid;
@@ -1759,6 +1786,14 @@ button { font-family: var(--sans); }
   .worldstrip__tile { padding: 20px 16px 18px; min-height: 130px; }
   .worldstrip__tag { font: 500 17px/1.2 var(--serif); }
   .worldstrip__name { font-size: 13px; letter-spacing: 0.22em; }
+
+  /* — hero copy: the kicker has to hold one centred line. At the desktop
+       12px/0.38em it runs ~410px and wraps to a stubby second line that reads
+       as off-centre; this fits inside a 320px content width. — */
+  .hero__kicker { font-size: 9.5px; letter-spacing: 0.2em; }
+  .hero__kicker-sep { padding: 0 0.5em; }
+  .hero__sub { margin-top: 14px; font-size: 15px; }
+  .hero__scrollcue span:first-child { font-size: 10px; letter-spacing: 0.24em; }
 
   /* — nav: a compact bag button so brand + burger breathe — */
   .nav {
