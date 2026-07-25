@@ -1,5 +1,14 @@
 /* End-to-end verification of the Patidar Doors app using system Chrome (headless). */
+import { readFileSync } from 'node:fs'
 import { chromium } from 'playwright-core'
+
+/* Read the live WhatsApp number out of the config rather than pinning a copy
+   here — this assertion silently rotted once already when the placeholder was
+   replaced with the real number. */
+const WA_NUMBER = readFileSync(new URL('../src/config.ts', import.meta.url), 'utf8').match(
+  /whatsappNumber:\s*'(\d+)'/,
+)?.[1]
+if (!WA_NUMBER) throw new Error('could not read config.whatsappNumber')
 
 const BASE = process.env.BASE ?? 'http://localhost:5199'
 const OUT = process.env.OUT ?? '.'
@@ -38,6 +47,22 @@ async function shot(name, opts = {}) {
   shots.push(path)
 }
 
+/**
+ * Scroll with real wheel ticks. Lenis owns wheel scrolling on the storefront,
+ * and it lerps toward its own internal target — a raw window.scrollTo gets
+ * dragged straight back (see src/lib/smoothScroll.ts), which leaves the portal
+ * at the wrong phase and its corridor invisible.
+ */
+async function wheelTo(targetY) {
+  for (let i = 0; i < 60; i++) {
+    const delta = targetY - (await page.evaluate(() => window.scrollY))
+    if (Math.abs(delta) < 12) break
+    await page.mouse.wheel(0, Math.max(-1400, Math.min(1400, delta)))
+    await page.waitForTimeout(90)
+  }
+  await page.waitForTimeout(500)
+}
+
 const step = async (label, fn) => {
   try {
     await fn()
@@ -69,19 +94,21 @@ await step('hero door opens on scroll (phase A)', async () => {
 })
 await shot('02-home-hero-open')
 
-await step('portal corridor appears with 4 world doors (phase C)', async () => {
-  await page.evaluate(() => {
+await step('portal corridor appears with 4 world globes (phase C)', async () => {
+  const target = await page.evaluate(() => {
     const el = document.querySelector('.portal')
-    window.scrollTo({ top: el.offsetTop + (el.offsetHeight - window.innerHeight) * 0.95, behavior: 'instant' })
+    return el.offsetTop + (el.offsetHeight - window.innerHeight) * 0.95
   })
-  await page.waitForTimeout(600)
-  const n = await page.locator('.world-door').count()
-  if (n !== 4) throw new Error(`expected 4 world doors, got ${n}`)
+  await wheelTo(target)
+  const n = await page.locator('.world-globe').count()
+  if (n !== 4) throw new Error(`expected 4 world globes, got ${n}`)
+  const vis = await page.evaluate(() => getComputedStyle(document.querySelector('.portal__corridor')).opacity)
+  if (Number(vis) < 0.9) throw new Error(`corridor not faded in (opacity ${vis})`)
 })
 await shot('02b-portal-corridor')
 
-await step('corridor door walks into Timbers world', async () => {
-  await page.locator('.world-door--timbers').click()
+await step('corridor globe walks into Timbers world', async () => {
+  await page.locator('.world-globe--timbers').click()
   await page.waitForURL('**/timbers')
   await page.waitForSelector('[data-world="timbers"]')
   await page.goBack()
@@ -141,9 +168,15 @@ await step('visit page renders', async () => {
   await page.waitForSelector('.visit__grid')
 })
 
-await step('admin login screen loads (auth-gated)', async () => {
+await step('admin route is auth-gated (never public)', async () => {
   await page.goto(BASE + '/admin', { waitUntil: 'networkidle' })
-  await page.waitForSelector('.ax-login__box', { timeout: 10000 })
+  // Without a local .env the app correctly renders "not configured" instead of
+  // the login box — both are valid gated states; a dashboard here would not be.
+  await page.waitForSelector('.ax-login__box, .ax-pad', { timeout: 10000 })
+  if (await page.locator('.ax').count()) throw new Error('admin dashboard rendered without a session')
+  if (!(await page.locator('.ax-login__box').count())) {
+    console.log('   (no VITE_SUPABASE_* env — admin showed the not-configured notice)')
+  }
 })
 
 /* ── PRODUCT ───────────────────────────────────────────── */
@@ -235,7 +268,7 @@ await step('valid order opens WhatsApp + confirmation', async () => {
   const wa = await page.evaluate(() => window.__waUrl)
   if (!wa) throw new Error('wa.me url not captured')
   const decoded = decodeURIComponent(wa)
-  for (const frag of ['wa.me/919800000000', 'NEW ORDER — PD-', 'The Meridian', 'The Flute', 'Vivek Patel', '380001', 'Preferred visit']) {
+  for (const frag of [`wa.me/${WA_NUMBER}`, 'NEW ORDER — PD-', 'The Meridian', 'The Flute', 'Vivek Patel', '380001', 'Preferred visit']) {
     if (!decoded.includes(frag)) throw new Error(`wa message missing: ${frag}`)
   }
   console.log('   wa.me OK:', decoded.slice(0, 120).replaceAll('\n', ' | '))

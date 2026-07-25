@@ -51,7 +51,7 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   `public/images/hero/hero-{frame,leaf}.webp`; skips if the folder is absent.
   ⚠️ Several raw photos carry third-party watermarks (see photoMap.ts header) — they are
   unmapped; replace with client photography.
-- **Portal hero** (`src/components/HeroPortal.tsx`): 520vh (mobile 420vh) sticky track;
+- **Portal hero** (`src/components/HeroPortal.tsx`): 520vh (mobile 300vh) sticky track;
   phases: door opens (0–.25) → scale push-through (.25–.55, transform+opacity only) →
   corridor of 4 world-doors (.55–.9). The hero door is `HeroDoorPhoto.tsx`: two photos of
   the same real door — full framed unit + the leaf cropped from the identical shot —
@@ -65,6 +65,22 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
 - **Hover-open door**: CSS on `.door-scene--hover` (SVG −26°, photos −18° + edge-shade
   `::after`). Touch devices get `door-scene--ajar` via `src/lib/useAjarInView.ts`
   (shared IntersectionObserver, mid-viewport band, `(hover: none)` only).
+- **Mobile-first rules** (the site is browsed on phones; keep these true):
+  · every colour-changing `:hover` lives inside `@media (hover: hover)` — touch latches
+  `:hover` on the last thing tapped. The `.door-scene--hover:hover` swing is the one
+  exception (touch gets `--ajar` instead), as is `.pdp__stage-note--hover/--touch`.
+  · form controls are ≥16px or iOS zooms the page on focus and never zooms back;
+  interactive targets ≥44px inside the phone breakpoints.
+  · `index.html` sets `viewport-fit=cover`, so all fixed chrome (nav, drawer, toast,
+  wa-float, footer) pads itself with `env(safe-area-inset-*)`.
+  · overlays (cart drawer, burger menu) go through `src/lib/useScrollLock.ts`:
+  `overflow:hidden` on `<html>` — **not** the `position:fixed` body trick, which
+  zeroes `scrollY` and snaps the portal hero shut behind the overlay. It also parks
+  Lenis and sets `body.has-overlay` (wa-float hides, toast moves off the CTA).
+  · `Nav.tsx` publishes its measured height as `--nav-h`; the menu sheet and the
+  overlay toast position off it instead of hard-coded offsets.
+  · `.portal__sticky` uses `100svh` — with `100vh` the scroll cue hides under the
+  mobile URL bar.
 - **SVG art**: 12 catalog designs + hero `classic` in `src/components/DoorArt.tsx`
   (original artwork — do not replace with Pinterest photos; see `docs/design-research.md`).
   Shared filters in `<DoorArtDefs/>` (mounted once in App, also used by MaterialArt);
@@ -77,6 +93,10 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
 - E2E smoke test: `scripts/verify.e2e.mjs` (playwright-core + system Chrome, headless).
   `BASE=… OUT=… node scripts/verify.e2e.mjs` against a dev/preview server. Covers portal
   phases, world pages, photo cards, redirect, full cart→wa.me flow, mobile. Keep it green.
+  ⚠️ Scroll the storefront with the script's `wheelTo()`, never a raw `window.scrollTo`:
+  Lenis owns wheel scrolling and lerps the page back to its own target, which leaves the
+  portal at the wrong phase (its corridor invisible → clicks time out). The admin step
+  passes with or without `.env`; the wa.me assertion reads `config.whatsappNumber`.
 - React 19 StrictMode gotcha: rAF-throttled scroll handlers must reset their ref to 0 in
   effect cleanup (see `useTrackProgress`).
 - Admin backend built + verified end-to-end (create/upload/crop/save into Supabase);

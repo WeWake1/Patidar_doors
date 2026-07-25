@@ -69,6 +69,28 @@ function WorldGlobe({ globe, style, tabbable }: { globe: Globe; style?: React.CS
   )
 }
 
+/**
+ * "Our yard · Our factory · Our store" — each phrase is atomic so a narrow
+ * screen breaks between them, never mid-phrase ("OUR YARD · OUR / FACTORY…").
+ */
+function HeroKicker({ className }: { className?: string }) {
+  return (
+    <div className={`hero__kicker${className ? ` ${className}` : ''}`}>
+      {['Our yard', 'Our factory', 'Our store'].map((phrase, i, all) => (
+        <span key={phrase} className="hero__kicker-part">
+          {phrase}
+          {/* separator trails its phrase, so a wrap never starts a line with "·" */}
+          {i < all.length - 1 && (
+            <span className="hero__kicker-sep" aria-hidden="true">
+              ·
+            </span>
+          )}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function Corridor({ p, interactive }: { p: number; interactive: boolean }) {
   const heading = seg(p, 0.8, 0.88)
   return (
@@ -113,7 +135,7 @@ export function HeroPortal() {
       <section className="portal portal--static">
         <div className="portal__stage portal__stage--static">
           <div className="portal__copy">
-            <div className="hero__kicker">Our yard&nbsp;&nbsp;·&nbsp;&nbsp;Our factory&nbsp;&nbsp;·&nbsp;&nbsp;Our store</div>
+            <HeroKicker />
             <h1 className="hero__title">
               Walk right <em>in</em>.
             </h1>
@@ -187,7 +209,7 @@ export function HeroPortal() {
           }}
         >
           <div className="portal__copy" style={{ opacity: copyOpacity }}>
-            <div className="hero__kicker rise">Our yard&nbsp;&nbsp;·&nbsp;&nbsp;Our factory&nbsp;&nbsp;·&nbsp;&nbsp;Our store</div>
+            <HeroKicker className="rise" />
             <h1 className="hero__title rise rise--1">
               Walk right <em>in</em>.
             </h1>

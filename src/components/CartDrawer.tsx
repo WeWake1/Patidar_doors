@@ -4,12 +4,15 @@ import { useCart } from '../cart/CartContext'
 import type { ArtId } from '../data/products'
 import { getProduct, getTone } from '../data/products'
 import { fmtINR } from '../lib/format'
+import { useScrollLock } from '../lib/useScrollLock'
 import { DoorArt } from './DoorArt'
 
 export function CartDrawer() {
   const cart = useCart()
   const navigate = useNavigate()
   const closeRef = useRef<HTMLButtonElement>(null)
+
+  useScrollLock(cart.isOpen)
 
   useEffect(() => {
     if (!cart.isOpen) return
@@ -18,11 +21,7 @@ export function CartDrawer() {
       if (e.key === 'Escape') cart.closeCart()
     }
     document.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
-    }
+    return () => document.removeEventListener('keydown', onKey)
   }, [cart.isOpen, cart])
 
   if (!cart.isOpen) return null

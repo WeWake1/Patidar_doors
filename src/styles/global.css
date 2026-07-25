@@ -34,7 +34,13 @@ body {
   font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  /* iOS rotates to landscape and helpfully inflates type; we set our own sizes */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
+
+/* grey flash on every tap reads as cheap — components own their pressed state */
+a, button, summary, [role='button'] { -webkit-tap-highlight-color: transparent; }
 
 ::selection { background: rgba(169, 139, 79, 0.28); }
 
@@ -57,6 +63,13 @@ button { font-family: var(--sans); }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
 @keyframes slidein { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+/* the toast is centred with translateX(-50%), so its entrance has to carry that
+   through — a plain `rise` (fill-mode: both) would overwrite the centering and
+   leave it hanging off the right edge */
+@keyframes toastin {
+  from { opacity: 0; transform: translate(-50%, 26px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
 
 .rise { animation: rise 0.8s ease both; }
 .rise--1 { animation-delay: 0.08s; }
@@ -128,12 +141,18 @@ button { font-family: var(--sans); }
   text-align: center;
   transition: background 0.25s, color 0.25s, border-color 0.25s;
 }
-.btn:hover { background: var(--ink); color: var(--cream); }
 .btn--dark { background: var(--ink); color: var(--cream); border-color: var(--ink); }
-.btn--dark:hover { background: var(--brass); border-color: var(--brass); color: var(--cream); }
 .btn--ghost { padding: 10px 16px; font-size: 11px; letter-spacing: 0.2em; }
 .btn--night { background: #241c13; color: #f0e3c2; border-color: #241c13; padding: 14px 26px; }
-.btn--night:hover { background: var(--brass); border-color: var(--brass); }
+/* Touch screens latch :hover on the last thing tapped — an "Add to cart" you
+   just pressed would sit in its hover colour until you tapped elsewhere. Every
+   hover that changes colour is therefore pointer-only. (The door-swing hovers
+   below are exempt: useAjarInView gives touch its own equivalent.) */
+@media (hover: hover) {
+  .btn:hover { background: var(--ink); color: var(--cream); }
+  .btn--dark:hover { background: var(--brass); border-color: var(--brass); color: var(--cream); }
+  .btn--night:hover { background: var(--brass); border-color: var(--brass); }
+}
 .btn--big { padding: 17px 36px; font-size: 13px; letter-spacing: 0.26em; }
 .btn--block { display: block; width: 100%; }
 
@@ -146,7 +165,11 @@ button { font-family: var(--sans); }
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 4vw;
+  padding:
+    calc(16px + env(safe-area-inset-top))
+    max(4vw, env(safe-area-inset-right))
+    16px
+    max(4vw, env(safe-area-inset-left));
   background: rgba(245, 240, 230, 0.86);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -156,6 +179,7 @@ button { font-family: var(--sans); }
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: 44px;
   text-decoration: none;
   padding: 0;
 }
@@ -179,13 +203,17 @@ button { font-family: var(--sans); }
   border-bottom: 1px solid transparent;
   transition: color 0.2s;
 }
-.nav__link:hover { color: var(--ink); }
+@media (hover: hover) {
+  .nav__link:hover { color: var(--ink); }
+}
 .nav__link--active { color: var(--ink); border-bottom-color: var(--brass); }
 .nav__actions { display: flex; align-items: center; gap: 14px; }
 .nav__cart {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 9px;
+  min-height: 44px;
   background: var(--ink);
   color: var(--cream);
   border: none;
@@ -195,7 +223,9 @@ button { font-family: var(--sans); }
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
-.nav__cart:hover { background: var(--brass); }
+@media (hover: hover) {
+  .nav__cart:hover { background: var(--brass); }
+}
 .nav__badge {
   background: var(--brass);
   color: var(--deep);
@@ -213,12 +243,12 @@ button { font-family: var(--sans); }
   flex-direction: column;
   justify-content: center;
   gap: 5px;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: none;
   border: 1px solid var(--line2);
   cursor: pointer;
-  padding: 8px;
+  padding: 10px;
 }
 .nav__burger span {
   display: block;
@@ -229,19 +259,35 @@ button { font-family: var(--sans); }
 .nav__burger--open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .nav__burger--open span:nth-child(2) { opacity: 0; }
 .nav__burger--open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+/* Tapping anywhere off the sheet closes it — a fixed panel with a live,
+   scrollable page behind it is the classic mobile-menu trap. */
+.nav__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 58;
+  background: rgba(24, 17, 9, 0.38);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: fadein 0.22s ease both;
+}
 .nav__menu {
   position: fixed;
-  top: 72px; left: 0; right: 0;
+  /* --nav-h is measured by Nav.tsx; the literal is the pre-hydration fallback */
+  top: var(--nav-h, 72px); left: 0; right: 0;
   z-index: 59;
+  max-height: calc(100dvh - var(--nav-h, 72px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--cream2);
   border-bottom: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  padding: 10px 6vw 22px;
+  padding: 10px 6vw calc(22px + env(safe-area-inset-bottom));
+  box-shadow: 0 26px 50px rgba(24, 17, 9, 0.18);
   animation: fadein 0.2s ease both;
 }
 .nav__menu-link {
-  padding: 14px 0;
+  padding: 15px 0;
   font: 500 14px var(--sans);
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -250,6 +296,21 @@ button { font-family: var(--sans); }
   border-bottom: 1px solid var(--line);
 }
 .nav__menu-link--active { color: var(--brass-d); }
+.nav__menu-call {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  background: var(--ink);
+  color: var(--cream);
+  text-decoration: none;
+  font: 500 12.5px var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.nav__menu-call svg { flex: none; }
 
 /* ── door scene ──────────────────────────────────────────── */
 .door-scene {
@@ -360,9 +421,11 @@ button { font-family: var(--sans); }
   text-decoration: none;
   transition: transform 0.45s ease, box-shadow 0.45s ease;
 }
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 26px 50px rgba(35, 25, 12, 0.12);
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 26px 50px rgba(35, 25, 12, 0.12);
+  }
 }
 .card__stage {
   background: linear-gradient(180deg, var(--panel), #e8dec7);
@@ -395,7 +458,9 @@ button { font-family: var(--sans); }
 }
 .card__price { font: 600 16px var(--sans); color: var(--ink); }
 .card__from { font: 400 12px var(--sans); color: var(--mut2); }
-.card:hover .card__cta { background: var(--ink); color: var(--cream); }
+@media (hover: hover) {
+  .card:hover .card__cta { background: var(--ink); color: var(--cream); }
+}
 
 .grid { display: grid; gap: 28px; }
 .grid--3 { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
@@ -407,7 +472,12 @@ button { font-family: var(--sans); }
   color: var(--brass-d);
   text-transform: uppercase;
   text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
+.hero__kicker-part { white-space: nowrap; }
+.hero__kicker-sep { padding: 0 0.6em 0 0.5em; opacity: 0.7; }
 .hero__title {
   margin: 14px 0 0;
   font: 500 clamp(54px, 8vw, 112px) / 0.95 var(--serif);
@@ -503,10 +573,11 @@ button { font-family: var(--sans); }
   color: #9b8c75;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  gap: 6px 0;
   align-items: baseline;
 }
-.econ__arrow { color: #5e503c; }
+.econ__link { white-space: nowrap; }
+.econ__arrow { color: #5e503c; padding: 0 0.5em; }
 .econ__cut { text-decoration: line-through; text-decoration-color: var(--brass); opacity: 0.6; }
 .econ__punch { margin-top: 10px; font: 500 clamp(44px, 6.5vw, 88px) / 1.05 var(--serif); color: var(--gold-l); }
 .econ__body { margin: 30px 0 0; max-width: 560px; font: 400 15.5px/1.75 var(--sans); color: #b5a78e; }
@@ -626,7 +697,9 @@ button { font-family: var(--sans); }
 /* ── product page ────────────────────────────────────────── */
 .crumbs { font: 400 13px var(--sans); color: var(--mut2); margin-bottom: 34px; }
 .crumbs a { color: var(--brass-d); text-decoration: none; }
-.crumbs a:hover { text-decoration: underline; }
+@media (hover: hover) {
+  .crumbs a:hover { text-decoration: underline; }
+}
 .pdp__grid {
   display: grid;
   grid-template-columns: minmax(300px, 0.9fr) 1.1fr;
@@ -681,7 +754,9 @@ button { font-family: var(--sans); }
   text-align: left;
   transition: border-color 0.2s, background 0.2s;
 }
-.cfg__size:hover { border-color: var(--brass); }
+@media (hover: hover) {
+  .cfg__size:hover { border-color: var(--brass); }
+}
 .cfg__size--on { border-color: var(--ink); background: var(--ink); }
 .cfg__size--on .cfg__size-label { color: var(--cream); }
 .cfg__size--on .cfg__size-note { color: var(--gold); }
@@ -698,7 +773,9 @@ button { font-family: var(--sans); }
   border: 2px solid rgba(33, 26, 18, 0.18);
   transition: box-shadow 0.2s, border-color 0.2s;
 }
-.cfg__tone:hover { border-color: var(--brass-d); }
+@media (hover: hover) {
+  .cfg__tone:hover { border-color: var(--brass-d); }
+}
 .cfg__tone--on { border-color: var(--brass); box-shadow: 0 0 0 3px rgba(169, 139, 79, 0.28); }
 .cfg__tone-name { margin-top: 10px; font: 500 12.5px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--mut); }
 .cfg__tone-delta { color: var(--brass-d); }
@@ -767,7 +844,12 @@ button { font-family: var(--sans); }
   color: var(--mut);
   padding: 4px 8px;
 }
-.drawer__body { flex: 1; overflow-y: auto; padding: 10px 28px; }
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 28px;
+}
 .drawer__empty { padding: 60px 0; text-align: center; }
 .drawer__empty-title { font: 500 22px var(--serif); color: var(--ink); }
 .drawer__empty p { margin: 10px 0 22px; font: 400 14px/1.6 var(--sans); color: var(--mut); }
@@ -811,7 +893,7 @@ button { font-family: var(--sans); }
 }
 .drawer__line-total { font: 600 15px var(--sans); color: var(--ink); }
 .drawer__foot {
-  padding: 22px 28px 28px;
+  padding: 22px 28px calc(28px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
   background: var(--cream);
 }
@@ -848,13 +930,28 @@ button { font-family: var(--sans); }
 .field input,
 .field textarea,
 .field select {
-  font: 400 15px var(--sans);
+  /* 16px is the floor: below it iOS Safari zooms the whole page on focus and
+     never zooms back out. Every field on this site is filled on a phone. */
+  font: 400 16px var(--sans);
   color: var(--ink);
   background: var(--cream2);
   border: 1px solid var(--line2);
+  border-radius: 0; /* iOS rounds inputs by default and breaks the sharp look */
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 48px;
   padding: 12px 14px;
   width: 100%;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field select {
+  /* the native arrow disappears with -webkit-appearance: none */
+  background-image: linear-gradient(45deg, transparent 50%, var(--mut) 50%),
+    linear-gradient(135deg, var(--mut) 50%, transparent 50%);
+  background-position: calc(100% - 19px) calc(50% + 1px), calc(100% - 13px) calc(50% + 1px);
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 40px;
 }
 .field textarea { resize: vertical; }
 .field input:focus,
@@ -962,7 +1059,9 @@ button { font-family: var(--sans); }
 }
 .footer__col { display: flex; flex-direction: column; gap: 10px; font: 400 14px var(--sans); }
 .footer__col a { color: #b5a78e; text-decoration: none; }
-.footer__col a:hover { color: #f0e3c2; }
+@media (hover: hover) {
+  .footer__col a:hover { color: #f0e3c2; }
+}
 .footer__bar {
   max-width: 1280px;
   margin: 60px auto 0;
@@ -979,9 +1078,10 @@ button { font-family: var(--sans); }
 /* ── toast & whatsapp float ──────────────────────────────── */
 .toast {
   position: fixed;
-  bottom: 30px;
+  bottom: calc(30px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
+  max-width: min(92vw, 420px);
   z-index: 120;
   background: var(--ink);
   color: var(--cream);
@@ -989,16 +1089,22 @@ button { font-family: var(--sans); }
   font: 500 13px var(--sans);
   letter-spacing: 0.06em;
   box-shadow: 0 16px 40px rgba(24, 17, 9, 0.3);
-  animation: rise 0.35s ease both;
+  animation: toastin 0.35s ease both;
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.toast .diamond { width: 7px; height: 7px; }
+.toast .diamond { width: 7px; height: 7px; flex: none; }
+/* with the cart drawer open the bottom strip belongs to "Proceed to checkout" —
+   the confirmation moves out from under the primary action */
+.has-overlay .toast {
+  bottom: auto;
+  top: calc(var(--nav-h, 72px) + 14px + env(safe-area-inset-top));
+}
 .wa-float {
   position: fixed;
-  right: 22px;
-  bottom: 24px;
+  right: calc(22px + env(safe-area-inset-right));
+  bottom: calc(24px + env(safe-area-inset-bottom));
   z-index: 70;
   width: 54px;
   height: 54px;
@@ -1009,9 +1115,19 @@ button { font-family: var(--sans); }
   align-items: center;
   justify-content: center;
   box-shadow: 0 12px 30px rgba(24, 40, 20, 0.35);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
-.wa-float:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 18px 40px rgba(24, 40, 20, 0.4); }
+@media (hover: hover) {
+  .wa-float:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 18px 40px rgba(24, 40, 20, 0.4); }
+}
+/* Nothing may sit on top of an open overlay (cart drawer, burger menu) — the
+   float steps aside instead of competing for the same thumb zone. useScrollLock
+   marks <body> so this needs no plumbing through the component tree. */
+.has-overlay .wa-float {
+  opacity: 0;
+  transform: scale(0.6);
+  pointer-events: none;
+}
 
 /* ── responsive ──────────────────────────────────────────── */
 @media (max-width: 860px) {
@@ -1147,8 +1263,21 @@ button { font-family: var(--sans); }
   text-transform: uppercase;
   color: var(--brass);
 }
+/* the number itself dials, not just the button under it */
+.visit__tel {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font: 500 17px var(--sans);
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--brass);
+}
+.visit__card p:has(> .visit__tel) { margin: -6px 0; }
 .btn--wa { background: var(--wa); color: #fff; border-color: var(--wa); }
-.btn--wa:hover { filter: brightness(1.06); }
+@media (hover: hover) {
+  .btn--wa:hover { filter: brightness(1.06); }
+}
 
 /* six-link nav needs tighter spacing before collapsing to burger */
 @media (max-width: 1080px) {
@@ -1170,6 +1299,9 @@ button { font-family: var(--sans); }
   position: sticky;
   top: 0;
   height: 100vh;
+  /* small-viewport height: with a mobile URL bar showing, 100vh is taller than
+     what you can see, and the scroll cue pinned to its bottom hides underneath */
+  height: 100svh;
   overflow: hidden;
   background: var(--cream);
 }
@@ -1210,6 +1342,7 @@ button { font-family: var(--sans); }
      via aspect-ratio breaks in stable Safari: the flex item's content
      min-height resolves to the img's intrinsic 660px and squeezes the photo. */
   --scene-h: min(44.4vh, 464px);
+  --scene-h: min(44.4svh, 464px);
   margin-top: 34px;
   height: var(--scene-h);
   width: calc(var(--scene-h) * 520 / 660);
@@ -1416,7 +1549,6 @@ button { font-family: var(--sans); }
     radial-gradient(60% 50% at 74% 82%, color-mix(in srgb, var(--wd, #c9a964) 45%, transparent), transparent 66%);
   box-shadow: inset 0 0 0 1px rgba(255, 240, 210, 0.18), inset 0 0 22px rgba(0, 0, 0, 0.4);
 }
-.world-globe:hover .globe,
 .world-globe:focus-visible .globe {
   transform: translateY(-4px);
   box-shadow:
@@ -1424,6 +1556,16 @@ button { font-family: var(--sans); }
     inset 0 -18px 32px rgba(0, 0, 0, 0.5),
     0 0 60px -6px var(--wd, var(--brass)),
     0 26px 46px -18px rgba(0, 0, 0, 0.85);
+}
+@media (hover: hover) {
+  .world-globe:hover .globe {
+    transform: translateY(-4px);
+    box-shadow:
+      inset 0 2px 10px rgba(255, 240, 210, 0.3),
+      inset 0 -18px 32px rgba(0, 0, 0, 0.5),
+      0 0 60px -6px var(--wd, var(--brass)),
+      0 26px 46px -18px rgba(0, 0, 0, 0.85);
+  }
 }
 .world-globe__label {
   font: 600 14px var(--sans);
@@ -1438,8 +1580,10 @@ button { font-family: var(--sans); }
   max-width: 170px;
   min-height: 34px;
 }
-.world-globe:hover .world-globe__label,
 .world-globe:focus-visible .world-globe__label { color: #fff; border-bottom-width: 3px; }
+@media (hover: hover) {
+  .world-globe:hover .world-globe__label { color: #fff; border-bottom-width: 3px; }
+}
 
 @keyframes globeSpin {
   to { transform: rotate(360deg); }
@@ -1494,7 +1638,9 @@ button { font-family: var(--sans); }
   border: 1px solid var(--line);
   transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
-.worldstrip__tile:hover { transform: translateY(-5px); box-shadow: 0 22px 44px rgba(35, 25, 12, 0.16); }
+@media (hover: hover) {
+  .worldstrip__tile:hover { transform: translateY(-5px); box-shadow: 0 22px 44px rgba(35, 25, 12, 0.16); }
+}
 .worldstrip__name { font: 600 15px var(--sans); letter-spacing: 0.3em; }
 .worldstrip__tag { font: 500 20px/1.25 var(--serif); }
 .worldstrip__go {
@@ -1516,9 +1662,12 @@ button { font-family: var(--sans); }
 .cta__row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
 
 @media (max-width: 720px) {
-  .portal { height: 420vh; }
+  /* A phone scrolls in short swipes: 420vh of door-opening was four of them
+     before any content. 300vh keeps all three phases, ~two swipes apart. */
+  .portal { height: 300vh; }
   .portal__zoom { padding-top: 96px; }
   .portal__scene { --scene-h: min(38vh, 109vw, 406px); }
+  .portal__scene { --scene-h: min(42svh, 109vw, 406px); }
   .portal__corridor { gap: 22px; padding-top: 108px; }
   .portal__doors {
     display: grid;
@@ -1554,13 +1703,16 @@ button { font-family: var(--sans); }
   .faqteaser { padding: 70px 5vw; }
   .cta { padding: 88px 5vw; }
   .cta__sub { margin-bottom: 30px; }
-  .worldstrip { padding: 60px 5vw 22px; }
+  /* the four-world strip and the featured row are separate ideas — 22px read
+     as one continuous block, so give the seam the same air as the others */
+  .worldstrip { padding: 60px 5vw 56px; }
   .worldstrip__grid { margin-top: 26px; }
   .world__intro { padding: 126px 5vw 54px; }
   .world__section { padding: 38px 5vw 4px; }
   .world__section-title { margin-bottom: 20px; }
   .world__why { padding: 58px 5vw 66px; }
-  .footer { padding: 60px 5vw 34px; }
+  /* extra bottom room so the WhatsApp float never lands on the last line */
+  .footer { padding: 60px 5vw calc(46px + env(safe-area-inset-bottom)); }
   .footer__grid { gap: 36px; }
   .footer__bar { margin-top: 42px; }
   .pdp__related { margin-top: 68px; }
@@ -1581,15 +1733,26 @@ button { font-family: var(--sans); }
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  /* pin the CTA to the bottom of the card so buttons line up across a row even
+     when one card's category label wraps to two lines and its neighbour's doesn't */
+  .card__body { flex: 1; }
   .card__row {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
-    margin-top: 12px;
+    margin-top: auto;
+    padding-top: 12px;
   }
   .card__price { font-size: 15px; }
   /* full-width tap target instead of a cramped inline chip */
-  .card__row .card__cta { display: block; width: 100%; padding: 11px 12px; }
+  .card__row .card__cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 11px 12px;
+  }
 
   /* — four-world strip → a tidy 2×2 instead of one tall stack — */
   .worldstrip__grid { grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -1598,23 +1761,100 @@ button { font-family: var(--sans); }
   .worldstrip__name { font-size: 13px; letter-spacing: 0.22em; }
 
   /* — nav: a compact bag button so brand + burger breathe — */
-  .nav { padding: 12px 5vw; gap: 10px; }
+  .nav {
+    padding: 10px max(5vw, env(safe-area-inset-left)) 10px max(5vw, env(safe-area-inset-right));
+    gap: 10px;
+  }
   .nav__mark { height: 26px; }
   .nav__word { font-size: 13px; letter-spacing: 0.24em; }
   .nav__sub { font-size: 8px; }
   .nav__cart { padding: 9px 13px; gap: 0; }
   .nav__cart-label { display: none; }
   .nav__badge { min-width: 18px; height: 18px; font-size: 10.5px; margin-left: 7px; }
-  .nav__menu { top: 63px; }
+
+  /* — thumbs, not cursors: every interactive thing gets a 44px-ish target — */
+  .chip { min-height: 44px; padding: 10px 18px; }
+  .btn { padding: 15px 24px; }
+  .btn--ghost { min-height: 44px; padding: 12px 18px; }
+  .linkline { display: inline-flex; align-items: center; min-height: 44px; }
+  .crumbs { margin-bottom: 24px; }
+  .crumbs a { display: inline-flex; align-items: center; min-height: 44px; }
+  .cfg__size { min-height: 56px; padding: 11px 16px; }
+  .cfg__tone { width: 46px; height: 64px; }
+  .cfg__tones { gap: 14px; }
+  .faq summary { padding-right: 40px; }
+  .footer__col { gap: 2px; }
+  .footer__col a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .footer__head { margin-bottom: 8px; }
+
+  /* — cart drawer: full-bleed sheet, thumb-sized controls — */
+  .drawer { width: min(440px, 100vw); }
+  .drawer__head { padding: 18px 20px; }
+  .drawer__body {
+    padding: 6px 20px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .drawer__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    margin-right: -8px;
+  }
+  .drawer__foot { padding: 18px 20px calc(22px + env(safe-area-inset-bottom)); }
+  .drawer__line-controls { gap: 6px; }
+  .qty button { width: 42px; height: 42px; font-size: 17px; }
+  .drawer__remove { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; }
+
+  /* — PDP: keep the door the hero of the first screen, just a little tighter — */
+  .pdp__stage { padding: 34px 0 22px; }
+  .pdp__gallery { gap: 8px; }
 }
 
 /* the bag glyph only earns its place next to the word on wider bars */
 .nav__cart-icon { flex: none; }
 @media (min-width: 621px) { .nav__cart-icon { margin-right: 2px; } }
 
+/* touch devices have no hover — the leaf swings itself as it crosses the
+   viewport (useAjarInView), so the stage note has to say so */
+.pdp__stage-note--touch { display: none; }
+@media (hover: none) {
+  .pdp__stage-note--hover { display: none; }
+  .pdp__stage-note--touch { display: inline; }
+}
+
+/* the float is a companion, not an obstacle: smaller and tucked further into
+   the corner on phones, clear of the home-bar */
+@media (max-width: 620px) {
+  .wa-float {
+    width: 48px;
+    height: 48px;
+    right: calc(14px + env(safe-area-inset-right));
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    box-shadow: 0 8px 22px rgba(24, 40, 20, 0.32);
+  }
+  .wa-float svg { width: 23px; height: 23px; }
+  /* the toast is centred at the bottom and the float lives in that same strip —
+     stack the toast above it so neither has to be hidden */
+  .toast {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 32px);
+    padding: 13px 20px;
+  }
+}
+
 /* very narrow phones — keep the two-up grid but shed the last bit of chrome */
 @media (max-width: 380px) {
   .nav__word { font-size: 12px; letter-spacing: 0.18em; }
+  .nav__sub { display: none; }
   .card__body { padding: 12px 11px 14px; }
   .card__name { font-size: 18px; }
+  .card__row .card__cta { font-size: 10px; letter-spacing: 0.14em; }
+  .chip { padding: 10px 14px; font-size: 11px; }
 }

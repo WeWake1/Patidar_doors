@@ -63,7 +63,8 @@ export function Policies() {
       <section>
         <h2>Contact</h2>
         <p>
-          {config.brand} · {config.phoneDisplay} · <a href={`mailto:${config.email}`}>{config.email}</a> · {config.hours}
+          {config.brand} · <a href={`tel:${config.phoneTel}`}>{config.phoneDisplay}</a> ·{' '}
+          <a href={`mailto:${config.email}`}>{config.email}</a> · {config.hours}
         </p>
       </section>
     </div>

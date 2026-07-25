@@ -24,7 +24,14 @@ export function Visit() {
           <div className="visit__head">Hours</div>
           <p>{config.hours}</p>
           <div className="visit__head">Phone</div>
-          <p>{config.phoneDisplay}</p>
+          <p>
+            <a className="visit__tel" href={`tel:${config.phoneTel}`}>
+              {config.phoneDisplay}
+            </a>
+          </p>
+          <a className="btn btn--dark" href={`tel:${config.phoneTel}`}>
+            Call the store
+          </a>
         </div>
         <div className="visit__card">
           <div className="visit__head">Before you come</div>

@@ -37,7 +37,7 @@ export function Footer() {
           <div className="footer__head">Contact</div>
           <div className="footer__col">
             <a href={`mailto:${config.email}`}>{config.email}</a>
-            <span>{config.phoneDisplay}</span>
+            <a href={`tel:${config.phoneTel}`}>{config.phoneDisplay}</a>
             <span>{config.hours}</span>
           </div>
         </div>

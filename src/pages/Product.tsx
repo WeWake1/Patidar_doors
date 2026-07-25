@@ -22,6 +22,20 @@ export function Product() {
   return <ProductInner key={product.id} product={product} />
 }
 
+/**
+ * The stage's affordance line. Touch devices have no hover — there the leaf
+ * swings by itself as the card crosses mid-viewport (useAjarInView) — so both
+ * phrasings ship and CSS picks the true one per pointer type.
+ */
+function StageNote() {
+  return (
+    <div className="pdp__stage-note">
+      <span className="pdp__stage-note--hover">Hover the door — it opens.</span>
+      <span className="pdp__stage-note--touch">Scroll — the door opens itself.</span>
+    </div>
+  )
+}
+
 function ProductStage({ product }: { product: ProductT }) {
   const visual = product.visual
   if (visual.kind === 'material') {
@@ -38,7 +52,7 @@ function ProductStage({ product }: { product: ProductT }) {
         {swing ? (
           <>
             <DoorScene photo={visual.cover} hoverOpen className="pdp__scene" />
-            <div className="pdp__stage-note">Hover the door — it opens.</div>
+            <StageNote />
           </>
         ) : (
           <PhotoShowcase photo={visual.cover} className="pdp__scene" />
@@ -124,7 +138,7 @@ function ProductInner({ product }: { product: ProductT }) {
         {product.visual.kind === 'art' ? (
           <div className="pdp__stage">
             <DoorScene art={product.visual.art} tone={tone} hoverOpen className="pdp__scene" />
-            <div className="pdp__stage-note">Hover the door — it opens.</div>
+            <StageNote />
           </div>
         ) : (
           <ProductStage product={product} />

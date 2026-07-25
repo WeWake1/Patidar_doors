@@ -15,6 +15,9 @@ export const config = {
   /** Shown in the footer / contact sections. */
   phoneDisplay: '+91 96119 53838',
 
+  /** Dial string for `tel:` links — no spaces, keeps the “+” country code. */
+  phoneTel: '+919611953838',
+
   email: 'patidartimber.pt@gmail.com',
 
   storeAddress:

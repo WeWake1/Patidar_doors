@@ -108,16 +108,25 @@ export function Home() {
         <div className="econ__inner">
           <div className="kicker kicker--gold">The economics of wood</div>
           <div className="econ__label">The usual way</div>
+          {/* each link carries its own trailing arrow so a narrow screen never
+              starts a line with a dangling "→" */}
           <div className="econ__chain">
-            <span>Sawmill</span>
-            <span className="econ__arrow">→</span>
-            <span className="econ__cut">Distributor</span>
-            <span className="econ__arrow">→</span>
-            <span className="econ__cut">Wholesaler</span>
-            <span className="econ__arrow">→</span>
-            <span className="econ__cut">Retailer</span>
-            <span className="econ__arrow">→</span>
-            <span>Your home</span>
+            {[
+              { label: 'Sawmill', cut: false },
+              { label: 'Distributor', cut: true },
+              { label: 'Wholesaler', cut: true },
+              { label: 'Retailer', cut: true },
+              { label: 'Your home', cut: false },
+            ].map((step, i, all) => (
+              <span key={step.label} className="econ__link">
+                <span className={step.cut ? 'econ__cut' : undefined}>{step.label}</span>
+                {i < all.length - 1 && (
+                  <span className="econ__arrow" aria-hidden="true">
+                    →
+                  </span>
+                )}
+              </span>
+            ))}
           </div>
           <div className="econ__label econ__label--after">The Patidar way</div>
           <div className="econ__punch">Our yard → Your home.</div>

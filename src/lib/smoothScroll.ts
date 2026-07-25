@@ -36,6 +36,14 @@ export function useSmoothScroll(): void {
   }, [reduced])
 }
 
+/** Pause/resume the wheel inertia while an overlay owns the screen (useScrollLock). */
+export function pauseSmoothScroll(): void {
+  lenis?.stop()
+}
+export function resumeSmoothScroll(): void {
+  lenis?.start()
+}
+
 /**
  * Programmatic scroll that goes through the live Lenis instance when one is
  * mounted — calling native scrollTo/scrollIntoView instead would fight

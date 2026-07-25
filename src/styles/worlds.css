@@ -25,9 +25,12 @@
 
 /* buttons inherit the world's ink so they work on dark worlds too */
 .world .btn--dark { background: var(--w-accent); border-color: var(--w-accent); color: var(--w-bg); }
-.world .btn--dark:hover { background: var(--w-ink); border-color: var(--w-ink); color: var(--w-bg); }
 .world .btn--ghost { color: var(--w-ink); border-color: var(--w-ink); }
-.world .btn--ghost:hover { background: var(--w-ink); color: var(--w-bg); }
+/* pointer-only: a tapped button on touch keeps :hover until you tap away */
+@media (hover: hover) {
+  .world .btn--dark:hover { background: var(--w-ink); border-color: var(--w-ink); color: var(--w-bg); }
+  .world .btn--ghost:hover { background: var(--w-ink); color: var(--w-bg); }
+}
 
 /* ── TIMBERS — dark sawmill ──────────────────────────────── */
 [data-world='timbers'] {
@@ -53,8 +56,10 @@
 [data-world='timbers'] .card__tag { color: var(--w-mut); }
 [data-world='timbers'] .card__price--enquire { color: var(--w-mut); }
 [data-world='timbers'] .card__cat { color: var(--w-accent); }
-[data-world='timbers'] .card:hover { box-shadow: 0 26px 50px rgba(0, 0, 0, 0.45); }
-[data-world='timbers'] .card:hover .card__cta { background: var(--w-accent); color: #2b2419; }
+@media (hover: hover) {
+  [data-world='timbers'] .card:hover { box-shadow: 0 26px 50px rgba(0, 0, 0, 0.45); }
+  [data-world='timbers'] .card:hover .card__cta { background: var(--w-accent); color: #2b2419; }
+}
 [data-world='timbers'] .card .btn--ghost { color: var(--w-ink); border-color: #5d4f38; }
 
 /* ── DOORS — flagship, the brand home ────────────────────── */
@@ -117,8 +122,9 @@
 [data-world='wpc'] .card { border-radius: 10px; overflow: hidden; }
 [data-world='wpc'] .card__stage { background: linear-gradient(180deg, #f0f4f2, #dbe4e1); }
 
-/* world door cards inside the hero corridor share these accents */
-.world-door--timbers { --wd: #c9903f; }
-.world-door--doors { --wd: #a98b4f; }
-.world-door--ply { --wd: #b0725a; }
-.world-door--wpc { --wd: #2f7e72; }
+/* world globes inside the hero corridor share these accents (HeroPortal also
+   sets --wd inline from the globe's tone; these are the CSS-side fallback) */
+.world-globe--timbers { --wd: #c9903f; }
+.world-globe--doors { --wd: #a98b4f; }
+.world-globe--ply { --wd: #b0725a; }
+.world-globe--wpc { --wd: #2f7e72; }
