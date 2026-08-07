@@ -1,0 +1,151 @@
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
+import DriftWall from './reactbits/DriftWall'
+import type { DriftWallItem } from './reactbits/DriftWall'
+import { WALL_PHOTOS } from '../data/wallPhotos'
+import { useMediaQuery } from '../lib/useMediaQuery'
+import { useScrollLock } from '../lib/useScrollLock'
+
+// gsap ships with StrokeText and nothing else on the site needs it — keep it
+// out of the entry bundle. The fallback holds the same box so the band doesn't
+// jump when the chunk lands.
+const StrokeText = lazy(() => import('./reactbits/StrokeText'))
+
+const TITLE = 'THE DOOR WALL'
+
+/** wide enough for the two-up split: wall on the right, chosen door on the left */
+const SPLIT_QUERY = '(min-width: 900px)'
+
+const ITEMS: DriftWallItem[] = WALL_PHOTOS.map((p) => ({
+  image: p.thumb,
+  srcSet: p.thumbSrcSet,
+  sizes: '(min-width: 900px) 200px, 140px',
+  title: p.alt,
+}))
+
+/**
+ * Catalogue showpiece: a slow 3D wall of door photographs drifting past.
+ *
+ * On a wide screen it is a two-up — the wall lives on the right and the door
+ * you click blows up on the left. Narrow screens keep the wall exactly as it
+ * is (it is the nicest thing on the page at that width) and a tap opens the
+ * photo full-screen instead, because a viewer pinned above or below the wall
+ * would update off-screen.
+ */
+export function DoorWall() {
+  const split = useMediaQuery(SPLIT_QUERY)
+  const [chosen, setChosen] = useState(0)
+  const [zoomed, setZoomed] = useState<number | null>(null)
+
+  useScrollLock(zoomed !== null)
+
+  const closeZoom = useCallback(() => setZoomed(null), [])
+
+  useEffect(() => {
+    if (zoomed === null) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeZoom()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoomed, closeZoom])
+
+  // the split view disappearing under a resize would leave a stale overlay
+  useEffect(() => {
+    if (split) setZoomed(null)
+  }, [split])
+
+  const onSelect = useCallback(
+    (_item: DriftWallItem, index: number) => {
+      if (split) setChosen(index)
+      else setZoomed(index)
+    },
+    [split],
+  )
+
+  const photo = WALL_PHOTOS[chosen]
+  const zoom = zoomed === null ? undefined : WALL_PHOTOS[zoomed]
+  if (!photo) return null
+
+  return (
+    <section className="doorwall" aria-labelledby="doorwall-title">
+      <div className="doorwall__head">
+        <div className="kicker kicker--gold">Straight off the shop floor</div>
+        <h2 className="doorwall__title" id="doorwall-title">
+          <Suspense fallback={<span className="doorwall__title-fb">{TITLE}</span>}>
+            <StrokeText
+              text={TITLE}
+              trigger="scroll"
+              fillMode="wipe"
+              strokeColor="#c9a964"
+              fillColor="#f5f0e6"
+              strokeWidth={1.6}
+              fontSize={120}
+              fontWeight={800}
+              letterSpacing={2}
+              drawDuration={1.5}
+              stagger={0.045}
+            />
+          </Suspense>
+        </h2>
+        <p className="doorwall__sub">
+          {split
+            ? 'Every one of these is standing in the store. Click any door on the wall to bring it forward.'
+            : 'Every one of these is standing in the store. Tap any door to see it up close.'}
+        </p>
+      </div>
+
+      <div className="doorwall__split">
+        {split && (
+          <figure className="doorwall__viewer">
+            <div className="doorwall__frame">
+              {/* keyed on the photo so each pick re-runs the fade-in */}
+              <img key={photo.id} src={photo.full} alt={photo.alt} width={photo.w} height={photo.h} />
+            </div>
+            {photo.caption && <figcaption className="doorwall__cap">{photo.caption}</figcaption>}
+          </figure>
+        )}
+
+        <div className="doorwall__wall">
+          <DriftWall
+            items={ITEMS}
+            columns={3}
+            tileWidth={split ? 196 : 132}
+            tileHeight={split ? 268 : 182}
+            gap={split ? 18 : 12}
+            radius={split ? 10 : 8}
+            tilt={split ? 11 : 9}
+            turn={split ? -15 : -9}
+            depth={split ? 110 : 70}
+            perspective={split ? 1150 : 900}
+            speed={split ? 34 : 28}
+            variance={0.4}
+            parallax={split ? 0.6 : 0}
+            lift={split ? 92 : 52}
+            fade={0.58}
+            /* the dim/overlay pair is the "unhovered" state — on a phone
+               nothing is ever hovered, so the wall would just look muddy */
+            dim={split ? 0.72 : 0.94}
+            overlayColor="#1c1610"
+            selectedIndex={split ? chosen : (zoomed ?? -1)}
+            onSelect={onSelect}
+            style={{ '--dw-ring': 'rgba(201, 169, 100, 0.95)' } as CSSProperties}
+          />
+        </div>
+      </div>
+
+      {zoom && (
+        <div className="doorzoom" role="dialog" aria-modal="true" aria-label="Door photograph">
+          <button type="button" className="doorzoom__back" onClick={closeZoom} aria-label="Close photo" />
+          <div className="doorzoom__box">
+            <img src={zoom.full} alt={zoom.alt} width={zoom.w} height={zoom.h} />
+            {zoom.caption && <div className="doorzoom__cap">{zoom.caption}</div>}
+          </div>
+          <button type="button" className="doorzoom__close" onClick={closeZoom}>
+            Close
+          </button>
+        </div>
+      )}
+    </section>
+  )
+}

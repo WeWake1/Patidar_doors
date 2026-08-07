@@ -50,10 +50,17 @@ export function resumeSmoothScroll(): void {
  * Lenis's internal target-scroll tracking (it'd snap back on the next wheel
  * tick). Falls back to native smooth scroll when Lenis isn't running
  * (reduced motion, or not yet mounted).
+ *
+ * `duration` (seconds) swaps Lenis's lerp for a fixed-length ease. Worth it
+ * for long jumps: the lerp is asymptotic, so it crawls the last stretch and a
+ * full-track glide reads as if it stalled. Ignored by the native fallback.
  */
-export function smoothScrollTo(target: number | HTMLElement, opts?: { offset?: number; immediate?: boolean }): void {
+export function smoothScrollTo(
+  target: number | HTMLElement,
+  opts?: { offset?: number; immediate?: boolean; duration?: number },
+): void {
   if (lenis) {
-    lenis.scrollTo(target, { offset: opts?.offset, immediate: opts?.immediate })
+    lenis.scrollTo(target, { offset: opts?.offset, immediate: opts?.immediate, duration: opts?.duration })
     return
   }
   const behavior = opts?.immediate ? 'instant' : 'smooth'

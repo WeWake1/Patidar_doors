@@ -62,6 +62,66 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   `aspect-ratio`: stable Safari resolves the flex item's content min-height to the img's
   intrinsic 660px and squeezes the photo (Chrome/WebKit-trunk don't).
   Static fallback under `prefers-reduced-motion`. Progress helpers in `src/lib/useTrackProgress.ts`.
+  · **Auto push-through** (`useAutoPushThrough`): the swing (0–.25) is the reader's to
+  scrub, but the zoom is a cutscene — stopping inside it parks the hero in a blurred
+  doorway. Crossing p=.26 hands the rest of the track to one `smoothScrollTo` landing at
+  p=.92 (corridor settled); re-arms below p=.18. Fires on the crossing, *not* on the
+  scroll going idle — idle meant waiting out Lenis's inertia tail first, which read as a
+  ~1s stall. ⚠️ two gotchas: the glide passes an explicit `duration` (Lenis's lerp is
+  asymptotic and crawls the last 10%), and the touch-deferred call goes through
+  `requestAnimationFrame` — a `lenis.scrollTo` issued *inside* a `touchend` handler is
+  swallowed by Lenis's own touch bookkeeping, which runs after ours.
+  · **Beams backdrop** (`.portal__rays` → `reactbits/Beams.tsx`): broad gold light beams
+  behind the opening phase, fading out with the zoom (`zoomOpacity`). The upstream
+  ReactBits component **vendored verbatim** (react-bits `src/ts-default/Backgrounds/
+  Beams/`, three + @react-three/fiber + drei); the only edit is a split `import type`,
+  because `verbatimModuleSyntax` rejects types mixed into a value import — keep it
+  re-syncable. Replaced `LightRays` 2026-08-06 (that file is still in `reactbits/` but
+  unimported, so it and `ogl` are tree-shaken out).
+  ⚠️ `beamWidth`/`beamHeight` are **three.js world units** in front of a fov-30 camera at
+  z=20, which sees ~17 units across — they are *not* a fraction of the viewport. So
+  `beamWidth` alone decides how wide a beam reads (4 = broad slabs), while `beamNumber`
+  and `beamHeight` only have to be big enough to keep the field's edges off-frame once
+  `rotation` tilts it; too small a `beamHeight` lays a hard diagonal seam across a corner.
+  Raising `beamNumber` does *not* thicken the field — it just extends it sideways.
+  Colour is `--gold-l` `#f2d18a`, not the demo's orange, and `speed` is half the demo's.
+  ⚠️ It is **lazy-loaded** (`React.lazy` + `Suspense`) and must stay that way: three is
+  ~238kB gz, twice the rest of the site, and this is a phone-first store. It gets its own
+  chunk, `.portal__rays`' warm gradient stands in until it lands, and the canvas fades in
+  (`@keyframes beams-in`) because its scene background is opaque black — without the fade
+  the hero snaps from warm brown to black when the chunk arrives.
+  · Console carries a `THREE.Clock … deprecated` warning from inside @react-three/fiber;
+  upstream, not ours, and `verify.e2e.mjs` reports it as console noise.
+- **World cards** (`.wcard`, in the corridor): each world is an arched opening with its
+  material full-bleed — `MaterialArt` slices to fill; the doors leaf is `DoorArt` (drawn
+  `preserveAspectRatio="none"`) given its 3:8 ratio back in CSS so it overflows and crops
+  like a photo instead of squashing. Colours are the *material* (teak, golden-teak leaf,
+  birch ply, slate-green WPC), not the world accent — that stays on the frame/rule via
+  `--wd`. Replaced the glass-globe treatment 2026-08-03: the sphere, its spinning
+  specular sweep and the bobbing float read as a toy against the rest of the site.
+- **Door Wall** (`src/components/DoorWall.tsx`, top of `/shop`): full-bleed dark band —
+  reactbits `DriftWall` of door photos drifting in 3D. ≥900px (`useMediaQuery`) it is a
+  two-up, wall right + clicked photo big on the left; below that the wall stays as-is and
+  a tap opens a full-screen `.doorzoom` (through `useScrollLock`), because a viewer above
+  or below the wall would update off-screen. Photos = `src/data/wallPhotos.ts`, a list of
+  ids from `images.gen.ts` — ⚠️ **placeholders borrowed from the catalogue photography**,
+  28 of them, hand-checked at full size for watermarks (the wall shows photos far bigger
+  than a card, so marks photoMap only had to dodge on covers surface here). Swap by
+  editing `WALL_IDS`; captions are opt-in via `CAPTIONS` and blank by default while copy
+  is unconfirmed. `.shop` is no longer one `.page-pad` — it is head / wall / list so the
+  band can go edge to edge.
+  ⚠️ two fixes on top of the registry `DriftWall`: (1) the tile is `transform-style: flat`,
+  not `preserve-3d` — inside a preserve-3d subtree Chrome resolves `elementFromPoint` (so
+  also mouse events) to the track for ~half the wall and the clicks vanish; the hover
+  `translateZ(lift)` is recreated as `scale(--dw-pop)`, computed from lift/perspective.
+  (2) the click is delegated to the wall and falls back to the tiles' projected rects when
+  `elementFromPoint` still misses near the plane's edges. Also `dim`/`.drift-wall__overlay`
+  go near-opaque under `(hover: none)`: the scrim only pays for itself if hover can lift it.
+- **StrokeText** (`src/components/reactbits/StrokeText.tsx`): SVG draw-on headline, used
+  for the Door Wall title. Needs `gsap` + ScrollTrigger (~46 KB gz) so it is **lazy-loaded**
+  with a `-webkit-text-stroke` fallback that holds the same box. Its `fontSize` prop only
+  fixes stroke-to-letterform proportions — the rendered size is the CSS height on
+  `.stroke-text__svg` (the viewBox is `meet`-scaled into it). Font-family is inherited.
 - **Hover-open door**: CSS on `.door-scene--hover` (SVG −26°, photos −18° + edge-shade
   `::after`). Touch devices get `door-scene--ajar` via `src/lib/useAjarInView.ts`
   (shared IntersectionObserver, mid-viewport band, `(hover: none)` only).
@@ -102,7 +162,8 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   (no enums), `noUnusedLocals/Parameters`.
 - E2E smoke test: `scripts/verify.e2e.mjs` (playwright-core + system Chrome, headless).
   `BASE=… OUT=… node scripts/verify.e2e.mjs` against a dev/preview server. Covers portal
-  phases, world pages, photo cards, redirect, full cart→wa.me flow, mobile. Keep it green.
+  phases, world pages, photo cards, the door wall (desktop click-to-viewer + mobile
+  tap-to-zoom), redirect, full cart→wa.me flow, mobile. Keep it green.
   ⚠️ Scroll the storefront with the script's `wheelTo()`, never a raw `window.scrollTo`:
   Lenis owns wheel scrolling and lerps the page back to its own target, which leaves the
   portal at the wrong phase (its corridor invisible → clicks time out). The admin step

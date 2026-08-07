@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
+import { DoorWall } from '../components/DoorWall'
 import { ProductCard } from '../components/ProductCard'
 import { PRODUCTS } from '../data/products'
 import { WORLDS } from '../data/worlds'
@@ -14,38 +15,46 @@ export function Shop() {
   const products = PRODUCTS.filter((p) => world === 'all' || p.world === world)
 
   return (
-    <div className="shop page-pad">
-      <div className="kicker">Everything under one roof</div>
-      <h1 className="shop__title">Catalogue</h1>
-      <p className="shop__sub">
-        Timbers, doors, ply and WPC — everything on this page is stocked or made by us. Doors are made to order in
-        your exact size; sheet and timber prices are confirmed in store or on WhatsApp.
-      </p>
-
-      <div className="chips" role="group" aria-label="Filter by range">
-        <button
-          type="button"
-          className={`chip${world === 'all' ? ' chip--on' : ''}`}
-          onClick={() => setParams({}, { replace: true })}
-        >
-          All
-        </button>
-        {WORLDS.map((w) => (
-          <button
-            key={w.id}
-            type="button"
-            className={`chip${world === w.id ? ' chip--on' : ''}`}
-            onClick={() => setParams({ world: w.id }, { replace: true })}
-          >
-            {w.name}
-          </button>
-        ))}
+    /* the door wall is a full-bleed dark band, so the page splits into padded
+       blocks around it instead of sitting inside one `.page-pad` */
+    <div className="shop">
+      <div className="shop__head page-pad">
+        <div className="kicker">Everything under one roof</div>
+        <h1 className="shop__title">Catalogue</h1>
+        <p className="shop__sub">
+          Timbers, doors, ply and WPC — everything on this page is stocked or made by us. Doors are made to order in
+          your exact size; sheet and timber prices are confirmed in store or on WhatsApp.
+        </p>
       </div>
 
-      <div className="grid grid--3">
-        {products.map((p) => (
-          <ProductCard key={p.id} product={p} />
-        ))}
+      <DoorWall />
+
+      <div className="shop__list page-pad">
+        <div className="chips" role="group" aria-label="Filter by range">
+          <button
+            type="button"
+            className={`chip${world === 'all' ? ' chip--on' : ''}`}
+            onClick={() => setParams({}, { replace: true })}
+          >
+            All
+          </button>
+          {WORLDS.map((w) => (
+            <button
+              key={w.id}
+              type="button"
+              className={`chip${world === w.id ? ' chip--on' : ''}`}
+              onClick={() => setParams({ world: w.id }, { replace: true })}
+            >
+              {w.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid--3">
+          {products.map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
 import type { ArtId, Tone, WorldId } from '../data/products'
 import { WOOD_TONES } from '../data/products'
@@ -8,7 +8,12 @@ import { easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '
 import { DoorArt } from './DoorArt'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
 import { MaterialArt } from './MaterialArt'
-import LightRays from './reactbits/LightRays'
+/* Beams pulls in three + @react-three/fiber + drei — ~220kB gzipped, which is
+   most of the bundle. It is a decorative backdrop, so it must never sit in
+   front of first paint on a phone: lazy-loaded into its own chunk, with
+   .portal__rays' warm gradient standing in until it arrives (it fades in, so
+   the swap doesn't pop). */
+const Beams = lazy(() => import('./reactbits/Beams'))
 
 /**
  * The portal hero: scroll swings the hero door open (phase A), pushes the
@@ -28,43 +33,46 @@ const t = (id: string, name: string, base: string, dark: string, light: string, 
 })
 
 /**
- * Each world is a spinning glass globe with its material floating inside:
- * timber/ply/wpc use the generated MaterialArt swatch, doors a miniature
- * DoorArt leaf. `tone` also tints the globe's rim glow + label (via --wd).
+ * Each world is one card showing its material full-bleed: timber/ply/wpc use
+ * the generated MaterialArt swatch, doors a DoorArt leaf. `tone` tints the
+ * card's frame accent + rule (via --wd).
  */
-type Globe =
+type WorldArt =
   | { id: WorldId; kind: 'door'; art: ArtId; tone: Tone }
   | { id: WorldId; kind: 'material'; material: 'timber' | 'ply' | 'wpc'; tone: Tone }
 
-const WORLD_GLOBES: Globe[] = [
-  { id: 'timbers', kind: 'material', material: 'timber', tone: t('w-timbers', 'Amber Teak', '#8a6234', '#6b4a24', '#a87c46') },
-  { id: 'doors', kind: 'door', art: 'meridian', tone: WOOD_TONES[4] },
-  { id: 'ply', kind: 'material', material: 'ply', tone: t('w-ply', 'Terracotta', '#b0725a', '#93583f', '#c78a70') },
-  { id: 'wpc', kind: 'material', material: 'wpc', tone: t('w-wpc', 'Teal', '#2f7e72', '#215c53', '#47968a', false) },
+/* Material colours are the real thing, not the world's brand accent (which
+   stays on the frame/rule): teak amber, a golden-teak leaf, pale birch ply,
+   and a muted slate-green WPC — a saturated teal board read as a toy. */
+const WORLD_ARTS: WorldArt[] = [
+  { id: 'timbers', kind: 'material', material: 'timber', tone: t('w-timbers', 'Amber Teak', '#8a6234', '#63431f', '#ab8149') },
+  { id: 'doors', kind: 'door', art: 'meridian', tone: WOOD_TONES[1] },
+  { id: 'ply', kind: 'material', material: 'ply', tone: t('w-ply', 'Birch Ply', '#c3a279', '#8c6c45', '#e0c8a4') },
+  { id: 'wpc', kind: 'material', material: 'wpc', tone: t('w-wpc', 'Slate Green', '#5d7b76', '#3d5854', '#8ba5a1', false) },
 ]
 
-function WorldGlobe({ globe, style, tabbable }: { globe: Globe; style?: React.CSSProperties; tabbable: boolean }) {
-  const world = WORLDS.find((w) => w.id === globe.id)!
+function WorldCard({ art, style, tabbable }: { art: WorldArt; style?: React.CSSProperties; tabbable: boolean }) {
+  const world = WORLDS.find((w) => w.id === art.id)!
   return (
     <Link
-      to={`/${globe.id}`}
-      className={`world-globe world-globe--${globe.id}`}
-      style={{ ...style, '--wd': globe.tone.base } as React.CSSProperties}
+      to={`/${art.id}`}
+      className={`wcard wcard--${art.id}`}
+      style={{ ...style, '--wd': art.tone.base } as React.CSSProperties}
       tabIndex={tabbable ? 0 : -1}
     >
-      <span className="globe" aria-hidden="true">
-        <span className="globe__shine" />
-        <span className={`globe__mat globe__mat--${globe.kind}`}>
-          {globe.kind === 'door' ? (
-            <DoorArt art={globe.art} tone={globe.tone} />
-          ) : (
-            <MaterialArt material={globe.material} base={globe.tone.base} dark={globe.tone.dark} light={globe.tone.light} />
-          )}
-        </span>
-        <span className="globe__glass" />
+      <span className={`wcard__art wcard__art--${art.kind}`} aria-hidden="true">
+        {art.kind === 'door' ? (
+          <DoorArt art={art.art} tone={art.tone} />
+        ) : (
+          <MaterialArt material={art.material} base={art.tone.base} dark={art.tone.dark} light={art.tone.light} />
+        )}
+        <span className="wcard__scrim" />
+        <span className="wcard__frame" />
       </span>
-      <span className="world-globe__label">{world.short}</span>
-      <span className="world-globe__hint">{world.tagline}</span>
+      <span className="wcard__body">
+        <span className="wcard__name">{world.short}</span>
+        <span className="wcard__tag">{world.tagline}</span>
+      </span>
     </Link>
   )
 }
@@ -91,6 +99,80 @@ function HeroKicker({ className }: { className?: string }) {
   )
 }
 
+/* ── auto push-through ─────────────────────────────────────
+   The door swing (0–.25) is the reader's to scrub. Everything after it is a
+   cutscene: stopping half-way through the zoom parks the hero inside a
+   blurred doorway, which reads as broken rather than as a pause. So the frame
+   the door finishes opening, the rest of the track is handed to one
+   programmatic glide that lands on the corridor.
+
+   It fires on the crossing, not on the scroll going quiet. Waiting for idle
+   meant waiting out Lenis's inertia tail first, so a reader who stopped sat
+   in the blur for the best part of a second before anything moved. Taking
+   over mid-flick costs nothing — Lenis just retargets the scroll it is
+   already animating. */
+const AUTO_FROM = 0.26 // the swing finishes at .25
+const AUTO_TO = 0.92 // corridor settled — last card lands at .87, heading at .88
+const AUTO_REARM = 0.18 // back at the door: allow the push-through again
+const AUTO_MS = 950 // fixed duration beats the lerp, which crawls the last 10%
+
+function useAutoPushThrough(trackRef: RefObject<HTMLElement | null>, p: number, enabled: boolean) {
+  /* armed starts false so a reload restoring mid-track scroll doesn't yank the
+     page; the first frame at the top of the track arms it */
+  const st = useRef({ armed: false, touching: false, pending: false })
+
+  const run = useCallback(() => {
+    const s = st.current
+    const el = trackRef.current
+    if (!el) return
+    s.armed = false
+    s.pending = false
+    smoothScrollTo(el.offsetTop + Math.max(1, el.offsetHeight - window.innerHeight) * AUTO_TO, {
+      duration: AUTO_MS / 1000,
+    })
+  }, [trackRef])
+
+  /* A finger on the glass owns the scroll — taking over mid-drag would rip the
+     page out from under it, so that one case defers to the lift. */
+  useEffect(() => {
+    if (!enabled) return
+    const s = st.current
+    const down = () => {
+      s.touching = true
+    }
+    const up = () => {
+      s.touching = false
+      /* next frame, not inline: Lenis's own touch handling runs after ours and
+         swallows a scrollTo issued from inside the touchend handler */
+      if (s.pending) requestAnimationFrame(run)
+    }
+    window.addEventListener('touchstart', down, { passive: true })
+    window.addEventListener('touchend', up, { passive: true })
+    window.addEventListener('touchcancel', up, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', down)
+      window.removeEventListener('touchend', up)
+      window.removeEventListener('touchcancel', up)
+      s.touching = false
+      s.pending = false
+    }
+  }, [enabled, run])
+
+  useEffect(() => {
+    if (!enabled) return
+    const s = st.current
+    if (p < AUTO_REARM) s.armed = true
+    if (!s.armed || p < AUTO_FROM || p >= AUTO_TO) return
+    /* an overlay owns the screen (Lenis is parked) — wait for it to close */
+    if (document.body.classList.contains('has-overlay')) return
+    if (s.touching) {
+      s.pending = true
+      return
+    }
+    run()
+  }, [p, enabled, run])
+}
+
 function Corridor({ p, interactive }: { p: number; interactive: boolean }) {
   const heading = seg(p, 0.8, 0.88)
   return (
@@ -108,12 +190,12 @@ function Corridor({ p, interactive }: { p: number; interactive: boolean }) {
         <h2>Choose your world</h2>
       </div>
       <div className="portal__doors">
-        {WORLD_GLOBES.map((g, i) => {
+        {WORLD_ARTS.map((g, i) => {
           const s = seg(p, 0.56 + i * 0.07, 0.66 + i * 0.07)
           return (
-            <WorldGlobe
+            <WorldCard
               key={g.id}
-              globe={g}
+              art={g}
               tabbable={interactive}
               style={{ opacity: s, transform: `translateY(${(1 - s) * 48}px)` }}
             />
@@ -129,6 +211,7 @@ export function HeroPortal() {
   const p = useTrackProgress(trackRef)
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   const mobile = useMediaQuery('(max-width: 720px)')
+  useAutoPushThrough(trackRef, p, !reduced)
 
   if (reduced) {
     return (
@@ -150,8 +233,8 @@ export function HeroPortal() {
           </div>
         </div>
         <div className="portal__grid">
-          {WORLD_GLOBES.map((g) => (
-            <WorldGlobe key={g.id} globe={g} tabbable />
+          {WORLD_ARTS.map((g) => (
+            <WorldCard key={g.id} art={g} tabbable />
           ))}
         </div>
       </section>
@@ -165,36 +248,46 @@ export function HeroPortal() {
   const zoomOpacity = 1 - seg(p, 0.45, 0.55)
   const corridorInteractive = p > 0.7
 
+  /* Cue / leaf click. Below the corridor it runs the whole thing in one glide
+     rather than the old nudge to .3 — that landed inside the push-through,
+     where useAutoPushThrough would immediately take over and the reader saw
+     two separate animations for one click. */
   const peek = () => {
     const el = trackRef.current
     if (!el) return
     const top = el.offsetTop
     const total = el.offsetHeight - window.innerHeight
-    const target = p < 0.15 ? top + total * 0.3 : p < 0.5 ? top + total : top
-    smoothScrollTo(target)
+    smoothScrollTo(p < AUTO_TO ? top + total * AUTO_TO : top, { duration: AUTO_MS / 1000 })
   }
 
   return (
     <section className="portal portal--dark" ref={trackRef}>
       <div className="portal__sticky">
-        {/* LightRays backdrop — only the opening phase; fades out before the corridor. */}
+        {/* Beams backdrop — only the opening phase; fades out before the corridor.
+            beamWidth/Height are world units in front of a fov-30 camera at z=20,
+            which sees ~17 units across: `beamWidth` alone sets how wide a beam
+            reads (4 = broad slabs), while `beamNumber`/`beamHeight` only need to
+            be large enough that the field's edges stay off-frame once rotated —
+            a short beamHeight puts a hard diagonal seam across the corner.
+            Speed is half the demo's; at 2 the noise crawls fast enough to
+            distract from the headline. */}
         <div
           className="portal__rays"
           style={{ opacity: zoomOpacity, visibility: zoomOpacity === 0 ? 'hidden' : 'visible' }}
           aria-hidden="true"
         >
-          <LightRays
-            raysOrigin="top-center"
-            raysColor="#f2d18a"
-            raysSpeed={0.9}
-            lightSpread={0.7}
-            rayLength={2}
-            fadeDistance={1.2}
-            followMouse
-            mouseInfluence={0.08}
-            noiseAmount={0.08}
-            distortion={0.04}
-          />
+          <Suspense fallback={null}>
+            <Beams
+              beamWidth={4}
+              beamHeight={30}
+              beamNumber={12}
+              lightColor="#f2d18a"
+              speed={1}
+              noiseIntensity={1.5}
+              scale={0.2}
+              rotation={30}
+            />
+          </Suspense>
         </div>
 
         <Corridor p={p} interactive={corridorInteractive} />

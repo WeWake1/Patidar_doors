@@ -88,7 +88,9 @@ function PlySwatch({ uid, colors }: { uid: string; colors: MaterialColors }) {
         return (
           <g key={i}>
             <rect x={24 + i * 6} y={y} width={W - 48 - i * 12} height={40} fill={`url(#${uid}-face)`} />
-            <g opacity={0.85}>
+            {/* core strata — kept low-contrast; at full strength the stack
+                read as a graphic barcode rather than a sheet edge */}
+            <g opacity={0.55}>
               {[6, 12, 18, 24, 30].map((dy, j) => (
                 <rect
                   key={dy}
@@ -97,7 +99,7 @@ function PlySwatch({ uid, colors }: { uid: string; colors: MaterialColors }) {
                   width={W - 48 - i * 12}
                   height={3}
                   fill={j % 2 ? colors.dark : colors.light}
-                  opacity={j % 2 ? 0.5 : 0.7}
+                  opacity={j % 2 ? 0.34 : 0.4}
                 />
               ))}
             </g>
@@ -129,10 +131,11 @@ function WpcSwatch({ uid, colors }: { uid: string; colors: MaterialColors }) {
       {/* extruded cell structure on the exposed edge */}
       <rect x={28} y={H - 58} width={W - 56} height={26} rx={6} fill={colors.dark} opacity={0.9} />
       {Array.from({ length: 11 }, (_, i) => (
-        <circle key={i} cx={52 + i * 30} cy={H - 45} r={7} fill={colors.light} opacity={0.85} />
+        <circle key={i} cx={52 + i * 30} cy={H - 45} r={5.5} fill={colors.dark} opacity={0.6} />
       ))}
-      {/* water-shrugging ripple lines */}
-      <g stroke={colors.light} strokeWidth={2} fill="none" opacity={0.55}>
+      {/* water-shrugging ripple lines — a whisper of surface texture; drawn
+          bolder they turned the board into a cartoon */}
+      <g stroke={colors.light} strokeWidth={1.4} fill="none" opacity={0.2}>
         <path d="M48 80 q 20 -10 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0" />
         <path d="M48 116 q 20 -10 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0" opacity={0.6} />
         <path d="M48 152 q 20 -10 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0" opacity={0.35} />

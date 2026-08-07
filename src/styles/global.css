@@ -680,6 +680,13 @@ button { font-family: var(--sans); }
 .cta__sub { margin: 20px auto 36px; max-width: 460px; font: 400 15.5px/1.7 var(--sans); color: var(--mut); }
 
 /* ── shop ────────────────────────────────────────────────── */
+/* the page splits into two padded blocks around the full-bleed door wall.
+   `.page-pad` keeps owning the outer edges (its own breakpoints rewrite the
+   shorthand later in this file) — these only close the seam, and carry two
+   classes so they win wherever they land in the cascade. */
+.shop__head.page-pad { padding-bottom: 56px; }
+.shop__list.page-pad { padding-top: 76px; }
+
 .shop__title { margin: 10px 0 0; font: 500 clamp(44px, 5.5vw, 76px) / 1.02 var(--serif); }
 .shop__sub { margin: 14px 0 0; max-width: 520px; font: 400 15px/1.7 var(--sans); color: var(--mut); }
 .chips { display: flex; gap: 10px; flex-wrap: wrap; margin: 38px 0 40px; }
@@ -695,6 +702,157 @@ button { font-family: var(--sans); }
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 .chip--on { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+
+/* ── door wall (catalogue showpiece) ─────────────────────── */
+/* Dark band so the DriftWall's radial mask can fade its tiles into the
+   background instead of stopping on a hard edge — `overlayColor` on the
+   component is this same --deep. */
+.doorwall {
+  background: var(--deep);
+  color: var(--cream);
+  padding: 88px 6vw 96px;
+  border-top: 1px solid #33281c;
+  border-bottom: 1px solid #33281c;
+  overflow: hidden;
+}
+.doorwall__head { max-width: 1040px; margin: 0 auto; text-align: center; }
+
+/* StrokeText scales its SVG to `meet` inside this height, so the height is what
+   actually sets the type size — its `fontSize` prop only fixes the proportions
+   of stroke to letterform. The fallback matches with -webkit-text-stroke so the
+   lazy chunk landing isn't a visible swap. */
+.doorwall__title { margin: 16px 0 0; min-height: clamp(46px, 8.4vw, 104px); }
+.doorwall__title .stroke-text__svg { height: clamp(46px, 8.4vw, 104px); }
+.doorwall__title-fb {
+  display: block;
+  font: 800 clamp(30px, 6.4vw, 76px) / clamp(46px, 8.4vw, 104px) var(--sans);
+  letter-spacing: 0.02em;
+  color: transparent;
+  -webkit-text-stroke: 1.2px var(--gold);
+}
+.doorwall__sub {
+  margin: 20px auto 0;
+  max-width: 500px;
+  font: 400 15px/1.7 var(--sans);
+  color: #b5a78e;
+}
+
+.doorwall__split {
+  max-width: 1320px;
+  margin: 54px auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 44px;
+}
+
+.doorwall__viewer { margin: 0; }
+/* `contain`, not `cover`: the point of the big pane is the whole leaf, and the
+   sources run anywhere from 1:1 to 1:2. */
+.doorwall__frame {
+  height: min(70vh, 620px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  border: 1px solid #3d3122;
+  background: linear-gradient(158deg, #2b2218, #191310);
+  overflow: hidden;
+}
+.doorwall__frame img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.85);
+  animation: doorfade 0.5s ease both;
+}
+@keyframes doorfade {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+.doorwall__cap {
+  margin-top: 14px;
+  font: 400 13px var(--sans);
+  letter-spacing: 0.04em;
+  color: #b5a78e;
+}
+
+/* .drift-wall is width/height:100% — the pane has to state a height */
+.doorwall__wall { height: min(70vh, 620px); }
+
+@media (min-width: 900px) {
+  .doorwall__split {
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 56px;
+  }
+}
+@media (max-width: 899px) {
+  /* the wall runs edge to edge on a phone; only the copy keeps a gutter */
+  .doorwall { padding: 66px 0 74px; }
+  .doorwall__head { padding: 0 6vw; }
+  .doorwall__split { margin-top: 30px; }
+  .doorwall__wall { height: min(64vh, 460px); }
+}
+/* same reason as `dim` in DoorWall.tsx: no hover means no reveal, so the
+   scrim that makes the desktop hover pop just leaves the photos muddy */
+@media (hover: none) {
+  .doorwall .drift-wall__overlay { opacity: 0.1; }
+}
+
+/* tap-to-zoom, the phone stand-in for the desktop two-up */
+.doorzoom {
+  position: fixed;
+  inset: 0;
+  z-index: 88;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding:
+    calc(20px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right))
+    calc(20px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));
+  animation: fadein 0.22s ease both;
+}
+.doorzoom__back {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(20, 15, 10, 0.95);
+  cursor: pointer;
+}
+.doorzoom__box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+}
+.doorzoom__box img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 72vh;
+  box-shadow: 0 30px 80px -30px #000;
+  animation: doorfade 0.32s ease both;
+}
+.doorzoom__cap { font: 400 13px var(--sans); color: #cbbb9d; }
+.doorzoom__close {
+  position: relative;
+  margin-top: 24px;
+  min-height: 44px;
+  padding: 12px 28px;
+  background: none;
+  color: var(--cream);
+  border: 1px solid #6b5a3d;
+  font: 500 12px var(--sans);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
 
 /* ── product page ────────────────────────────────────────── */
 .crumbs { font: 400 13px var(--sans); color: var(--mut2); margin-bottom: 34px; }
@@ -1310,7 +1468,7 @@ button { font-family: var(--sans); }
   background: var(--cream);
 }
 
-/* Dark opening phase — a warm night backdrop so the LightRays glow reads.
+/* Dark opening phase — a warm night backdrop so the Beams glow reads.
    Scoped to the animated portal only; the reduced-motion .portal--static hero
    keeps its light cream treatment. */
 /* the track carries the colour too, so any sub-pixel rounding under the sticky
@@ -1324,7 +1482,17 @@ button { font-family: var(--sans); }
   background: radial-gradient(115% 78% at 50% -6%, rgba(120, 88, 42, 0.55) 0%, rgba(40, 30, 18, 0.4) 42%, transparent 72%);
   will-change: opacity;
 }
-.portal__rays .light-rays-container { z-index: 0; }
+/* The Beams canvas paints its own opaque black scene background, so it lands
+   on top of .portal__rays' warm gradient. It arrives late (lazy chunk) —
+   fade it in, or the hero visibly snaps from warm brown to black. */
+.portal__rays .beams-container {
+  z-index: 0;
+  animation: beams-in 700ms ease-out both;
+}
+@keyframes beams-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 .portal--dark .hero__kicker { color: var(--gold-l); }
 .portal--dark .hero__title { color: var(--cream); }
 .portal--dark .hero__title em { color: var(--gold-l); }
@@ -1448,171 +1616,150 @@ button { font-family: var(--sans); }
   background: radial-gradient(120% 100% at 50% 0%, #3a2e1e 0%, #241c13 55%, #16110b 100%);
   will-change: opacity;
 }
+/* The room the arches stand in. Everything here is soft on purpose — the old
+   version drew a hard bright floor edge and two skewed stripe panels, which
+   read as artefacts over the photography-free backdrop. */
 .portal__hall {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    /* floor plane */
-    linear-gradient(180deg, transparent 0 62%, rgba(201, 169, 100, 0.14) 62.2%, rgba(90, 65, 33, 0.35) 78%, rgba(20, 14, 8, 0.6) 100%),
-    /* converging ceiling glow */
-    radial-gradient(60% 34% at 50% 8%, rgba(246, 223, 172, 0.12), transparent 70%);
+    /* pooled light on the floor, no hard horizon line */
+    radial-gradient(78% 40% at 50% 96%, rgba(214, 178, 108, 0.16), transparent 72%),
+    linear-gradient(180deg, transparent 0 58%, rgba(20, 14, 8, 0.22) 82%, rgba(12, 8, 4, 0.55) 100%),
+    /* light spilling in from the ceiling above the arches */
+    radial-gradient(52% 30% at 50% 2%, rgba(246, 223, 172, 0.14), transparent 72%);
 }
-.portal__hall::before,
-.portal__hall::after {
+/* side walls falling away into the dark — a vignette, not stripes */
+.portal__hall::before {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 18vw;
-  background: repeating-linear-gradient(90deg, rgba(246, 223, 172, 0.05) 0 2px, transparent 2px 56px);
+  inset: 0;
+  background: linear-gradient(90deg, rgba(10, 7, 3, 0.62) 0%, transparent 26%, transparent 74%, rgba(10, 7, 3, 0.62) 100%);
 }
-.portal__hall::before { left: 0; transform: skewY(9deg); }
-.portal__hall::after { right: 0; transform: skewY(-9deg); }
 .portal__corridor-head { text-align: center; }
 .portal__corridor-head h2 {
   margin: 10px 0 0;
   font: 500 clamp(30px, 4vw, 52px) / 1.05 var(--serif);
   color: #f0e3c2;
 }
+/* four openings down the hall */
 .portal__doors {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: clamp(26px, 4.5vw, 70px);
+  gap: clamp(18px, 3vw, 46px);
 }
-
-/* one clickable world — a spinning glass globe with its material inside */
-.world-globe {
+/* ── one clickable world ───────────────────────────────────
+   An arched opening: a clipped art box (material art full-bleed, so it reads
+   as a real sample rather than an icon), a depth scrim, a hairline frame,
+   and the label block beneath. */
+.wcard {
+  display: flex;
+  flex-direction: column;
+  width: clamp(132px, 15vw, 198px);
+  text-align: center;
+  text-decoration: none;
+  isolation: isolate;
+}
+.wcard__art {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 3 / 4.5;
+  /* doorway arch: semicircular head, square foot */
+  border-radius: 50% 50% 3px 3px / 33% 33% 3px 3px;
+  /* tinted from the material, not black: the generated swatches are drawn with
+     margins and gaps, and a black backdrop turned those into hard graphic
+     bands instead of shadow between planks/sheets */
+  background: color-mix(in srgb, var(--wd, #c9a964) 26%, #17110a);
+  box-shadow: 0 34px 60px -34px rgba(0, 0, 0, 0.95);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
+}
+/* materials slice to fill (their own preserveAspectRatio) */
+.wcard__art svg { display: block; width: 100%; height: 100%; }
+/* the door leaf draws with preserveAspectRatio="none", so it gets its true
+   3:8 ratio back from CSS and overflows the box, which crops it like a
+   photograph instead of squashing it */
+.wcard__art--door svg {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 8;
+  transform: translateY(-50%);
+}
+.wcard__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(12, 8, 3, 0.3) 0%, transparent 26%, transparent 54%, rgba(12, 8, 3, 0.42) 100%),
+    radial-gradient(115% 78% at 50% 6%, transparent 46%, rgba(12, 8, 3, 0.34) 100%);
+  transition: opacity 0.45s ease;
+}
+/* hairline reveal: cream rim, dark inner reveal, tone accent hugging it */
+.wcard__frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 227, 194, 0.22),
+    inset 0 0 0 4px rgba(12, 8, 3, 0.5),
+    inset 0 0 0 5px color-mix(in srgb, var(--wd, #c9a964) 42%, transparent),
+    inset 0 -40px 60px -30px rgba(0, 0, 0, 0.8);
+  transition: box-shadow 0.45s ease;
+}
+.wcard__body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  width: clamp(116px, 13vw, 176px);
-  text-decoration: none;
-  text-align: center;
+  gap: 7px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--wd, #c9a964) 55%, transparent);
 }
-/* the glass sphere */
-.globe {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  overflow: hidden;
-  isolation: isolate;
-  perspective: 520px;
-  background:
-    radial-gradient(circle at 34% 28%, rgba(255, 246, 224, 0.34), rgba(90, 66, 38, 0.28) 42%, rgba(24, 17, 10, 0.9) 100%);
-  box-shadow:
-    inset 0 2px 10px rgba(255, 240, 210, 0.24),
-    inset 0 -18px 32px rgba(0, 0, 0, 0.55),
-    0 0 46px -10px var(--wd, var(--brass)),
-    0 20px 40px -20px rgba(0, 0, 0, 0.8);
-  transition: box-shadow 0.4s ease, transform 0.4s ease;
-}
-/* the material, floating + gently turning in the middle */
-.globe__mat {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform-style: preserve-3d;
-  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
-  animation: globeFloat 6.5s ease-in-out infinite;
-}
-.globe__mat svg { display: block; width: 100%; height: 100%; }
-.globe__mat--material {
-  width: 58%;
-  aspect-ratio: 4 / 3;
-  border-radius: 5px;
-  overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(255, 240, 210, 0.16);
-}
-.globe__mat--door {
-  width: 32%;
-  aspect-ratio: 3 / 7;
-  border-radius: 3px 3px 2px 2px;
-  overflow: hidden;
-}
-/* rotating specular sweep — reads as the globe turning.
-   Must be a circle itself: a transformed child escapes the parent's
-   circular overflow clip, so a square here leaks its bounding box. */
-.globe__glass {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: 50%;
-  pointer-events: none;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgba(255, 248, 228, 0.16) 26deg,
-    transparent 70deg,
-    transparent 190deg,
-    rgba(255, 248, 228, 0.09) 216deg,
-    transparent 260deg
-  );
-  mix-blend-mode: screen;
-  animation: globeSpin 13s linear infinite;
-}
-/* fixed top-left highlight + rim — gives the glass its roundness */
-.globe__shine {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  border-radius: 50%;
-  background:
-    radial-gradient(38% 30% at 30% 24%, rgba(255, 252, 244, 0.6), transparent 62%),
-    radial-gradient(60% 50% at 74% 82%, color-mix(in srgb, var(--wd, #c9a964) 45%, transparent), transparent 66%);
-  box-shadow: inset 0 0 0 1px rgba(255, 240, 210, 0.18), inset 0 0 22px rgba(0, 0, 0, 0.4);
-}
-.world-globe:focus-visible .globe {
-  transform: translateY(-4px);
-  box-shadow:
-    inset 0 2px 10px rgba(255, 240, 210, 0.3),
-    inset 0 -18px 32px rgba(0, 0, 0, 0.5),
-    0 0 60px -6px var(--wd, var(--brass)),
-    0 26px 46px -18px rgba(0, 0, 0, 0.85);
-}
-@media (hover: hover) {
-  .world-globe:hover .globe {
-    transform: translateY(-4px);
-    box-shadow:
-      inset 0 2px 10px rgba(255, 240, 210, 0.3),
-      inset 0 -18px 32px rgba(0, 0, 0, 0.5),
-      0 0 60px -6px var(--wd, var(--brass)),
-      0 26px 46px -18px rgba(0, 0, 0, 0.85);
-  }
-}
-.world-globe__label {
-  font: 600 14px var(--sans);
+.wcard__name {
+  font: 600 13px var(--sans);
   letter-spacing: 0.3em;
   color: #f0e3c2;
-  border-bottom: 2px solid var(--wd, var(--brass));
-  padding-bottom: 6px;
+  transition: color 0.3s ease;
 }
-.world-globe__hint {
-  font: 400 11.5px/1.45 var(--sans);
-  color: rgba(240, 227, 194, 0.62);
-  max-width: 170px;
-  min-height: 34px;
-}
-.world-globe:focus-visible .world-globe__label { color: #fff; border-bottom-width: 3px; }
-@media (hover: hover) {
-  .world-globe:hover .world-globe__label { color: #fff; border-bottom-width: 3px; }
+.wcard__tag {
+  font: 400 12.5px/1.45 var(--sans);
+  color: rgba(240, 227, 194, 0.6);
+  max-width: 180px;
+  min-height: 36px;
 }
 
-@keyframes globeSpin {
-  to { transform: rotate(360deg); }
+/* lift + clear the scrim slightly on intent */
+.wcard:focus-visible { outline: none; }
+.wcard:focus-visible .wcard__art { transform: translateY(-6px); }
+.wcard:focus-visible .wcard__scrim { opacity: 0.72; }
+.wcard:focus-visible .wcard__frame {
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 227, 194, 0.4),
+    inset 0 0 0 4px rgba(12, 8, 3, 0.5),
+    inset 0 0 0 5px var(--wd, #c9a964),
+    inset 0 -40px 60px -30px rgba(0, 0, 0, 0.75);
 }
-@keyframes globeFloat {
-  0%   { transform: translate(-50%, -50%) translateY(5px) rotateY(-20deg); }
-  50%  { transform: translate(-50%, -50%) translateY(-5px) rotateY(20deg); }
-  100% { transform: translate(-50%, -50%) translateY(5px) rotateY(-20deg); }
+.wcard:focus-visible .wcard__name { color: #fff; }
+@media (hover: hover) {
+  .wcard:hover .wcard__art { transform: translateY(-6px); }
+  .wcard:hover .wcard__scrim { opacity: 0.72; }
+  .wcard:hover .wcard__frame {
+    box-shadow:
+      inset 0 0 0 1px rgba(240, 227, 194, 0.4),
+      inset 0 0 0 4px rgba(12, 8, 3, 0.5),
+      inset 0 0 0 5px var(--wd, #c9a964),
+      inset 0 -40px 60px -30px rgba(0, 0, 0, 0.75);
+  }
+  .wcard:hover .wcard__name { color: #fff; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .globe__glass { animation: none; }
-  .globe__mat { animation: none; transform: translate(-50%, -50%); }
+  .wcard__art { transition: none; }
 }
 
 /* reduced-motion static fallback */
@@ -1634,8 +1781,9 @@ button { font-family: var(--sans); }
   margin: 0 auto;
   padding: 30px 6vw 80px;
 }
-.portal--static .world-globe__label { color: var(--ink); }
-.portal--static .world-globe__hint { color: var(--mut); }
+.portal__grid .wcard { width: auto; }
+.portal--static .wcard__name { color: var(--ink); }
+.portal--static .wcard__tag { color: var(--mut); }
 
 /* ── home: world tiles strip ─────────────────────────────── */
 .worldstrip { padding: 90px 6vw 30px; max-width: 1320px; margin: 0 auto; }
@@ -1696,14 +1844,16 @@ button { font-family: var(--sans); }
     flex: none;
   }
   .portal__corridor { gap: 22px; padding-top: 108px; }
+  /* two-up on a phone — four arches across never fits */
   .portal__doors {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px 34px;
-    width: min(88vw, 420px);
+    gap: 18px 30px;
+    width: min(88vw, 400px);
   }
-  .world-globe { width: min(36vw, 148px); gap: 12px; justify-self: center; }
-  .world-globe__hint { display: none; }
+  .portal__doors .wcard { width: min(38vw, 156px); justify-self: center; }
+  .wcard__body { margin-top: 12px; padding-top: 10px; }
+  .wcard__tag { display: none; }
 }
 
 /* ═══════════════ mobile polish — magnificent on a phone ═══════════════════

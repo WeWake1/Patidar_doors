@@ -122,9 +122,9 @@
 [data-world='wpc'] .card { border-radius: 10px; overflow: hidden; }
 [data-world='wpc'] .card__stage { background: linear-gradient(180deg, #f0f4f2, #dbe4e1); }
 
-/* world globes inside the hero corridor share these accents (HeroPortal also
-   sets --wd inline from the globe's tone; these are the CSS-side fallback) */
-.world-globe--timbers { --wd: #c9903f; }
-.world-globe--doors { --wd: #a98b4f; }
-.world-globe--ply { --wd: #b0725a; }
-.world-globe--wpc { --wd: #2f7e72; }
+/* world cards inside the hero corridor share these accents (HeroPortal also
+   sets --wd inline from the card's tone; these are the CSS-side fallback) */
+.wcard--timbers { --wd: #c9903f; }
+.wcard--doors { --wd: #a98b4f; }
+.wcard--ply { --wd: #b0725a; }
+.wcard--wpc { --wd: #2f7e72; }

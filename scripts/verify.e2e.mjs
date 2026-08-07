@@ -94,21 +94,21 @@ await step('hero door opens on scroll (phase A)', async () => {
 })
 await shot('02-home-hero-open')
 
-await step('portal corridor appears with 4 world globes (phase C)', async () => {
+await step('portal corridor appears with 4 world cards (phase C)', async () => {
   const target = await page.evaluate(() => {
     const el = document.querySelector('.portal')
     return el.offsetTop + (el.offsetHeight - window.innerHeight) * 0.95
   })
   await wheelTo(target)
-  const n = await page.locator('.world-globe').count()
-  if (n !== 4) throw new Error(`expected 4 world globes, got ${n}`)
+  const n = await page.locator('.wcard').count()
+  if (n !== 4) throw new Error(`expected 4 world cards, got ${n}`)
   const vis = await page.evaluate(() => getComputedStyle(document.querySelector('.portal__corridor')).opacity)
   if (Number(vis) < 0.9) throw new Error(`corridor not faded in (opacity ${vis})`)
 })
 await shot('02b-portal-corridor')
 
-await step('corridor globe walks into Timbers world', async () => {
-  await page.locator('.world-globe--timbers').click()
+await step('corridor card walks into Timbers world', async () => {
+  await page.locator('.wcard--timbers').click()
   await page.waitForURL('**/timbers')
   await page.waitForSelector('[data-world="timbers"]')
   await page.goBack()
@@ -138,7 +138,34 @@ await step('catalogue shows all 49 products', async () => {
 await page.waitForTimeout(600)
 await shot('05-shop-all', { fullPage: true })
 
+/* The wall's tiles drift continuously, so there is no stable locator to click —
+   aim at the middle of the pane and let the component resolve the tile. */
+async function clickDoorWall() {
+  await wheelTo(620)
+  await page.waitForTimeout(700)
+  const box = await page.locator('.doorwall__wall').boundingBox()
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  await page.waitForTimeout(500)
+}
+
+await step('door wall: click a tile, big viewer follows', async () => {
+  await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.drift-wall__tile')
+  const before = await page.locator('.doorwall__viewer img').getAttribute('src')
+  // up to three tries: the middle of the pane can land on the one photo already
+  // showing, which is a legitimate click with no visible change
+  let after = before
+  for (let i = 0; i < 3 && after === before; i++) {
+    await clickDoorWall()
+    after = await page.locator('.doorwall__viewer img').getAttribute('src')
+  }
+  if (after === before) throw new Error('viewer never changed photo')
+  if (!(await page.locator('.drift-wall__tile.is-selected').count())) throw new Error('no tile marked selected')
+})
+
 await step('world filter works', async () => {
+  await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.card')
   await page.getByRole('button', { name: 'Doors', exact: true }).click()
   await page.waitForTimeout(300)
   const n = await page.locator('.card').count()
@@ -316,10 +343,24 @@ await step('mobile home + burger menu', async () => {
   await shot('14-mobile-menu')
 })
 
+await step('mobile door wall taps open the full-screen photo', async () => {
+  await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.drift-wall__tile')
+  if (await page.locator('.doorwall__viewer').count()) throw new Error('split viewer should be desktop-only')
+  await clickDoorWall()
+  await page.waitForSelector('.doorzoom', { timeout: 3000 })
+  await shot('15-mobile-doorwall')
+  await page.locator('.doorzoom__close').click()
+  await page.waitForTimeout(300)
+  if (await page.locator('.doorzoom').count()) throw new Error('overlay did not close')
+  const locked = await page.evaluate(() => document.documentElement.style.overflow)
+  if (locked === 'hidden') throw new Error('scroll lock survived the overlay')
+})
+
 await step('mobile shop + pdp', async () => {
   await page.goto(BASE + '/product/haveli', { waitUntil: 'networkidle' })
   await page.waitForTimeout(500)
-  await shot('15-mobile-pdp')
+  await shot('16-mobile-pdp')
 })
 
 /* ── report ────────────────────────────────────────────── */
