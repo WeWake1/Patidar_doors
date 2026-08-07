@@ -122,6 +122,9 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   with a `-webkit-text-stroke` fallback that holds the same box. Its `fontSize` prop only
   fixes stroke-to-letterform proportions — the rendered size is the CSS height on
   `.stroke-text__svg` (the viewBox is `meet`-scaled into it). Font-family is inherited.
+  ⚠️ it runs on `trigger="hover"`, which starts *at* the finished state and replays the
+  draw on `pointerenter` — so touch visitors only ever see the finished headline. Switch
+  to `trigger="scroll"` if the animation should play for them too.
 - **Hover-open door**: CSS on `.door-scene--hover` (SVG −26°, photos −18° + edge-shade
   `::after`). Touch devices get `door-scene--ajar` via `src/lib/useAjarInView.ts`
   (shared IntersectionObserver, mid-viewport band, `(hover: none)` only).
