@@ -75,12 +75,21 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   and `beamHeight` only have to be big enough to keep the field's edges off-frame once
   `rotation` tilts it; too small a `beamHeight` lays a hard diagonal seam across a corner.
   Raising `beamNumber` does *not* thicken the field — it just extends it sideways.
-  Colour is `--gold-l` `#f2d18a`, not the demo's orange, and `speed` is half the demo's.
+  Colour is `--gold-l` `#f2d18a`, not the demo's orange, and `speed` (1.35) stays under
+  the demo's 2 — faster and the noise crawling down the beams competes with the headline.
   ⚠️ It is **lazy-loaded** (`React.lazy` + `Suspense`) and must stay that way: three is
   ~238kB gz, twice the rest of the site, and this is a phone-first store. It gets its own
   chunk, `.portal__rays`' warm gradient stands in until it lands, and the canvas fades in
   (`@keyframes beams-in`) because its scene background is opaque black — without the fade
   the hero snaps from warm brown to black when the chunk arrives.
+  ⚠️ It is also **conditionally mounted** (`beamsLive`, off above p=.62, back on below
+  p=.5) and must stay that way. `visibility: hidden` on `.portal__rays` hides the canvas
+  but does **not** stop @react-three/fiber's render loop — measured ~120 WebGL draw
+  calls/sec still running through the corridor and all the way down the page, i.e. for
+  the whole life of the home page. That was the single biggest cause of the hero
+  stuttering on real phones (~25% of main-thread scripting, plus a full-screen shader at
+  DPR 3 on the GPU). Hysteresis on the two thresholds so scrubbing across the edge can't
+  thrash the WebGL context; remount costs a shader recompile, hidden by `beams-in`.
   · Console carries a `THREE.Clock … deprecated` warning from inside @react-three/fiber;
   upstream, not ours, and `verify.e2e.mjs` reports it as console noise.
 - **World cards** (`.wcard`, in the corridor): each world is an arched opening with its
@@ -90,6 +99,12 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   birch ply, slate-green WPC), not the world accent — that stays on the frame/rule via
   `--wd`. Replaced the glass-globe treatment 2026-08-03: the sphere, its spinning
   specular sweep and the bobbing float read as a toy against the rest of the site.
+  ⚠️ `.wcard__art` carries `will-change: transform` purely to force a compositor layer,
+  and needs it. `.wcard` is scroll-scrubbed (transform+opacity per frame) while that box
+  holds the expensive pixels — an feTurbulence/feDisplacementMap-filtered SVG under an
+  elliptical clip, a 60px drop shadow and a 60px inset one. Unpromoted, Chrome
+  re-rasterises all four on every frame of the reveal, which is exactly the phase that
+  stuttered on a phone. Verify with CDP `LayerTree`: all 4 must have their own layer.
 - **Door Wall** (`src/components/DoorWall.tsx`, top of `/shop`): full-bleed dark band —
   reactbits `DriftWall` of door photos drifting in 3D. ≥900px (`useMediaQuery`) it is a
   two-up, wall right + clicked photo big on the left; below that the wall stays as-is and

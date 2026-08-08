@@ -1,4 +1,4 @@
-import { Suspense, lazy, useRef } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { ArtId, Tone, WorldId } from '../data/products'
 import { WOOD_TONES } from '../data/products'
@@ -137,6 +137,14 @@ export function HeroPortal() {
   const p = useTrackProgress(trackRef)
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   const mobile = useMediaQuery('(max-width: 720px)')
+  /* Whether the WebGL backdrop is worth running at all — see the Beams block
+     below. Setting the same value bails out of the re-render, so this costs
+     nothing on the frames in between. Must sit above the reduced-motion early
+     return: hooks can't run conditionally. */
+  const [beamsLive, setBeamsLive] = useState(true)
+  useEffect(() => {
+    setBeamsLive((live: boolean) => (live ? p < 0.62 : p < 0.5))
+  }, [p])
 
   if (reduced) {
     return (
@@ -191,24 +199,32 @@ export function HeroPortal() {
             reads (4 = broad slabs), while `beamNumber`/`beamHeight` only need to
             be large enough that the field's edges stay off-frame once rotated —
             a short beamHeight puts a hard diagonal seam across the corner.
-            Speed is half the demo's; at 2 the noise crawls fast enough to
-            distract from the headline. */}
+            Speed stays under the demo's 2 — that fast, the noise crawling down
+            the beams pulls the eye off the headline. */}
         <div
           className="portal__rays"
           style={{ opacity: zoomOpacity, visibility: zoomOpacity === 0 ? 'hidden' : 'visible' }}
           aria-hidden="true"
         >
           <Suspense fallback={null}>
-            <Beams
-              beamWidth={4}
-              beamHeight={30}
-              beamNumber={12}
-              lightColor="#f2d18a"
-              speed={1}
-              noiseIntensity={1.5}
-              scale={0.2}
-              rotation={30}
-            />
+            {/* Mounted only while it can be seen. `visibility: hidden` hides the
+                canvas but does NOT stop @react-three/fiber's render loop — it
+                kept issuing ~120 WebGL draw calls/sec through the corridor and
+                all the way down the page, which is most of the hero's
+                main-thread budget and all of its GPU one. Hysteresis (off above
+                .62, back on below .5) so scrubbing across the edge can't thrash
+                the WebGL context. */}
+            {beamsLive && (
+              <Beams
+                beamWidth={4}
+                beamHeight={30}
+                beamNumber={12}
+                lightColor="#f2d18a"
+                speed={2}
+                noiseIntensity={1.5}
+                 rotation={30}
+              />
+            )}
           </Suspense>
         </div>
 

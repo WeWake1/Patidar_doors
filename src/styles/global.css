@@ -1806,6 +1806,13 @@ button { font-family: var(--sans); }
   background: color-mix(in srgb, var(--wd, #c9a964) 26%, #17110a);
   box-shadow: 0 34px 60px -34px rgba(0, 0, 0, 0.95);
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
+  /* Give the art its own compositor layer. `.wcard` is scroll-scrubbed
+     (transform + opacity per frame) and this box holds the expensive pixels:
+     an feTurbulence/feDisplacementMap-filtered SVG under an elliptical clip,
+     a 60px drop shadow and a 60px inset one. Unpromoted it re-rasterises on
+     every frame of the reveal — which is exactly the phase that stutters on a
+     phone. Promoted, it is rasterised once and only composited after that. */
+  will-change: transform;
 }
 /* materials slice to fill (their own preserveAspectRatio) */
 .wcard__art svg { display: block; width: 100%; height: 100%; }
