@@ -13,6 +13,11 @@ export interface OrderLineSnapshot {
   name: string
   sizeLabel: string
   toneName: string
+  /**
+   * The made-to-measure options, already flattened to a string. Optional
+   * because orders placed before the configurator shipped have no such line.
+   */
+  optsLabel?: string
   qty: number
   unitPrice: number
   lineTotal: number

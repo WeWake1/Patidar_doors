@@ -67,6 +67,7 @@ export function CartDrawer() {
                     <div className="drawer__line-meta">
                       {l.sizeLabel} · {l.toneName}
                     </div>
+                    <div className="drawer__line-meta">{l.optsLabel}</div>
                     <div className="drawer__line-meta">{fmtINR(l.unitPrice)} each</div>
                     <div className="drawer__line-controls">
                       <div className="qty">

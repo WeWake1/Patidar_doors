@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useCart } from '../cart/CartContext'
+import { DoorConfigurator, PriceBreakdown } from '../components/DoorConfigurator'
 import { DoorScene } from '../components/DoorScene'
 import { MaterialArt } from '../components/MaterialArt'
 import { PhotoShowcase } from '../components/PhotoShowcase'
 import { ProductCard } from '../components/ProductCard'
 import { useToast } from '../components/Toast'
 import { config, whatsappLink } from '../config'
+import { DEFAULT_CONFIG, formatSizeLabel, toSizeId } from '../data/pricing'
 import type { Product as ProductT } from '../data/products'
-import { BASE_SIZE_ID, PRODUCTS, SIZES, defaultToneId, getProduct, getTone, priceFor, tonesFor } from '../data/products'
+import { PRODUCTS, defaultToneId, getProduct, getTone, quoteFor, tonesFor } from '../data/products'
 import { getWorld } from '../data/worlds'
 import { fmtINR } from '../lib/format'
 import { usePageMeta } from '../lib/usePageMeta'
@@ -105,24 +107,25 @@ function EnquiryPanel({ product }: { product: ProductT }) {
 }
 
 function ProductInner({ product }: { product: ProductT }) {
-  const [sizeId, setSizeId] = useState(BASE_SIZE_ID)
+  const [cfg, setCfg] = useState(DEFAULT_CONFIG)
   const [toneId, setToneId] = useState(defaultToneId(product))
   const cart = useCart()
   const { toast } = useToast()
   usePageMeta(product.name, product.tag)
 
   const world = getWorld(product.world)
-  // Size×finish configurator for anything with a confirmed price — SVG art
-  // doors pick a finish too; CMS photo doors configure size only.
+  // Made-to-measure configurator for anything with a confirmed price — SVG art
+  // doors pick a finish too; CMS photo doors configure size and options only.
   const configurable = product.purchasable && product.price !== undefined
   const tone = getTone(product, toneId)
-  const price = priceFor(product, sizeId, tone.id)
+  const quote = quoteFor(product, cfg, tone.id)
+  const price = quote?.total ?? 0
   const related = PRODUCTS.filter((p) => p.id !== product.id)
     .sort((a, b) => Number(b.world === product.world) - Number(a.world === product.world))
     .slice(0, 3)
 
   const add = () => {
-    cart.add(product.id, sizeId, tone.id)
+    cart.add(product.id, toSizeId(cfg.heightIn, cfg.widthIn), tone.id, cfg)
     toast(`${product.name} added to cart`)
   }
 
@@ -160,30 +163,10 @@ function ProductInner({ product }: { product: ProductT }) {
 
             <div className="pdp__price-row">
               <div className="pdp__price">{fmtINR(price)}</div>
-              <div className="pdp__price-note">installed · {SIZES.find((s) => s.id === sizeId)?.label}</div>
+              <div className="pdp__price-note">installed · {formatSizeLabel(cfg.heightIn, cfg.widthIn)}</div>
             </div>
 
-            <fieldset className="cfg">
-              <legend>Size — made to your frame</legend>
-              <div className="cfg__sizes">
-                {SIZES.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`cfg__size${sizeId === s.id ? ' cfg__size--on' : ''}`}
-                    onClick={() => setSizeId(s.id)}
-                    aria-pressed={sizeId === s.id}
-                  >
-                    <span className="cfg__size-label">{s.label}</span>
-                    <span className="cfg__size-note">{s.note}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="cfg__hint">
-                Different opening? Pick the closest size — we confirm exact dimensions (and price, same per-area rate)
-                at the free measurement visit.
-              </div>
-            </fieldset>
+            {quote && <DoorConfigurator config={cfg} onChange={setCfg} quote={quote} />}
 
             {tonesFor(product).length > 0 && (
               <fieldset className="cfg">
@@ -208,6 +191,8 @@ function ProductInner({ product }: { product: ProductT }) {
                 </div>
               </fieldset>
             )}
+
+            {quote && <PriceBreakdown quote={quote} />}
 
             <button type="button" className="btn btn--dark btn--big btn--block" onClick={add}>
               Add to cart — {fmtINR(price)}

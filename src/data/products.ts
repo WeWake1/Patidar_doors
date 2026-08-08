@@ -18,6 +18,8 @@
 
 import { CMS_PRODUCTS } from './catalog.gen'
 import { photoVisualFor } from './photoMap'
+import type { DoorConfig, PriceResult } from './pricing'
+import { calcPrice, configFromLine, formatSizeLabel, parseSizeId } from './pricing'
 
 export type WorldId = 'timbers' | 'doors' | 'ply' | 'wpc'
 
@@ -89,7 +91,12 @@ export interface SizeOption {
   heightIn: number
 }
 
-export const SIZES: SizeOption[] = [
+/**
+ * The sizes people actually ask for. Since the configurator went in these are
+ * no longer the only buyable sizes — the sliders take any ¼″ — they are the
+ * labelled ticks under them, and one tap sets both sliders.
+ */
+export const COMMON_SIZES: SizeOption[] = [
   { id: '78x30', label: '6′6″ × 2′6″', note: 'Bath & utility', widthIn: 30, heightIn: 78 },
   { id: '84x33', label: '7′0″ × 2′9″', note: 'Bedroom', widthIn: 33, heightIn: 84 },
   { id: '84x36', label: '7′0″ × 3′0″', note: 'Bedroom, wide', widthIn: 36, heightIn: 84 },
@@ -756,19 +763,40 @@ export function getTone(product: Product, toneId: string): Tone {
   return tones.find((t) => t.id === toneId) ?? tones[0]
 }
 
+/**
+ * Any `height x width` in inches resolves — `'84x33'` from a preset, `'79.25x32'`
+ * straight off the sliders, or an id saved in a cart before the configurator
+ * existed (they share the same shape, which is why old carts still price).
+ */
 export function getSize(sizeId: string): SizeOption {
-  return SIZES.find((s) => s.id === sizeId) ?? SIZES[3]
+  const preset = COMMON_SIZES.find((s) => s.id === sizeId)
+  if (preset) return preset
+  const parsed = parseSizeId(sizeId)
+  if (!parsed) return COMMON_SIZES[3]
+  return {
+    id: sizeId,
+    label: formatSizeLabel(parsed.heightIn, parsed.widthIn),
+    note: 'Made to measure',
+    widthIn: parsed.widthIn,
+    heightIn: parsed.heightIn,
+  }
 }
 
-const BASE = getSize(BASE_SIZE_ID)
-
-/** Made-to-measure price: base price scales with leaf area, finish adds a delta. */
-export function priceFor(product: Product, sizeId: string, toneId: string): number {
+/**
+ * Made-to-measure price. The size and the options are the whole quote now —
+ * see `src/data/pricing.ts` for the model (stock-panel snapping, fixed +
+ * per-sq-ft leaf, flat add-ons, frame by running foot).
+ */
+export function priceFor(product: Product, sizeId: string, toneId: string, opts?: Partial<DoorConfig>): number {
   if (!product.purchasable || product.price === undefined) return 0
-  const size = getSize(sizeId)
   const tone = getTone(product, toneId)
-  const areaFactor = (size.widthIn * size.heightIn) / (BASE.widthIn * BASE.heightIn)
-  return Math.round((product.price * areaFactor + tone.delta) / 100) * 100
+  return calcPrice(product.price, tone.delta, configFromLine(sizeId, opts)).total
+}
+
+/** The full quote — same numbers as `priceFor`, plus the breakdown to show. */
+export function quoteFor(product: Product, config: DoorConfig, toneId: string): PriceResult | null {
+  if (!product.purchasable || product.price === undefined) return null
+  return calcPrice(product.price, getTone(product, toneId).delta, config)
 }
 
 /** Featured on the home page. */

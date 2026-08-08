@@ -158,15 +158,49 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   (original artwork — do not replace with Pinterest photos; see `docs/design-research.md`).
   Shared filters in `<DoorArtDefs/>` (mounted once in App, also used by MaterialArt);
   per-instance gradient ids are uid-prefixed.
-- Pricing (Designer Studio only): base price = 8′×3′ leaf; sizes scale by area (`priceFor`),
-  finishes add flat `delta`. Cart lines keyed `product|size|tone`, localStorage
-  `patidar.cart.v1` (one-time migration from `doorswala.cart.v1`); order ids `PD-…`.
+- **Door configurator / pricing** (Designer Studio only) — model in `src/data/pricing.ts`,
+  UI in `DoorConfigurator.tsx`, both driven from one `DoorConfig`. Replaced the five fixed
+  size buttons 2026-08-08 (modelled on brightdoors.in's Uni CPO setup, rebuilt client-side:
+  they POST to WordPress on every slider tick and it visibly lags).
+  · **Sliders**, not presets: height 60–96″, width 20–48″, ¼″ steps. Native
+    `<input type=range>` on purpose — a slider lib would be new weight on a phone-first
+    store, and native gets keyboard/AT/touch-drag right for free. ± nudges each side
+    because a ¼″ is undraggable at 390px. `COMMON_SIZES` survives as the quick-pick pills
+    under the sliders (`.cfg__tick`).
+  · **Price = base + rate × snapped area.** The chosen size is rounded *up* to the smallest
+    stock panel covering it (`snapToStock` over `STOCK_PANELS`, the H×W cartesian) and
+    billed on that — a leaf is cut from a board, so 79″ costs what 81″ costs. This is why
+    the price climbs in steps and holds flat between them; the `.cfg__hint` says so, and
+    the E2E asserts both halves. Leaf = a fixed share (`PRICING.fixedShare`, doesn't shrink
+    with the door) + a per-sq-ft share scaled by `thicknessFactor`.
+  · Options: thickness, back-side design, frame (none/3-side/4-side → reveals section +
+    design, priced on running feet via `frameRunningFeet`), hardware/lock. Unlike Bright
+    Doors, **the sliders always measure the leaf** — the frame is an add-on derived from it,
+    not a second size mode that hides the door sliders. Far less conditional-visibility
+    logic for the same quote.
+  · ⚠️ **Every number in `PRICING`, `STOCK_PANELS` and the option deltas is a placeholder**,
+    back-solved so a plain 30mm 8′×3′ still equals `product.price` exactly (nothing moved
+    commercially when this shipped). Confirm the whole table with the client. Prices stay
+    all-inclusive of GST + installation — no tax split anywhere.
+  · Each computed line rounds to `roundTo` and the total is their plain **sum** — never a
+    second rounding, or the printed breakdown stops adding up (the E2E checks it does).
+  · `PriceBreakdown` renders after the finish swatches, not inside the configurator: the
+    finish is one of the lines it itemises.
+- Cart lines keyed `product|size|tone|opts` (the `opts` segment is empty for an all-default
+  door), localStorage `patidar.cart.v1` (one-time migration from `doorswala.cart.v1`);
+  order ids `PD-…`. `sizeId` is `height x width` in inches — the same shape the old fixed
+  ids used (`'84x33'`), so **carts and orders saved before the configurator still parse and
+  price**; `CartLine.opts` / `OrderLineSnapshot.optsLabel` are optional for the same reason
+  and fall back to `DEFAULT_CONFIG`. The wa.me order carries the size in feet-inches *and*
+  plain inches plus the spec line, because the workshop cuts from that message.
 - TS config uses `verbatimModuleSyntax` (use `import type`) and `erasableSyntaxOnly`
   (no enums), `noUnusedLocals/Parameters`.
 - E2E smoke test: `scripts/verify.e2e.mjs` (playwright-core + system Chrome, headless).
   `BASE=… OUT=… node scripts/verify.e2e.mjs` against a dev/preview server. Covers portal
   phases, world pages, photo cards, the door wall (desktop click-to-viewer + mobile
-  tap-to-zoom), redirect, full cart→wa.me flow, mobile. Keep it green.
+  tap-to-zoom), redirect, the door configurator (panel-snap steps, conditional frame
+  groups, breakdown sums to the headline, mobile 44px targets), full cart→wa.me flow,
+  mobile. Keep it green.
   ⚠️ Scroll the storefront with the script's `wheelTo()`, never a raw `window.scrollTo`:
   Lenis owns wheel scrolling and lerps the page back to its own target, which leaves the
   portal at the wrong phase (its corridor invisible → clicks time out). The admin step

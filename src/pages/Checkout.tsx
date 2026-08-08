@@ -73,8 +73,17 @@ export function Checkout() {
     }
 
     const id = makeOrderId()
+    // The workshop reads this message to cut the door, so it carries the exact
+    // measured size in inches alongside the feet-inches the customer saw.
     const lineText = cart.lines
-      .map((l) => `• ${l.qty} × ${l.name}\n   ${l.sizeLabel} · ${l.toneName} · ${fmtINR(l.unitPrice)} each`)
+      .map((l) =>
+        [
+          `• ${l.qty} × ${l.name}`,
+          `   ${l.sizeLabel} (${l.sizeInches})`,
+          `   ${l.toneName} · ${l.optsLabel}`,
+          `   ${fmtINR(l.unitPrice)} each`,
+        ].join('\n'),
+      )
       .join('\n')
     const message = [
       `🚪 NEW ORDER — ${id}`,
@@ -106,6 +115,7 @@ export function Checkout() {
         name: l.name,
         sizeLabel: l.sizeLabel,
         toneName: l.toneName,
+        optsLabel: l.optsLabel,
         qty: l.qty,
         unitPrice: l.unitPrice,
         lineTotal: l.lineTotal,
@@ -196,6 +206,7 @@ export function Checkout() {
                 <div className="checkout__line-meta">
                   {l.sizeLabel} · {l.toneName}
                 </div>
+                <div className="checkout__line-meta">{l.optsLabel}</div>
               </div>
               <div className="checkout__line-price">{fmtINR(l.lineTotal)}</div>
             </div>

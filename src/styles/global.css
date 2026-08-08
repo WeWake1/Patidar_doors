@@ -902,7 +902,8 @@ button { font-family: var(--sans); }
   padding: 0;
   margin-bottom: 14px;
 }
-.cfg__sizes { display: flex; flex-wrap: wrap; gap: 10px; }
+.cfg--size { margin-top: 22px; }
+.cfg__opts { display: flex; flex-wrap: wrap; gap: 10px; }
 .cfg__size {
   display: flex;
   flex-direction: column;
@@ -939,6 +940,136 @@ button { font-family: var(--sans); }
 .cfg__tone--on { border-color: var(--brass); box-shadow: 0 0 0 3px rgba(169, 139, 79, 0.28); }
 .cfg__tone-name { margin-top: 10px; font: 500 12.5px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--mut); }
 .cfg__tone-delta { color: var(--brass-d); }
+
+/* ── made-to-measure sliders ─────────────────────────── */
+.dim + .dim { margin-top: 18px; }
+.dim__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.dim__label { font: 500 12.5px var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--mut); }
+.dim__value { display: flex; align-items: baseline; gap: 8px; }
+/* The inch figure leads — it is the number people measure and quote. */
+.dim__value-in { font: 600 20px var(--sans); color: var(--ink); font-variant-numeric: tabular-nums; }
+.dim__value-ft { font: 400 13px var(--sans); color: var(--mut2); }
+.dim__row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.dim__track { flex: 1; min-width: 0; }
+.dim__nudge {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--cream2);
+  border: 1px solid var(--line2);
+  color: var(--ink);
+  font: 400 20px var(--sans);
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+@media (hover: hover) {
+  .dim__nudge:hover:not(:disabled) { border-color: var(--brass); }
+}
+.dim__nudge:disabled { opacity: 0.35; cursor: default; }
+.dim__input {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  /* 44px of grabbable height around a 6px track — the visual is the thumb */
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+/* Track and thumb have to be declared per engine; the rules cannot be grouped
+   (one unknown pseudo-element drops the whole selector list). */
+.dim__input::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--brass) var(--dim-pct, 50%), var(--line2) var(--dim-pct, 50%));
+}
+.dim__input::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--brass) var(--dim-pct, 50%), var(--line2) var(--dim-pct, 50%));
+}
+.dim__input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: var(--cream2);
+  border: 2px solid var(--brass-d);
+  box-shadow: 0 1px 5px rgba(33, 26, 18, 0.24);
+}
+.dim__input::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--cream2);
+  border: 2px solid var(--brass-d);
+  box-shadow: 0 1px 5px rgba(33, 26, 18, 0.24);
+}
+.dim__input:focus-visible { outline: none; }
+.dim__input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(169, 139, 79, 0.35); }
+.dim__input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px rgba(169, 139, 79, 0.35); }
+.dim__ends {
+  display: flex;
+  justify-content: space-between;
+  font: 400 11.5px var(--sans);
+  color: var(--mut2);
+  /* line up with the track, not with the nudge buttons */
+  margin: -2px 52px 0;
+}
+
+.cfg__ticks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
+.cfg__ticks-label {
+  font: 500 11px var(--sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mut2);
+  margin-right: 2px;
+}
+.cfg__tick {
+  background: none;
+  border: 1px solid var(--line2);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font: 400 12.5px var(--sans);
+  color: var(--mut);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+@media (hover: hover) {
+  .cfg__tick:hover { border-color: var(--brass); color: var(--ink); }
+}
+.cfg__tick--on { border-color: var(--ink); background: var(--ink); color: var(--cream); }
+
+/* ── price breakdown ─────────────────────────────────── */
+.cfg__break { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 14px; }
+.cfg__break > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+  font: 500 12.5px var(--sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass-d);
+  list-style: none;
+}
+.cfg__break > summary::-webkit-details-marker { display: none; }
+.cfg__break-count { font: 400 11.5px var(--sans); letter-spacing: 0.06em; text-transform: none; color: var(--mut2); }
+.cfg__break-count::before { content: '· '; }
+.cfg__break-list { list-style: none; margin: 14px 0 0; padding: 0; }
+.cfg__break-list li { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; }
+.cfg__break-label { font: 400 13.5px var(--sans); color: var(--ink); }
+.cfg__break-note { display: block; font: 400 11.5px var(--sans); color: var(--mut2); }
+.cfg__break-amt { font: 500 13.5px var(--sans); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cfg__break-total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px !important; }
+.cfg__break-total .cfg__break-label,
+.cfg__break-total .cfg__break-amt { font-weight: 600; }
 .pdp__info > .btn { margin-top: 34px; }
 .pdp__reassure { margin-top: 12px; text-align: center; font: 400 12px var(--sans); color: var(--mut2); }
 .pdp__specs {
@@ -1967,6 +2098,17 @@ button { font-family: var(--sans); }
   .cfg__size { min-height: 56px; padding: 11px 16px; }
   .cfg__tone { width: 46px; height: 64px; }
   .cfg__tones { gap: 14px; }
+  /* the option chips are two-up rather than a ragged wrap on a narrow screen */
+  .cfg__opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cfg__tick { min-height: 44px; padding: 10px 14px; }
+  /* the label takes its own row — inline it wraps into the middle of the pills */
+  .cfg__ticks { gap: 8px; }
+  .cfg__ticks-label { flex-basis: 100%; margin: 0 0 -2px; }
+  /* a fatter thumb and more travel — this is dragged, not clicked */
+  .dim__input::-webkit-slider-thumb { width: 30px; height: 30px; margin-top: -12px; }
+  .dim__input::-moz-range-thumb { width: 30px; height: 30px; }
+  .dim__value-in { font-size: 22px; }
+  .cfg__break > summary { min-height: 44px; align-items: center; }
   .faq summary { padding-right: 40px; }
   .footer__col { gap: 2px; }
   .footer__col a {

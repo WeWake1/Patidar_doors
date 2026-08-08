@@ -212,25 +212,61 @@ await step('legacy /door/:id redirects to /product/:id', async () => {
   await page.waitForURL('**/product/meridian')
 })
 
-await step('product page + configurator pricing', async () => {
+/** Drag a dimension slider to an exact value and return the new price text. */
+const setDim = async (which, inches) => {
+  await page.locator('.dim__input').nth(which === 'height' ? 0 : 1).fill(String(inches))
+  return page.locator('.pdp__price').innerText()
+}
+
+await step('product page + made-to-measure configurator', async () => {
   await page.goto(BASE + '/product/meridian', { waitUntil: 'networkidle' })
   await page.waitForSelector('.pdp__price')
   const p1 = await page.locator('.pdp__price').innerText()
-  if (!p1.includes('86,900')) throw new Error(`default price wrong (ebony default 84500+2400): ${p1}`)
-  // switch size to 6'6" x 2'6"
-  await page.locator('.cfg__size').first().click()
-  const p2 = await page.locator('.pdp__price').innerText()
-  if (p2 === p1) throw new Error('price did not change with size')
+  if (!p1.includes('86,900')) throw new Error(`default price wrong (8'x3' ebony 84500+2400): ${p1}`)
+
+  const p2 = await setDim('height', 78)
+  if (p2 === p1) throw new Error('price did not change with height')
+  const p3 = await setDim('width', 30)
+  if (p3 === p2) throw new Error('price did not change with width')
+
+  // The panel ladder is the point: a quarter-inch that still fits the same
+  // 78x30 board must not move the price, and crossing to the next one must.
+  const same = await setDim('height', 77.75)
+  if (same !== p3) throw new Error(`price moved inside one stock panel: ${p3} -> ${same}`)
+  const next = await setDim('height', 79)
+  if (next === same) throw new Error('price did not step up to the next stock panel')
+
+  // thinner leaf is cheaper
+  await page.getByRole('radio', { name: /28 mm/ }).click()
+  const thin = await page.locator('.pdp__price').innerText()
+  if (thin === next) throw new Error('price did not change with thickness')
+
+  // a frame reveals its own two option groups and adds to the price
+  await page.getByRole('radio', { name: /3-side frame/ }).click()
+  await page.waitForSelector('.cfg--opt legend:text-is("Frame section")')
+  const framed = await page.locator('.pdp__price').innerText()
+  if (framed === thin) throw new Error('price did not change with the frame')
+
+  // the breakdown must add up to the headline price
+  await page.locator('.cfg__break > summary').click()
+  const total = await page.locator('.cfg__break-total .cfg__break-amt').innerText()
+  if (total.trim() !== framed.trim()) throw new Error(`breakdown total ${total} != headline ${framed}`)
+
   // switch finish to walnut (delta 0)
   await page.locator('.cfg__tone').first().click()
-  const p3 = await page.locator('.pdp__price').innerText()
-  if (p3 === p2) throw new Error('price did not change with finish')
+  const toned = await page.locator('.pdp__price').innerText()
+  if (toned === framed) throw new Error('price did not change with finish')
 })
 await shot('06-pdp-meridian')
 
 await step('add to cart shows toast and badge', async () => {
-  await page.locator('.cfg__size').nth(3).click() // back to 8x3
+  // back to a plain 8'0" x 3'0" ebony leaf
+  await page.getByRole('radio', { name: /Leaf only/ }).click()
+  await page.getByRole('radio', { name: /30 mm/ }).click()
+  await page.locator('.cfg__tick').nth(3).click()
   await page.locator('.cfg__tone').nth(4).click() // ebony
+  const price = await page.locator('.pdp__price').innerText()
+  if (!price.includes('86,900')) throw new Error(`reset to 8'x3' ebony gave ${price}`)
   await page.getByRole('button', { name: /Add to cart/ }).click()
   await page.waitForSelector('.toast')
   const badge = await page.locator('.nav__badge').innerText()
@@ -295,7 +331,18 @@ await step('valid order opens WhatsApp + confirmation', async () => {
   const wa = await page.evaluate(() => window.__waUrl)
   if (!wa) throw new Error('wa.me url not captured')
   const decoded = decodeURIComponent(wa)
-  for (const frag of [`wa.me/${WA_NUMBER}`, 'NEW ORDER — PD-', 'The Meridian', 'The Flute', 'Vivek Patel', '380001', 'Preferred visit']) {
+  for (const frag of [
+    `wa.me/${WA_NUMBER}`,
+    'NEW ORDER — PD-',
+    'The Meridian',
+    'The Flute',
+    // the workshop needs the measured size and the spec, not just the name
+    '96″ × 36″',
+    '30 mm',
+    'Vivek Patel',
+    '380001',
+    'Preferred visit',
+  ]) {
     if (!decoded.includes(frag)) throw new Error(`wa message missing: ${frag}`)
   }
   console.log('   wa.me OK:', decoded.slice(0, 120).replaceAll('\n', ' | '))
@@ -362,6 +409,22 @@ await step('mobile shop + pdp', async () => {
   await page.waitForTimeout(500)
   await shot('16-mobile-pdp')
 })
+
+await step('mobile configurator targets are thumb-sized', async () => {
+  await page.waitForSelector('.dim__input')
+  // the slider itself, the ± nudges and the common-size pills all have to be
+  // grabbable with a thumb, not a cursor
+  for (const sel of ['.dim__input', '.dim__nudge', '.cfg__tick', '.cfg__opt']) {
+    const box = await page.locator(sel).first().boundingBox()
+    if (!box) throw new Error(`${sel} not rendered on mobile`)
+    if (box.height < 44) throw new Error(`${sel} is only ${Math.round(box.height)}px tall on mobile`)
+  }
+  // and dragging must actually reprice
+  const before = await page.locator('.pdp__price').innerText()
+  await page.locator('.dim__input').first().fill('78')
+  if ((await page.locator('.pdp__price').innerText()) === before) throw new Error('mobile slider did not reprice')
+})
+await shot('17-mobile-configurator')
 
 /* ── report ────────────────────────────────────────────── */
 console.log('\n──── console noise ────')

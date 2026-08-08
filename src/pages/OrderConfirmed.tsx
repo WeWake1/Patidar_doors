@@ -47,6 +47,7 @@ export function OrderConfirmed() {
               <div className="checkout__line-meta">
                 {l.sizeLabel} · {l.toneName}
               </div>
+              {l.optsLabel && <div className="checkout__line-meta">{l.optsLabel}</div>}
             </div>
             <div className="checkout__line-price">{fmtINR(l.lineTotal)}</div>
           </div>
