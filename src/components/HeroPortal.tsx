@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, type RefObject } from 'react'
+import { Suspense, lazy, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import type { ArtId, Tone, WorldId } from '../data/products'
 import { WOOD_TONES } from '../data/products'
@@ -99,80 +99,6 @@ function HeroKicker({ className }: { className?: string }) {
   )
 }
 
-/* ── auto push-through ─────────────────────────────────────
-   The door swing (0–.25) is the reader's to scrub. Everything after it is a
-   cutscene: stopping half-way through the zoom parks the hero inside a
-   blurred doorway, which reads as broken rather than as a pause. So the frame
-   the door finishes opening, the rest of the track is handed to one
-   programmatic glide that lands on the corridor.
-
-   It fires on the crossing, not on the scroll going quiet. Waiting for idle
-   meant waiting out Lenis's inertia tail first, so a reader who stopped sat
-   in the blur for the best part of a second before anything moved. Taking
-   over mid-flick costs nothing — Lenis just retargets the scroll it is
-   already animating. */
-const AUTO_FROM = 0.26 // the swing finishes at .25
-const AUTO_TO = 0.92 // corridor settled — last card lands at .87, heading at .88
-const AUTO_REARM = 0.18 // back at the door: allow the push-through again
-const AUTO_MS = 950 // fixed duration beats the lerp, which crawls the last 10%
-
-function useAutoPushThrough(trackRef: RefObject<HTMLElement | null>, p: number, enabled: boolean) {
-  /* armed starts false so a reload restoring mid-track scroll doesn't yank the
-     page; the first frame at the top of the track arms it */
-  const st = useRef({ armed: false, touching: false, pending: false })
-
-  const run = useCallback(() => {
-    const s = st.current
-    const el = trackRef.current
-    if (!el) return
-    s.armed = false
-    s.pending = false
-    smoothScrollTo(el.offsetTop + Math.max(1, el.offsetHeight - window.innerHeight) * AUTO_TO, {
-      duration: AUTO_MS / 1000,
-    })
-  }, [trackRef])
-
-  /* A finger on the glass owns the scroll — taking over mid-drag would rip the
-     page out from under it, so that one case defers to the lift. */
-  useEffect(() => {
-    if (!enabled) return
-    const s = st.current
-    const down = () => {
-      s.touching = true
-    }
-    const up = () => {
-      s.touching = false
-      /* next frame, not inline: Lenis's own touch handling runs after ours and
-         swallows a scrollTo issued from inside the touchend handler */
-      if (s.pending) requestAnimationFrame(run)
-    }
-    window.addEventListener('touchstart', down, { passive: true })
-    window.addEventListener('touchend', up, { passive: true })
-    window.addEventListener('touchcancel', up, { passive: true })
-    return () => {
-      window.removeEventListener('touchstart', down)
-      window.removeEventListener('touchend', up)
-      window.removeEventListener('touchcancel', up)
-      s.touching = false
-      s.pending = false
-    }
-  }, [enabled, run])
-
-  useEffect(() => {
-    if (!enabled) return
-    const s = st.current
-    if (p < AUTO_REARM) s.armed = true
-    if (!s.armed || p < AUTO_FROM || p >= AUTO_TO) return
-    /* an overlay owns the screen (Lenis is parked) — wait for it to close */
-    if (document.body.classList.contains('has-overlay')) return
-    if (s.touching) {
-      s.pending = true
-      return
-    }
-    run()
-  }, [p, enabled, run])
-}
-
 function Corridor({ p, interactive }: { p: number; interactive: boolean }) {
   const heading = seg(p, 0.8, 0.88)
   return (
@@ -211,7 +137,6 @@ export function HeroPortal() {
   const p = useTrackProgress(trackRef)
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   const mobile = useMediaQuery('(max-width: 720px)')
-  useAutoPushThrough(trackRef, p, !reduced)
 
   if (reduced) {
     return (
@@ -248,16 +173,13 @@ export function HeroPortal() {
   const zoomOpacity = 1 - seg(p, 0.45, 0.55)
   const corridorInteractive = p > 0.7
 
-  /* Cue / leaf click. Below the corridor it runs the whole thing in one glide
-     rather than the old nudge to .3 — that landed inside the push-through,
-     where useAutoPushThrough would immediately take over and the reader saw
-     two separate animations for one click. */
   const peek = () => {
     const el = trackRef.current
     if (!el) return
     const top = el.offsetTop
     const total = el.offsetHeight - window.innerHeight
-    smoothScrollTo(p < AUTO_TO ? top + total * AUTO_TO : top, { duration: AUTO_MS / 1000 })
+    const target = p < 0.15 ? top + total * 0.3 : p < 0.5 ? top + total : top
+    smoothScrollTo(target)
   }
 
   return (

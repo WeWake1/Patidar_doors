@@ -62,15 +62,6 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   `aspect-ratio`: stable Safari resolves the flex item's content min-height to the img's
   intrinsic 660px and squeezes the photo (Chrome/WebKit-trunk don't).
   Static fallback under `prefers-reduced-motion`. Progress helpers in `src/lib/useTrackProgress.ts`.
-  · **Auto push-through** (`useAutoPushThrough`): the swing (0–.25) is the reader's to
-  scrub, but the zoom is a cutscene — stopping inside it parks the hero in a blurred
-  doorway. Crossing p=.26 hands the rest of the track to one `smoothScrollTo` landing at
-  p=.92 (corridor settled); re-arms below p=.18. Fires on the crossing, *not* on the
-  scroll going idle — idle meant waiting out Lenis's inertia tail first, which read as a
-  ~1s stall. ⚠️ two gotchas: the glide passes an explicit `duration` (Lenis's lerp is
-  asymptotic and crawls the last 10%), and the touch-deferred call goes through
-  `requestAnimationFrame` — a `lenis.scrollTo` issued *inside* a `touchend` handler is
-  swallowed by Lenis's own touch bookkeeping, which runs after ours.
   · **Beams backdrop** (`.portal__rays` → `reactbits/Beams.tsx`): broad gold light beams
   behind the opening phase, fading out with the zoom (`zoomOpacity`). The upstream
   ReactBits component **vendored verbatim** (react-bits `src/ts-default/Backgrounds/
