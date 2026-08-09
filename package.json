@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "verify:e2e": "node scripts/verify.e2e.mjs",
+    "contrast": "node scripts/contrast.mjs",
     "images:build": "node scripts/import-images.mjs",
     "catalog:fetch": "node scripts/fetch-catalog.mjs",
     "catalog:seed": "node scripts/seed-supabase.mjs"

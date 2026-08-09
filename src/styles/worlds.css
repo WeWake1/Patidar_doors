@@ -1,80 +1,113 @@
 /* ═══════════════ World themes — Timbers · Doors · Ply · WPC ═══════════════
-   Each world page redefines the semantic --w-* tokens declared on .world in
-   global.css, plus its own static texture motifs (gradients/SVG only — no
-   filters, nothing animated during scroll). One brand, four moods. */
+   Four sub-brands under one roof. Each world restates the *role* layer from
+   global.css — surfaces, text ramp, borders, accent, action pair — and every
+   card, button, chip and rule inside it follows without knowing which world
+   it is in. What used to be six --w-* tokens plus a hand-written override per
+   component is now one token block plus that world's signature move.
+
+   The signature is deliberately not just a hue. Each world separates its
+   content by a different physical logic, because that is what the material
+   does:
+
+     Timbers  cut lines      — the kerf a blade leaves down a log
+     Doors    hairlines      — the house paper, ruled like a printed catalogue
+     Ply      layered plies  — three stacked rules, the edge of a sheet
+     WPC      tonal steps    — moulded stock has no arris, so nothing is ruled
+
+   Every colour below is measured against the surface it actually lands on
+   (WCAG AA: 4.5:1 text, 3:1 controls), not against the canvas — a tertiary
+   that passes on the page but fails on the card stage is not passing.
+
+   Motifs stay gradients and SVG only: nothing filtered, nothing animated
+   during scroll. This is a phone-first store. */
 
 /* ── shared world plumbing ───────────────────────────────── */
 .world {
-  background: var(--w-bg);
-  color: var(--w-ink);
+  background: var(--surface);
+  color: var(--text);
 }
-.world__desc { color: var(--w-mut); }
-.world__title { color: var(--w-ink); }
-.world__section-title { color: var(--w-ink); }
+.world__desc { color: var(--text-2); }
+.world__title { color: var(--text); }
+.world__section-title { color: var(--text); }
 .world__section-title::after {
   content: '';
   display: block;
   width: 44px;
   height: 3px;
   margin-top: 10px;
-  background: var(--w-accent);
+  background: var(--accent);
 }
-.world__why { background: var(--w-surface); border-top: 1px solid var(--w-line); }
-.world__why h2 { color: var(--w-ink); }
-.world__why p { color: var(--w-mut); }
+.world__why { background: var(--surface-band); border-top: 1px solid var(--border); }
+.world__why h2 { color: var(--text); }
+.world__why p { color: var(--text-2); }
 
-/* buttons inherit the world's ink so they work on dark worlds too */
-.world .btn--dark { background: var(--w-accent); border-color: var(--w-accent); color: var(--w-bg); }
-.world .btn--ghost { color: var(--w-ink); border-color: var(--w-ink); }
-/* pointer-only: a tapped button on touch keeps :hover until you tap away */
-@media (hover: hover) {
-  .world .btn--dark:hover { background: var(--w-ink); border-color: var(--w-ink); color: var(--w-bg); }
-  .world .btn--ghost:hover { background: var(--w-ink); color: var(--w-bg); }
-}
+/* Buttons take the world's action pair, so the dark world's primary is a lit
+   amber plate and the cream worlds' stays an ink one — same component, no
+   per-world button rules at all. */
 
-/* ── TIMBERS — dark sawmill ──────────────────────────────── */
+/* ═══ TIMBERS — the saw line ════════════════════════════════
+   A dark shed at the end of the day: sawn stacks, amber work-light, dust in
+   the air. The only fully dark world, and the only one whose primary action
+   is the accent rather than ink — an ink plate on this ground is invisible.
+   Composed as a dark theme rather than an inversion of the cream one: the
+   surfaces step *up* from the canvas toward the light, not down. */
 [data-world='timbers'] {
-  --w-bg: #2b2419;
-  --w-surface: #352c1f;
-  --w-ink: #efe6d4;
-  --w-mut: #b8a98d;
-  --w-accent: #c9903f;
-  --w-line: #4a3f2d;
+  --surface: #221c13;
+  --surface-raised: #2e2618;      /* a stacked board, catching the light */
+  --surface-sunk: #1a150e;
+  --surface-sunk-2: #241d14;
+  --surface-band: #2a2217;
+  --text: #f2e9d6;                /* 14.0:1 */
+  --text-2: #c3b394;              /*  8.2:1 */
+  --text-3: #9b8e75;              /*  4.6:1 on the raised board */
+  --border: #443a28;
+  --border-strong: #584b34;
+  --border-control: #584b34;
+  --accent: #d29a45;              /* teak under a work-light — 6.8:1 */
+  --accent-deep: #b07d2f;
+  --accent-text: #d29a45;         /* on a dark ground the accent *is* readable */
+  --action: #d29a45;
+  --action-text: #221c13;
+  --action-hover: #f2e9d6;
+  --action-hover-text: #221c13;
+  --focus: #f0c078;
+  --focus-halo: rgba(210, 154, 69, 0.28);
 }
+/* the saw line: log ends stacked against the far wall, and the horizontal
+   marks a blade leaves in a face */
 [data-world='timbers'] .world__intro {
   background:
-    radial-gradient(circle at 88% 30%, transparent 0 54px, rgba(201, 144, 63, 0.14) 54px 57px, transparent 57px 86px, rgba(201, 144, 63, 0.12) 86px 89px, transparent 89px 122px, rgba(201, 144, 63, 0.1) 122px 125px, transparent 125px 160px, rgba(201, 144, 63, 0.08) 160px 163px, transparent 163px),
-    repeating-linear-gradient(178deg, transparent 0 26px, rgba(0, 0, 0, 0.22) 26px 28px, transparent 28px 61px, rgba(239, 230, 212, 0.03) 61px 63px),
-    var(--w-bg);
+    radial-gradient(circle at 88% 30%, transparent 0 54px, rgba(210, 154, 69, 0.16) 54px 57px, transparent 57px 86px, rgba(210, 154, 69, 0.13) 86px 89px, transparent 89px 122px, rgba(210, 154, 69, 0.1) 122px 125px, transparent 125px 160px, rgba(210, 154, 69, 0.08) 160px 163px, transparent 163px),
+    repeating-linear-gradient(178deg, transparent 0 26px, rgba(10, 6, 2, 0.26) 26px 28px, transparent 28px 61px, rgba(242, 233, 214, 0.03) 61px 63px),
+    var(--surface);
 }
-[data-world='timbers'] .card {
-  background: #3a3023;
-  border-color: #4a3f2d;
+/* signature — the section rule is a kerf, not a bar: a full-width cut with
+   the bright amber edge where the blade actually bites */
+[data-world='timbers'] .world__section-title::after {
+  width: 100%;
+  max-width: 460px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent) 0 64px, var(--border-strong) 64px);
 }
-[data-world='timbers'] .card__stage { background: linear-gradient(180deg, #443827, #382e1f); }
-[data-world='timbers'] .card__name { color: var(--w-ink); }
-[data-world='timbers'] .card__tag { color: var(--w-mut); }
-[data-world='timbers'] .card__price--enquire { color: var(--w-mut); }
-[data-world='timbers'] .card__cat { color: var(--w-accent); }
+[data-world='timbers'] .card__stage {
+  /* end grain glowing under the light, warmest at the top */
+  background: radial-gradient(120% 90% at 50% 8%, #4a3c27, #322819 62%, #2a2217);
+}
 @media (hover: hover) {
-  [data-world='timbers'] .card:hover { box-shadow: 0 26px 50px rgba(0, 0, 0, 0.45); }
-  [data-world='timbers'] .card:hover .card__cta { background: var(--w-accent); color: #2b2419; }
+  [data-world='timbers'] .card:hover { box-shadow: 0 26px 50px rgba(10, 6, 2, 0.5); }
 }
-[data-world='timbers'] .card .btn--ghost { color: var(--w-ink); border-color: #5d4f38; }
 
-/* ── DOORS — flagship, the brand home ────────────────────── */
+/* ═══ DOORS — the flagship ══════════════════════════════════
+   The house paper, unchanged: this world *is* the base system, and its
+   distinction is being the one everything else is a departure from. Ruled
+   with hairlines like a printed catalogue plate. */
 [data-world='doors'] {
-  --w-bg: #f5f0e6;
-  --w-surface: #efe7d6;
-  --w-ink: #211a12;
-  --w-mut: #6f6354;
-  --w-accent: #a98b4f;
-  --w-line: #e6dcc6;
+  --surface-band: var(--panel);
 }
 [data-world='doors'] .world__intro {
   background:
     radial-gradient(90% 120% at 50% -30%, rgba(169, 139, 79, 0.16), transparent 60%),
-    var(--w-bg);
+    var(--surface);
 }
 [data-world='doors'] .world__motif {
   background: repeating-linear-gradient(90deg, transparent 0 120px, rgba(169, 139, 79, 0.07) 120px 122px);
@@ -82,49 +115,119 @@
   -webkit-mask-image: linear-gradient(180deg, transparent 30%, #000);
 }
 
-/* ── PLY — technical, engineered, spec-sheet ─────────────── */
+/* ═══ PLY — the mill spec sheet ═════════════════════════════
+   Not a page: a stack of sheets seen edge-on. Deeper and warmer than the
+   house paper because a pallet of gurjan-faced ply is, and the type is
+   uppercase sans throughout because a spec sheet should not be lyrical. */
 [data-world='ply'] {
-  --w-bg: #efe7d8;
-  --w-surface: #e7dcc7;
-  --w-ink: #241c13;
-  --w-mut: #6d5f4c;
-  --w-accent: #b0725a;
-  --w-line: #d9cdb2;
+  --surface: #ece2cf;
+  --surface-raised: #f6efe0;
+  --surface-sunk: #e0d3ba;
+  --surface-sunk-2: #d5c6a9;
+  --surface-band: #e4d8c0;
+  --text: #241c13;                /* 13.1:1 */
+  --text-2: #5c4c38;              /*  6.4:1 */
+  --text-3: #68563f;              /*  4.8:1 on the sunk stage */
+  --border: #d9cdb2;
+  --border-strong: #c6b596;
+  --border-control: #bda98a;
+  --accent: #a8603f;              /* gurjan face, cut and sanded */
+  --accent-deep: #8f4d30;
+  --accent-text: #8f4d30;         /* 5.0:1 */
+  --action-hover: #8f4d30;
+  --action-hover-text: #f6efe0;
+  --focus: #8f4d30;
+  --focus-halo: rgba(143, 77, 48, 0.22);
 }
 [data-world='ply'] .world__intro {
   border-bottom: 12px solid transparent;
   border-image: repeating-linear-gradient(90deg, #c9ae85 0 34px, #8a7355 34px 38px, #e2cda8 38px 72px, #8a7355 72px 76px) 12;
   background:
     repeating-linear-gradient(0deg, transparent 0 44px, rgba(36, 28, 19, 0.045) 44px 46px),
-    var(--w-bg);
+    var(--surface);
 }
 [data-world='ply'] .world__kicker { font-family: var(--sans); }
 [data-world='ply'] .world__section-title { font: 600 22px/1.2 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; }
 [data-world='ply'] .card__name { font: 600 19px/1.2 var(--sans); }
+/* signature — a sheet seen edge-on: face, core, face. The same five-ply strip
+   rules the sections and runs along the foot of every card, so a row of cards
+   reads as a stack of sheets rather than a row of boxes.
+   It is a background, not a border-image: border-image repaints *every* edge
+   that has width, which turned the card's 1px hairline into dashes on all
+   four sides. */
+[data-world='ply'] {
+  --ply-edge: linear-gradient(180deg, #e2cda8 0 1px, #8a7355 1px 2px, #c9ae85 2px 3px, #8a7355 3px 4px, #e2cda8 4px 5px, #8a7355 5px 6px, var(--accent) 6px 7px);
+}
+[data-world='ply'] .world__section-title::after {
+  width: 96px;
+  height: 7px;
+  background: var(--ply-edge);
+}
+[data-world='ply'] .card {
+  padding-bottom: 5px;
+  background-image: var(--ply-edge);
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100% 5px;
+}
+/* the home tile carries data-world on itself, so this compounds rather than
+   descends */
+[data-world='ply'].worldstrip__tile {
+  padding-bottom: 24px;
+  background-image: var(--ply-edge);
+  background-repeat: no-repeat;
+  background-position: bottom;
+  background-size: 100% 5px;
+}
 
-/* ── WPC — cool, waterproof, modern ──────────────────────── */
+/* ═══ WPC — moulded, waterproof ═════════════════════════════
+   The one cool world. Extruded stock has no arris and no visible edge, so
+   this is the world with no hairlines at all: every separation is a tonal
+   step or a radius, and the section mark is a moulded lozenge. */
 [data-world='wpc'] {
-  --w-bg: #e9eeec;
-  --w-surface: #dde5e2;
-  --w-ink: #1e3634;
-  --w-mut: #56706c;
-  --w-accent: #2f7e72;
-  --w-line: #c8d4d0;
+  --surface: #dfe9e5;
+  --surface-raised: #f1f6f4;
+  --surface-sunk: #cfdcd7;
+  --surface-sunk-2: #c2d2cc;
+  --surface-band: #d3e0db;
+  --text: #132e2b;                /* 11.7:1 */
+  --text-2: #3f5f5a;              /*  5.7:1 */
+  --text-3: #46625d;              /*  4.7:1 on the sunk stage */
+  --border: #c8d4d0;
+  --border-strong: #b3c4bf;
+  --border-control: #a4b8b2;
+  --accent: #1c675c;
+  --accent-deep: #17564d;
+  --accent-text: #1c675c;         /* 5.4:1 */
+  --action: #132e2b;
+  --action-text: #f1f6f4;
+  --action-hover: #1c675c;
+  --action-hover-text: #f1f6f4;
+  --focus: #17564d;
+  --focus-halo: rgba(28, 103, 92, 0.24);
 }
 [data-world='wpc'] .world__intro {
   background:
-    repeating-radial-gradient(140% 60% at 50% 118%, transparent 0 68px, rgba(47, 126, 114, 0.08) 68px 70px),
-    linear-gradient(180deg, #f2f6f4, var(--w-bg)),
-    var(--w-bg);
+    repeating-radial-gradient(140% 60% at 50% 118%, transparent 0 68px, rgba(28, 103, 92, 0.09) 68px 70px),
+    linear-gradient(180deg, var(--surface-raised), var(--surface)),
+    var(--surface);
 }
 [data-world='wpc'] .kicker,
-[data-world='wpc'] .card__cat { color: var(--w-accent); }
-[data-world='wpc'] .card { border-radius: 10px; overflow: hidden; }
-[data-world='wpc'] .card__stage { background: linear-gradient(180deg, #f0f4f2, #dbe4e1); }
+[data-world='wpc'] .card__cat { color: var(--accent-text); }
+/* signature — nothing here has a knife edge */
+[data-world='wpc'] .world__section-title::after { width: 52px; height: 6px; border-radius: 999px; }
+[data-world='wpc'] .world__why { border-top: none; }
+[data-world='wpc'] .card {
+  border-radius: 10px;
+  overflow: hidden;
+  /* moulded, not cut: the light catches a rolled edge along the top */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+[data-world='wpc'] .card__stage { background: linear-gradient(180deg, #e7efec, var(--surface-sunk)); }
 
 /* world cards inside the hero corridor share these accents (HeroPortal also
    sets --wd inline from the card's tone; these are the CSS-side fallback) */
-.wcard--timbers { --wd: #c9903f; }
+.wcard--timbers { --wd: #d29a45; }
 .wcard--doors { --wd: #a98b4f; }
-.wcard--ply { --wd: #b0725a; }
-.wcard--wpc { --wd: #2f7e72; }
+.wcard--ply { --wd: #a8603f; }
+.wcard--wpc { --wd: #2f9082; }

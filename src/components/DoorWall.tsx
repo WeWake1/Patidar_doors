@@ -2,7 +2,9 @@ import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import DriftWall from './reactbits/DriftWall'
 import type { DriftWallItem } from './reactbits/DriftWall'
+import { ErrorBoundary } from './ErrorBoundary'
 import { WALL_PHOTOS } from '../data/wallPhotos'
+import { t } from '../lib/i18n'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { useScrollLock } from '../lib/useScrollLock'
 
@@ -12,6 +14,35 @@ import { useScrollLock } from '../lib/useScrollLock'
 const StrokeText = lazy(() => import('./reactbits/StrokeText'))
 
 const TITLE = 'THE DOOR WALL'
+
+/**
+ * The wall's photos are placeholders awaiting the client's own photography, so
+ * a dead reference here is likelier than anywhere else on the site — and these
+ * two are the largest images the site ever shows. Their `<img>` is `width:auto`
+ * inside a flex frame, so a failed one collapses to nothing rather than holding
+ * its place; hence a real fallback rather than the CSS cover the small tiles
+ * use.
+ */
+function WallPhoto({ photo }: { photo: { id: string; full: string; alt: string; w: number; h: number } }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <div className="doorwall__missing" role="img" aria-label={photo.alt}>
+        {t('photo.unavailable')}
+      </div>
+    )
+  }
+  return (
+    <img
+      key={photo.id}
+      src={photo.full}
+      alt={photo.alt}
+      width={photo.w}
+      height={photo.h}
+      onError={() => setFailed(true)}
+    />
+  )
+}
 
 /** wide enough for the two-up split: wall on the right, chosen door on the left */
 const SPLIT_QUERY = '(min-width: 900px)'
@@ -72,6 +103,11 @@ export function DoorWall() {
       <div className="doorwall__head">
         <div className="kicker kicker--gold">Straight off the shop floor</div>
         <h2 className="doorwall__title" id="doorwall-title">
+          {/* The `-webkit-text-stroke` span holds the same box and the same
+              words, so a gsap chunk that fails to load (redeploy under an open
+              tab) costs the animation and nothing else — it must never cost the
+              headline, or the section loses its title. */}
+          <ErrorBoundary label="stroke-text" fallback={<span className="doorwall__title-fb">{TITLE}</span>}>
           <Suspense fallback={<span className="doorwall__title-fb">{TITLE}</span>}>
             <StrokeText
               text={TITLE}
@@ -91,6 +127,7 @@ export function DoorWall() {
               reverse={false}
             />
           </Suspense>
+          </ErrorBoundary>
         </h2>
         <p className="doorwall__sub">
           {split
@@ -103,8 +140,9 @@ export function DoorWall() {
         {split && (
           <figure className="doorwall__viewer">
             <div className="doorwall__frame">
-              {/* keyed on the photo so each pick re-runs the fade-in */}
-              <img key={photo.id} src={photo.full} alt={photo.alt} width={photo.w} height={photo.h} />
+              {/* keyed on the photo so each pick re-runs the fade-in — and so
+                  a failed photo's state doesn't carry to the next pick */}
+              <WallPhoto key={photo.id} photo={photo} />
             </div>
             {photo.caption && <figcaption className="doorwall__cap">{photo.caption}</figcaption>}
           </figure>
@@ -142,7 +180,7 @@ export function DoorWall() {
         <div className="doorzoom" role="dialog" aria-modal="true" aria-label="Door photograph">
           <button type="button" className="doorzoom__back" onClick={closeZoom} aria-label="Close photo" />
           <div className="doorzoom__box">
-            <img src={zoom.full} alt={zoom.alt} width={zoom.w} height={zoom.h} />
+            <WallPhoto key={zoom.id} photo={zoom} />
             {zoom.caption && <div className="doorzoom__cap">{zoom.caption}</div>}
           </div>
           <button type="button" className="doorzoom__close" onClick={closeZoom}>

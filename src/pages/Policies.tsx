@@ -9,26 +9,25 @@ export function Policies() {
       <h1 className="page-title">Warranty & policies</h1>
 
       <section>
-        <h2>{config.warrantyYears}-year warranty</h2>
+        <h2>Warranty</h2>
         <p>
-          Every Patidar door carries a {config.warrantyYears}-year warranty against manufacturing defects: warping
-          beyond 3 mm across the leaf, delamination of the face, core defects, and failure of hardware supplied by us
-          under normal domestic use.
+          Every door we make is covered against manufacturing defects under normal domestic use. Ask us for the exact
+          term and what it covers before you order — we would rather tell you in person than have you read it off a
+          page. The written warranty is issued with your final invoice, so you have it in hand either way.
         </p>
         <p>
-          The warranty does not cover physical damage or misuse, exposure to standing water at the frame, alterations
-          made by third parties, or natural variation in wood grain and colour — that variation is the point. Your
-          digital warranty card is issued with the final invoice; claims are honoured with repair first, replacement
-          where repair isn’t possible.
+          What no warranty covers, here or anywhere: physical damage and misuse, standing water at the frame,
+          alterations made by third parties, and natural variation in wood grain and colour — that last one is the
+          point of buying real timber. Claims are settled with repair first, replacement where repair isn’t possible.
         </p>
       </section>
 
       <section>
         <h2>Measurement visit</h2>
         <p>
-          Placing an order books a free measurement visit — it costs nothing and doesn’t commit you. Our fitter
-          measures the frame, checks swing side and level, and confirms the final size and price (same per-area rate as
-          the site). Production begins only after your go-ahead.
+          Sending us an order books a free measurement visit anywhere in {config.serviceCity} — it costs nothing and
+          doesn’t commit you. Our fitter measures the frame, checks swing side and level, and confirms the final size
+          and price (same per-area rate as the site). Production begins only after your go-ahead.
         </p>
       </section>
 
@@ -44,9 +43,14 @@ export function Policies() {
       <section>
         <h2>Delivery & installation</h2>
         <p>
-          Made-to-measure production takes 10–14 working days from confirmation. Delivery and installation happen in a
-          single visit by our own crew — the door is hung on our hinges, aligned, sealed, and the site left clean. We
-          serve customers pan-India; remote pincodes are confirmed on the scheduling call.
+          Made-to-measure production takes 10–14 working days from confirmation. Across {config.serviceCity}, delivery
+          and installation happen in a single visit by our own crew — the door is hung on our hinges, aligned, sealed,
+          and the site left clean.
+        </p>
+        <p>
+          Outside the city we supply the material rather than the fitting: timber, ply and finished doors can be
+          freighted to you, but our crews do not travel to install them. Send us your pincode before you order and
+          we’ll tell you exactly what we can and can’t do for that address.
         </p>
       </section>
 

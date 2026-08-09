@@ -30,6 +30,12 @@ export interface LastOrder {
   waUrl: string
   customer: OrderCustomer
   lines: OrderLineSnapshot[]
+  /**
+   * True when `window.open` was refused (pop-up blocker, in-app browser). The
+   * confirmation page leads with the button instead of the receipt in that
+   * case — the customer has *not* seen WhatsApp and doesn't know it.
+   */
+  blocked?: boolean
 }
 
 const KEY = 'patidar.lastOrder.v1'
@@ -40,6 +46,64 @@ export function saveLastOrder(order: LastOrder) {
     localStorage.setItem(KEY, JSON.stringify(order))
   } catch {
     // best-effort only
+  }
+}
+
+const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+
+/**
+ * Coerce whatever is in storage into a `LastOrder`, or return null.
+ *
+ * `JSON.parse` alone was a cast, not a check: anything that survived parsing
+ * was handed to the page as a valid order, and the confirmation page reads
+ * `customer.name.split(' ')` and maps `lines` on the first render. A truncated
+ * write (storage quota hit mid-`setItem`), a hand-edited entry, or a value
+ * left by an older schema therefore threw during render rather than falling
+ * back to the "nothing to send" state that already exists for this case.
+ */
+function coerce(raw: unknown): LastOrder | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const id = str(o.id)
+  const waUrl = str(o.waUrl)
+  // Without these two the page has nothing to show and nothing to send.
+  if (!id || !waUrl) return null
+
+  const c = (typeof o.customer === 'object' && o.customer ? o.customer : {}) as Record<string, unknown>
+  const lines = Array.isArray(o.lines) ? o.lines : []
+
+  return {
+    id,
+    waUrl,
+    ts: num(o.ts),
+    subtotal: num(o.subtotal),
+    blocked: o.blocked === true,
+    customer: {
+      name: str(c.name),
+      phone: str(c.phone),
+      email: str(c.email),
+      address: str(c.address),
+      city: str(c.city),
+      pincode: str(c.pincode),
+      slot: str(c.slot),
+      notes: str(c.notes),
+    },
+    lines: lines.flatMap((l): OrderLineSnapshot[] => {
+      if (!l || typeof l !== 'object') return []
+      const r = l as Record<string, unknown>
+      return [
+        {
+          name: str(r.name),
+          sizeLabel: str(r.sizeLabel),
+          toneName: str(r.toneName),
+          optsLabel: typeof r.optsLabel === 'string' ? r.optsLabel : undefined,
+          qty: num(r.qty),
+          unitPrice: num(r.unitPrice),
+          lineTotal: num(r.lineTotal),
+        },
+      ]
+    }),
   }
 }
 
@@ -54,7 +118,7 @@ export function loadLastOrder(): LastOrder | null {
         localStorage.removeItem(OLD_KEY)
       }
     }
-    return raw ? (JSON.parse(raw) as LastOrder) : null
+    return raw ? coerce(JSON.parse(raw)) : null
   } catch {
     return null
   }

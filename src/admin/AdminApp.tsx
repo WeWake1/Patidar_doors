@@ -1,4 +1,5 @@
-import { Route, Routes } from 'react-router-dom'
+import { Link, Route, Routes } from 'react-router-dom'
+import { t } from '../lib/i18n'
 import { isSupabaseConfigured } from '../lib/supabase'
 import './admin.css'
 import { Dashboard } from './Dashboard'
@@ -14,9 +15,9 @@ export default function AdminApp() {
   const { session, loading, signIn, signOut } = useAuth()
 
   if (!isSupabaseConfigured) {
-    return <div className="ax-pad">Admin is not configured — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.</div>
+    return <div className="ax-pad">{t('ax.notConfigured')}</div>
   }
-  if (loading) return <div className="ax-pad">Loading…</div>
+  if (loading) return <div className="ax-pad">{t('ax.loading')}</div>
   if (!session) return <Login onSignIn={signIn} />
 
   return (
@@ -25,6 +26,20 @@ export default function AdminApp() {
         <Route path="" element={<Dashboard onSignOut={signOut} />} />
         <Route path="product/new" element={<ProductEditor />} />
         <Route path="product/:id" element={<ProductEditor />} />
+        {/* Without this a typo under /admin rendered an empty <div className="ax">
+            — a blank white page inside a signed-in session, which reads as the
+            admin being broken rather than as a wrong address. */}
+        <Route
+          path="*"
+          element={
+            <div className="ax-pad ax-state">
+              <p>{t('ax.notFound')}</p>
+              <Link to="/admin" className="ax-btn ax-btn--primary">
+                {t('ax.backToCatalogue')}
+              </Link>
+            </div>
+          }
+        />
       </Routes>
     </div>
   )

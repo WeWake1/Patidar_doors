@@ -1,3 +1,14 @@
+/**
+ * Home-page and FAQ copy.
+ *
+ * ⚠️ Claim discipline: nothing in this file may state a number, a term or a
+ * guarantee the client has not confirmed. The warranty duration, the coverage
+ * list and the pan-India service reach were all removed on 2026-08-08 for
+ * exactly that reason — see PRODUCT.md § "Evidence on Hand" before adding any
+ * of them back. Two claims survive here that are still unverified and are
+ * tracked in PRODUCT.md rather than fixed: the 30-working-day refund guarantee
+ * in Policies.tsx, and "Screw-holding certified" in products.ts.
+ */
 export interface Faq {
   q: string
   a: string
@@ -10,7 +21,7 @@ export const FAQS: Faq[] = [
   },
   {
     q: 'How does the measurement visit work?',
-    a: 'Once you place an order, our team calls within 24 hours to schedule a free visit. A fitter measures your frame to the millimetre, checks the wall and swing side, and confirms the final size with you on the spot. Production starts only after you approve the measurements — and you pay nothing until then.',
+    a: 'Once your order reaches us on WhatsApp, we call within 24 hours to schedule a free visit anywhere in Bengaluru. A fitter measures your frame to the millimetre, checks the wall and swing side, and confirms the final size with you on the spot. Production starts only after you approve the measurements — and you pay nothing until then.',
   },
   {
     q: 'When do I pay?',
@@ -21,20 +32,20 @@ export const FAQS: Faq[] = [
     a: 'Made-to-measure production takes 10–14 working days after measurement. Delivery and installation are scheduled together — most orders are hung, aligned and finished within 3 weeks of ordering.',
   },
   {
-    q: 'What does the 10-year warranty cover?',
-    a: 'Warping beyond 3 mm, delamination, core defects and manufacturing faults in hardware we supply. It does not cover physical damage, water logging of the frame, or repainting of site-finished surfaces. The warranty card is issued digitally with your invoice.',
+    q: 'Is there a warranty?',
+    a: 'Yes — every door we make is covered against manufacturing defects. Ask us for the exact term and what it covers before you order; the written warranty is issued with your final invoice, so you have it in hand either way.',
   },
   {
     q: 'Do you make non-standard sizes?',
-    a: 'Yes — every door is cut to your exact frame. The configurator shows five common sizes for instant pricing; if your opening is different, pick the closest size and note the exact dimensions at checkout. Final pricing is confirmed after measurement, at the same per-area rate.',
+    a: 'Yes — every door is cut to your exact frame. Set the height and width you need on the product page, to the quarter inch, and the price updates as you go. It climbs in steps rather than smoothly because a leaf is cut from a stock board: your size is rounded up to the smallest board that covers it, and you pay for that board. The final size is confirmed at the measurement visit, at the same rate.',
   },
   {
     q: 'Can I cancel my order?',
     a: 'Anytime before production begins — that is, any time up to your post-measurement confirmation — at no cost. Once a leaf is cut to your size it cannot be resold, so cancellations after production starts forfeit the 50% production payment.',
   },
   {
-    q: 'Which cities do you serve?',
-    a: 'We deliver and install pan-India. Measurement visits are free in metro and tier-1 cities; for remote pincodes we confirm logistics on the scheduling call.',
+    q: 'Which areas do you serve?',
+    a: 'Measurement, delivery and installation are handled by our own crews across Bengaluru, and the visit is free. Beyond the city we supply the material — timber, ply and made-to-measure doors can be freighted to you, but fitting is not included. Message us with your pincode and we will tell you what we can do before you order.',
   },
   {
     q: 'Do you supply frames and hardware too?',
@@ -42,30 +53,43 @@ export const FAQS: Faq[] = [
   },
 ]
 
-export interface Testimonial {
-  quote: string
-  name: string
-  place: string
+/**
+ * The payment sequence, shown on the home page in place of the testimonials
+ * that used to sit there. Those three quotes were written by AI and attributed
+ * to people who do not exist; they were removed on 2026-08-08.
+ *
+ * What replaced them is the one thing on this page that is both fully confirmed
+ * and genuinely reassuring to a stranger deciding whether to drive to
+ * Nagasandra: when money actually changes hands. Every step below comes from
+ * PRODUCT.md § "Operating Context". Do not add a fourth step, a discount or a
+ * deadline — the sequence is the whole point, and its credibility is that it is
+ * plainly true.
+ */
+export interface PaymentStep {
+  /** The amount, set large in gold. Kept short — it has to hold at 44px. */
+  amount: string
+  when: string
+  body: string
 }
 
-export const TESTIMONIALS: Testimonial[] = [
+export const PAYMENT_STEPS: PaymentStep[] = [
   {
-    quote:
-      'The fitter measured on Tuesday, the door arrived in twelve days, and it shut with that soft click you only get from a door that actually fits.',
-    name: 'Meera Krishnan',
-    place: 'Bengaluru',
+    amount: '₹0',
+    when: 'Today',
+    body: 'Shortlist here or in the store and send it over. Nothing is collected on this website, and no card is asked for.',
   },
   {
-    quote:
-      'I paid less than the local dealer quoted for plain laminate — and got the fluted sage door everyone asks about.',
-    name: 'Arjun Shah',
-    place: 'Ahmedabad',
+    amount: '50%',
+    when: 'After you approve the measurements',
+    body: 'A fitter measures your frame, confirms the size and the price with you, and leaves. Production starts only once you say yes.',
   },
   {
-    quote:
-      'Three doors, one visit, zero sawdust in the house. They hung them, oiled the hinges and took the packing away.',
-    name: 'Ritika & Dev Malhotra',
-    place: 'Gurugram',
+    /* "Balance", not "The rest": it is the word the checkout summary already
+       uses for this line, and a short one keeps the three amounts reading as
+       one column rather than turning the last into a headline. */
+    amount: 'Balance',
+    when: 'After it is hung',
+    body: 'Paid when the door is installed, aligned and you have inspected it — not before.',
   },
 ]
 

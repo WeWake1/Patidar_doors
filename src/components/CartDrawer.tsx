@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCart } from '../cart/CartContext'
+import { MAX_QTY_PER_LINE, useCart } from '../cart/CartContext'
 import type { ArtId } from '../data/products'
 import { getProduct, getTone } from '../data/products'
 import { fmtINR } from '../lib/format'
+import { t } from '../lib/i18n'
 import { useScrollLock } from '../lib/useScrollLock'
 import { DoorArt } from './DoorArt'
 
@@ -29,10 +30,10 @@ export function CartDrawer() {
   return (
     <>
       <div className="drawer__overlay" onClick={cart.closeCart} aria-hidden="true" />
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Your cart">
+      <aside className="drawer" role="dialog" aria-modal="true" aria-label={t('cart.title')}>
         <div className="drawer__head">
-          <div className="drawer__title">Your cart</div>
-          <button ref={closeRef} type="button" className="drawer__close" onClick={cart.closeCart} aria-label="Close cart">
+          <div className="drawer__title">{t('cart.title')}</div>
+          <button ref={closeRef} type="button" className="drawer__close" onClick={cart.closeCart} aria-label={t('cart.close')}>
             ✕
           </button>
         </div>
@@ -40,8 +41,8 @@ export function CartDrawer() {
         <div className="drawer__body">
           {cart.lines.length === 0 ? (
             <div className="drawer__empty">
-              <div className="drawer__empty-title">Your cart is empty</div>
-              <p>Every great room starts at the door.</p>
+              <div className="drawer__empty-title">{t('cart.empty.title')}</div>
+              <p>{t('cart.empty.body')}</p>
               <button
                 type="button"
                 className="btn btn--dark"
@@ -50,7 +51,7 @@ export function CartDrawer() {
                   navigate('/shop')
                 }}
               >
-                Browse doors
+                {t('cart.browse')}
               </button>
             </div>
           ) : (
@@ -68,21 +69,33 @@ export function CartDrawer() {
                       {l.sizeLabel} · {l.toneName}
                     </div>
                     <div className="drawer__line-meta">{l.optsLabel}</div>
-                    <div className="drawer__line-meta">{fmtINR(l.unitPrice)} each</div>
+                    <div className="drawer__line-meta">{t('cart.each', { price: fmtINR(l.unitPrice) })}</div>
                     <div className="drawer__line-controls">
                       <div className="qty">
-                        <button type="button" onClick={() => cart.setQty(l.key, -1)} aria-label={`Decrease quantity of ${l.name}`}>
+                        <button
+                          type="button"
+                          onClick={() => cart.setQty(l.key, -1)}
+                          aria-label={t('cart.decrease', { name: l.name })}
+                        >
                           −
                         </button>
                         <span>{l.qty}</span>
-                        <button type="button" onClick={() => cart.setQty(l.key, 1)} aria-label={`Increase quantity of ${l.name}`}>
+                        {/* Disabled rather than silently ignored at the ceiling
+                            — a + that does nothing reads as a broken button. */}
+                        <button
+                          type="button"
+                          onClick={() => cart.setQty(l.key, 1)}
+                          disabled={l.qty >= MAX_QTY_PER_LINE}
+                          aria-label={t('cart.increase', { name: l.name })}
+                        >
                           +
                         </button>
                       </div>
                       <button type="button" className="drawer__remove" onClick={() => cart.remove(l.key)}>
-                        Remove
+                        {t('cart.remove')}
                       </button>
                     </div>
+                    {l.qty >= MAX_QTY_PER_LINE && <div className="drawer__cap">{t('cart.maxQty')}</div>}
                   </div>
                   <div className="drawer__line-total">{fmtINR(l.lineTotal)}</div>
                 </div>
@@ -94,11 +107,11 @@ export function CartDrawer() {
         {cart.lines.length > 0 && (
           <div className="drawer__foot">
             <div className="drawer__foot-row">
-              <span>Measurement visit & installation</span>
-              <span className="drawer__included">Included</span>
+              <span>{t('cart.included')}</span>
+              <span className="drawer__included">{t('cart.includedValue')}</span>
             </div>
             <div className="drawer__foot-row drawer__foot-row--total">
-              <span>Subtotal</span>
+              <span>{t('cart.subtotal')}</span>
               <span className="drawer__subtotal">{fmtINR(cart.subtotal)}</span>
             </div>
             <button
@@ -109,9 +122,9 @@ export function CartDrawer() {
                 navigate('/checkout')
               }}
             >
-              Proceed to checkout
+              {t('cart.checkout')}
             </button>
-            <div className="drawer__note">Pay after the measurement visit · Cancel anytime before production</div>
+            <div className="drawer__note">{t('cart.note')}</div>
           </div>
         )}
       </aside>

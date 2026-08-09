@@ -54,7 +54,7 @@ function widest(srcSet: string | undefined, fallback: string): string {
   return last.split(/\s+/)[0] || fallback
 }
 
-export const WALL_PHOTOS: WallPhoto[] = WALL_IDS.flatMap((id, i) => {
+export const WALL_PHOTOS: WallPhoto[] = WALL_IDS.flatMap((id) => {
   const img = DOOR_IMAGES[id]
   if (!img) return []
   const caption = CAPTIONS[id]
@@ -66,7 +66,11 @@ export const WALL_PHOTOS: WallPhoto[] = WALL_IDS.flatMap((id, i) => {
       full: widest(img.srcSet, img.src),
       w: img.w,
       h: img.h,
-      alt: caption || `Door ${i + 1} from the Patidar Doors showroom`,
+      /* The index-numbered alt this used to carry ("Door 7 from the…") counted
+         something the reader cannot see and told them nothing about the photo.
+         Until CAPTIONS is filled in, say the one thing that is true of all of
+         them and let a real caption override it. */
+      alt: caption || 'A finished door on display in our Bengaluru showroom',
       caption,
     },
   ]

@@ -33,6 +33,90 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      The site is client-rendered, so no JavaScript means no page at all. The
+      goal of this site is footfall to Nagasandra — a visitor with a blocked or
+      broken bundle should still leave with the address and the phone number.
+      Styled inline on purpose: in dev the stylesheet is injected by the very
+      script that isn't running here.
+    -->
+    <noscript>
+      <div
+        style="
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12vw 6vw;
+          background: #f5f0e6;
+          color: #211a12;
+          font: 400 16px/1.6 Archivo, system-ui, sans-serif;
+        "
+      >
+        <div style="max-width: 46rem">
+          <p
+            style="
+              margin: 0 0 22px;
+              font: 600 12px Archivo, system-ui, sans-serif;
+              letter-spacing: 0.34em;
+              text-transform: uppercase;
+              color: #7d6234;
+            "
+          >
+            Patidar Doors · by Patidar Timbers
+          </p>
+          <h1
+            style="
+              margin: 0;
+              font: 500 clamp(38px, 7vw, 64px) / 1.04 'Cormorant Garamond', Georgia, serif;
+              color: #211a12;
+            "
+          >
+            The catalogue needs JavaScript. The store doesn’t.
+          </h1>
+          <p style="margin: 22px 0 0; color: #5f5342; max-width: 52ch">
+            Everything on this site is standing on our floor in Nagasandra — teak timbers,
+            made-to-measure doors, plywood and WPC, sawn in our own yard and finished in our own
+            factory. Come and see it, or call and we’ll tell you what’s in stock today.
+          </p>
+          <hr style="border: 0; border-top: 1px solid #d9cdb2; margin: 34px 0" />
+          <!-- One line each: a separator between them dangles at the end of the
+               line on a phone, where this page matters most. -->
+          <p style="margin: 0 0 6px; font-size: 20px">
+            <a href="tel:+919611953838" style="color: #211a12; font-weight: 600"
+              >+91 96119 53838</a
+            >
+          </p>
+          <p style="margin: 0 0 6px">
+            <a href="mailto:patidartimber.pt@gmail.com" style="color: #7d6234"
+              >patidartimber.pt@gmail.com</a
+            >
+          </p>
+          <p style="margin: 0 0 18px; color: #5f5342">Mon–Sat, 9am–7pm IST</p>
+          <address style="margin: 0; font-style: normal; color: #5f5342; max-width: 46ch">
+            No 382, Opp IKEA &amp; Nagsandra Metro Station, Opp Flyover Pillar No 115, Corner Site
+            of Vikas Nagar 1st Cross Entrance, National Highway 4, Tumkur Road, Nagasandra,
+            Bengaluru, Karnataka 560073
+          </address>
+          <p style="margin: 26px 0 0">
+            <a
+              href="https://share.google/0ZGoQQAgdRaHQDSNI"
+              style="
+                display: inline-block;
+                padding: 13px 24px;
+                background: #211a12;
+                color: #f5f0e6;
+                text-decoration: none;
+                font: 500 12px Archivo, system-ui, sans-serif;
+                letter-spacing: 0.22em;
+                text-transform: uppercase;
+              "
+              >Directions to the store</a
+            >
+          </p>
+        </div>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

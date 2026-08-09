@@ -328,13 +328,34 @@ export function describeConfig(cfg: DoorConfig): string {
   return parts.join(' · ')
 }
 
-/** Rebuild a full config from a stored cart line. */
+/** One option id, or the default if the stored value isn't one we sell. */
+function pick<T extends string>(stored: unknown, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(stored as T) ? (stored as T) : fallback
+}
+
+const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max)
+
+/**
+ * Rebuild a full config from a stored cart line.
+ *
+ * Every field is checked against the options we actually sell rather than
+ * spread in. A cart line is `localStorage` — it outlives redeploys that rename
+ * an option, and it can be edited by hand. An unrecognised thickness used to
+ * reach `PRICING.thicknessFactor[cfg.thickness]` as `undefined`, which turned
+ * the leaf price, the line total and the cart subtotal into `NaN` and printed
+ * that into the WhatsApp message the workshop cuts from.
+ */
 export function configFromLine(sizeId: string, stored?: Partial<DoorConfig>): DoorConfig {
   const size = parseSizeId(sizeId)
+  const s = (stored ?? {}) as Record<string, unknown>
   return {
-    ...DEFAULT_CONFIG,
-    ...stored,
-    heightIn: size?.heightIn ?? DEFAULT_CONFIG.heightIn,
-    widthIn: size?.widthIn ?? DEFAULT_CONFIG.widthIn,
+    heightIn: clamp(size?.heightIn ?? DEFAULT_CONFIG.heightIn, SIZE_LIMITS.height.min, SIZE_LIMITS.height.max),
+    widthIn: clamp(size?.widthIn ?? DEFAULT_CONFIG.widthIn, SIZE_LIMITS.width.min, SIZE_LIMITS.width.max),
+    thickness: pick(s.thickness, THICKNESS_OPTIONS.map((t) => t.id), DEFAULT_CONFIG.thickness),
+    backSide: pick(s.backSide, ['plain', 'matched'] as const, DEFAULT_CONFIG.backSide),
+    frame: pick(s.frame, FRAME_OPTIONS.map((f) => f.id), DEFAULT_CONFIG.frame),
+    frameSection: pick(s.frameSection, FRAME_SECTION_OPTIONS.map((o) => o.id), DEFAULT_CONFIG.frameSection),
+    frameDesign: pick(s.frameDesign, ['plain', 'matched'] as const, DEFAULT_CONFIG.frameDesign),
+    hardware: pick(s.hardware, HARDWARE_OPTIONS.map((h) => h.id), DEFAULT_CONFIG.hardware),
   }
 }

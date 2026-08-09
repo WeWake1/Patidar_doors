@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { HeroPortal } from '../components/HeroPortal'
 import { ProductCard } from '../components/ProductCard'
 import { Reveal } from '../components/Reveal'
-import { FAQS, PROCESS, TESTIMONIALS } from '../data/content'
+import { FAQS, PAYMENT_STEPS, PROCESS } from '../data/content'
 import { getProduct } from '../data/products'
 import { WORLDS } from '../data/worlds'
 import { usePageMeta } from '../lib/usePageMeta'
@@ -69,7 +69,9 @@ export function Home() {
         <div className="worldstrip__grid">
           {WORLDS.map((w, i) => (
             <Reveal key={w.id} delay={i * 80}>
-              <Link to={`/${w.id}`} className={`worldstrip__tile worldstrip__tile--${w.id}`}>
+              {/* data-world hands the tile that world's whole token block, so the
+                  strip can never drift from the page it opens */}
+              <Link to={`/${w.id}`} data-world={w.id} className={`worldstrip__tile worldstrip__tile--${w.id}`}>
                 <span className="worldstrip__name">{w.short}</span>
                 <span className="worldstrip__tag">{w.tagline}</span>
                 <span className="worldstrip__go" aria-hidden="true">
@@ -150,23 +152,30 @@ export function Home() {
             </Reveal>
           ))}
         </div>
-        <div className="process__note">
-          You pay nothing online. 50% after the measurement visit, the rest after installation.
-        </div>
       </section>
 
-      {/* ── TESTIMONIALS ─────────────────────────────────────── */}
-      <section className="quotes">
-        <div className="kicker kicker--gold">From our doorways</div>
-        <div className="quotes__grid">
-          {TESTIMONIALS.map((t, i) => (
-            <Reveal key={t.name} delay={i * 90} className="quotes__card">
-              <p className="quotes__text">“{t.quote}”</p>
-              <div className="quotes__who">
-                {t.name} · {t.place}
-              </div>
-            </Reveal>
-          ))}
+      {/* ── PAYMENT SEQUENCE ─────────────────────────────────────
+          Replaced three fabricated testimonials (see content.ts). The band
+          keeps its place in the page's dark-band rhythm and absorbs the old
+          `.process__note`, which said the same thing in 13.5px muted text —
+          the terms are the reassurance, so they get the band, not a footnote. */}
+      <section className="terms">
+        <div className="terms__inner">
+          <div className="kicker kicker--gold">What you pay, and when</div>
+          <h2 className="terms__title">Nothing is paid online.</h2>
+          <ol className="terms__track">
+            {PAYMENT_STEPS.map((s, i) => (
+              <Reveal key={s.when} as="li" delay={i * 90} className="terms__stop">
+                <span className="diamond diamond--gold" aria-hidden="true" />
+                <span className="terms__amount">{s.amount}</span>
+                <span className="terms__when">{s.when}</span>
+                <p className="terms__body">{s.body}</p>
+              </Reveal>
+            ))}
+          </ol>
+          <p className="terms__foot">
+            Cancel free of charge any time before production begins.
+          </p>
         </div>
       </section>
 

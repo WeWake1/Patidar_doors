@@ -4,6 +4,7 @@ import { Reveal } from '../components/Reveal'
 import { config, whatsappLink } from '../config'
 import { productsIn } from '../data/products'
 import type { World } from '../data/worlds'
+import { t } from '../lib/i18n'
 import { usePageMeta } from '../lib/usePageMeta'
 
 /**
@@ -32,6 +33,27 @@ export function WorldPage({ world }: { world: World }) {
         </div>
         <div className="world__motif" aria-hidden="true" />
       </header>
+
+      {/* The client can unpublish every product in a range from /admin, which
+          left this page as an intro and a "why buy from us" with nothing
+          between them — reading as a range that no longer exists rather than
+          one that is between photographs. */}
+      {sections.length === 0 && (
+        <section className="world__section">
+          <div className="empty-range">
+            <h2 className="empty-range__title">{t('world.empty')}</h2>
+            <p className="empty-range__body">{t('world.emptyBody')}</p>
+            <a
+              className="btn btn--dark"
+              href={whatsappLink(`Hi ${config.brand}! What do you have in stock in the ${world.name} range?`)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Ask on WhatsApp
+            </a>
+          </div>
+        </section>
+      )}
 
       {sections.map((s) => (
         <section key={s.sub} className="world__section">

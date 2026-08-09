@@ -10,8 +10,34 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
 - **Product copy is unverified draft** — tags/stories/specs across all four worlds were
   drafted by AI and must be confirmed with the client.
 - **Four worlds IA**: `/timbers` `/doors` `/ply` `/wpc` render one `WorldPage` themed by
-  `[data-world]` token scopes (`--w-bg/-ink/-accent/…`) in `src/styles/worlds.css`.
-  Worlds/subcategories defined in `src/data/worlds.ts`.
+  `[data-world]` token scopes in `src/styles/worlds.css`. Worlds/subcategories defined in
+  `src/data/worlds.ts`. The home world-strip tiles carry `data-world` too, so they read the
+  same block and can't drift from the page they open.
+- **Colour tokens are two-tier** (`src/styles/global.css`). Tier 1 = primitives, physical
+  names for pigments (`--cream --panel --night --brass --gold --lamp2/3 …`). Tier 2 =
+  **roles** (`--surface[-raised|-sunk|-band] --text[-2|-3] --border[-strong|-control]
+  --accent[-deep|-text] --action[-text|-hover|-hover-text] --focus --focus-halo --stage`)
+  and **components only ever read roles**. Each `[data-world]` block restates the roles, so
+  one component set renders as four sub-brands — if you catch yourself writing
+  `[data-world='x'] .card__name`, a role is missing. `--w-*` survive only as aliases.
+  Global chrome (nav, footer, drawer, toast, wa-float) reads tier 1 and deliberately does
+  **not** theme — it's what holds the four worlds together as one brand.
+  · **Status = the shop floor**: clay (Ply/terracotta) = fault, teak (Timbers) = caution,
+  slate (WPC) = confirmed. Every status colour is a material on the floor, so nothing
+  violates "don't introduce a colour no material has". WhatsApp green stays platform-only
+  and is never reused as a generic success. Every status also carries text + the rotated
+  square, so nothing is colour-only (clay and teak converge under deuteranopia).
+  · **Brass has three steps and picking the wrong one is the usual failure**: `--accent`
+  = decoration you look at (2.9:1, never text), `--accent-deep` = a control you must see
+  (focus ring, selected border), `--accent-text` = anything you must read (5.0:1).
+  · ⚠️ `npm run contrast` reads the hexes **out of** global.css/worlds.css and checks all
+  74 text/surface pairs against WCAG AA. Text is checked against the *deepest* surface it
+  can land on (the card stage, not the canvas) — three ramp steps had to move because they
+  passed on the page and failed on the panel. Extend it when you add a role or a world;
+  don't eyeball a new value. It exits non-zero on a failure.
+  · ⚠️ the ply-edge stripe is a **background strip, never `border-image`** — border-image
+  repaints every edge that has width, which turned the card's 1px hairline into dashes on
+  all four sides.
 - **Data model** (`src/data/products.ts`): `Product.visual` is a union —
   `art` (SVG door + tone group), `photo` (real image; `presentation: 'swing'`
   door-opens-animation vs `'showcase'` zoom/lift for in-situ shots), `material`
@@ -216,6 +242,63 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
 - Admin backend built + verified end-to-end (create/upload/crop/save into Supabase);
   remaining go-live steps in docs/admin-setup.md (client user + admins allow-list, disable
   signup, Vercel webhook).
+- **Failure states** (hardening pass 2026-08-08). The rule is that nothing on this site
+  fails to a blank rectangle — a store whose goal is footfall must still hand over an
+  address when it breaks.
+  · `ErrorBoundary.tsx` wraps the root, the page (keyed on pathname, so navigating away
+  clears a crash and the nav/footer survive it), the lazy admin, and — with
+  `fallback` — the two decorative lazy chunks. It **detects a stale chunk separately**:
+  a hashed `Beams-*.js` / `StrokeText-*.js` / `AdminApp-*.js` that 404s is not a bug but
+  a redeploy under an open tab, so the copy says "reload", and reload goes back to the
+  server rather than re-rendering into the same dead URL. The beams fall back to
+  nothing (`.portal__rays`' gradient already stands in); the Door Wall headline falls
+  back to its `-webkit-text-stroke` span.
+  · `index.html` carries a `<noscript>` with the phone, hours, address and a directions
+  button — **inline-styled**, because in dev the stylesheet is injected by the very
+  script that isn't running. Skip link is in `App.tsx` + `.skip-link` (min-height 44px:
+  12px micro-caps with generous padding still lands at 42).
+  · **Nothing trusts `localStorage`.** `order.ts` coerces the saved order field by field
+  (a truncated write used to reach `customer.name.split()` during render);
+  `CartContext.loadInitial` re-derives every line and clamps qty; `configFromLine`
+  validates each option against the ones we sell — an unrecognised thickness reached
+  `PRICING.thicknessFactor[…]` as `undefined` and printed `NaN` into the WhatsApp
+  message the workshop cuts from. `fmtINR` degrades a non-finite number to `—`.
+  · **Cart ceilings are message-length rules**, not commercial ones: 50/line, 30 lines,
+  and checkout refuses a `wa.me` URL over 1900 chars — in-app browsers (Instagram,
+  Gmail, some Android shells) truncate long URLs *silently*, and a truncated order is
+  worse than a refused one. Checkout also latches `handing` against double-submit and
+  records `blocked: true` when `window.open` is refused, which makes `/order-confirmed`
+  lead with the button instead of the receipt.
+  · **Catalogue photos** go through `ProductPhoto.tsx` (drawn stand-in on `onError`) —
+  the client can delete a photo in `/admin` while the build-time snapshot still points
+  at it. The Door Wall is the exception: its small tiles are inside the vendored
+  `DriftWall`, so they are covered from outside via `color: transparent` +
+  `img::before` (generated content renders on an `<img>` **only** while it is falling
+  back to a non-replaced box, i.e. only when broken — a loaded photo never shows it);
+  the two big `width:auto` images get a real React fallback, `WallPhoto`.
+  · **Admin**: `humanError()` in `api.ts` maps 23505/23503/42501/401/offline to what the
+  owner should do next, and keeps anything unrecognised verbatim. Every mutation was a
+  bare `await` with no catch — a blocked write rejected into nothing and the reload put
+  the row straight back. Dashboard has loading/error/retry and an **orphan bucket**
+  (a product whose section was deleted rendered nowhere while still counting in the
+  header). Editor has a load-failure retry, `beforeunload` + Back guards on a dirty
+  form, and blank-spec stripping. Uploads validate type and size *before* decoding,
+  reject with a real message on HEIC (`img.onerror` hands back an Event, so
+  `.message` was undefined and the error box rendered empty), guard `toBlob`'s null,
+  revoke every object URL, and show which of the three round trips is running.
+- **Kannada/Hindi readiness** (no translations shipped). `src/lib/i18n.ts` is a keyed
+  catalogue + `t()` over the **functional** copy only — controls, errors, empty states,
+  admin chrome; editorial copy stays with the CMS. `t()` is a plain function, not a
+  hook, which is safe only because one locale ships; a second one needs a provider and
+  the call sites don't change. `fmtINR` runs through `Intl` on the active locale, but
+  the order message uses `fmtINROrder` pinned to `en-IN` — the workshop reads it.
+  ⚠️ The type rules matter more than the strings: `--serif`/`--sans` carry Noto/Sangam
+  tails (Cormorant and Archivo are Latin-only), and under `html:lang(kn|hi)` all
+  `letter-spacing` and `text-transform` are dropped — uppercase is a no-op in a caseless
+  script and tracking **separates a consonant from its matra**, so the akshara stops
+  reading as one unit. The `:not(:lang(en))` in that selector is the contract for
+  whoever translates: mark Latin runs (`WPC`, `710 BWP`, the brand) `lang="en"` and they
+  keep the system's voice.
 
 ## prototype/ (historical)
 

@@ -1,6 +1,7 @@
 import type { ArtId, ProductImage, Tone } from '../data/products'
 import { useAjarInView } from '../lib/useAjarInView'
 import { DoorArt } from './DoorArt'
+import { ProductPhoto } from './ProductPhoto'
 import GlareHover from './reactbits/GlareHover'
 
 /**
@@ -40,17 +41,7 @@ export function DoorScene({
       </div>
       <div className="door-scene__leaf">
         {photo ? (
-          <img
-            className="door-scene__photo"
-            src={photo.src}
-            srcSet={photo.srcSet}
-            sizes="(max-width: 720px) 90vw, 30vw"
-            alt={photo.alt}
-            width={photo.w}
-            height={photo.h}
-            loading="lazy"
-            decoding="async"
-          />
+          <ProductPhoto photo={photo} className="door-scene__photo" />
         ) : (
           art && tone && <DoorArt art={art} tone={tone} />
         )}

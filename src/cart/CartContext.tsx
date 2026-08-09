@@ -45,6 +45,18 @@ const STORAGE_KEY = 'patidar.cart.v1'
 const OLD_STORAGE_KEY = 'doorswala.cart.v1'
 
 /**
+ * A ceiling on one line, and on the cart as a whole.
+ *
+ * Not a business rule — a message-length one. The order leaves as a `wa.me`
+ * URL, and every line is four printed rows in it. Held down on the `+` button
+ * a phone repeats the keypress, and nothing stopped the count climbing until
+ * the URL was too long for WhatsApp to open at all. Anyone genuinely ordering
+ * more doors than this needs a person and a bulk price, not a cart.
+ */
+export const MAX_QTY_PER_LINE = 50
+const MAX_LINES = 30
+
+/**
  * Two lines merge only when the whole specification matches — same door, same
  * measured size, same finish and same options. The options segment is empty
  * for an all-default door, which keeps keys stable with pre-configurator ones.
@@ -54,13 +66,23 @@ function lineKey(productId: string, sizeId: string, toneId: string, opts?: DoorC
   return `${productId}|${sizeId}|${toneId}${optsPart ? `|${optsPart}` : ''}`
 }
 
+/** Whole doors only, at least one, no more than the ceiling. */
+function clampQty(n: unknown): number {
+  const q = Math.floor(Number(n))
+  if (!Number.isFinite(q)) return 1
+  return Math.min(Math.max(q, 0), MAX_QTY_PER_LINE)
+}
+
 function reducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'add': {
       const key = lineKey(action.productId, action.sizeId, action.toneId, action.opts)
       const existing = state.lines.find((l) => l.key === key)
+      if (!existing && state.lines.length >= MAX_LINES) return state
       const lines = existing
-        ? state.lines.map((l) => (l.key === key ? { ...l, qty: l.qty + (action.qty ?? 1) } : l))
+        ? state.lines.map((l) =>
+            l.key === key ? { ...l, qty: clampQty(l.qty + (action.qty ?? 1)) } : l,
+          )
         : [
             ...state.lines,
             {
@@ -69,14 +91,14 @@ function reducer(state: CartState, action: CartAction): CartState {
               sizeId: action.sizeId,
               toneId: action.toneId,
               opts: action.opts,
-              qty: action.qty ?? 1,
+              qty: clampQty(action.qty ?? 1),
             },
           ]
       return { lines }
     }
     case 'setQty': {
       const lines = state.lines
-        .map((l) => (l.key === action.key ? { ...l, qty: l.qty + action.delta } : l))
+        .map((l) => (l.key === action.key ? { ...l, qty: clampQty(l.qty + action.delta) } : l))
         .filter((l) => l.qty > 0)
       return { lines }
     }
@@ -99,10 +121,22 @@ function loadInitial(): CartState {
       }
     }
     if (!raw) return { lines: [] }
-    const parsed = JSON.parse(raw) as CartState
-    if (!Array.isArray(parsed.lines)) return { lines: [] }
-    // Drop lines whose product no longer exists in the catalog.
-    return { lines: parsed.lines.filter((l) => getProduct(l.productId)) }
+    const parsed = JSON.parse(raw) as unknown
+    const stored = (parsed as CartState | null)?.lines
+    if (!Array.isArray(stored)) return { lines: [] }
+    // Every field is re-derived rather than trusted. This survives a redeploy
+    // that renamed a product, a truncated write, and a hand-edited entry — all
+    // of which used to reach `priceFor()` and the WhatsApp message intact.
+    const lines = stored.flatMap((l): CartLine[] => {
+      if (!l || typeof l !== 'object') return []
+      const { productId, sizeId, toneId, opts, qty } = l as Partial<CartLine>
+      if (typeof productId !== 'string' || !getProduct(productId)) return []
+      if (typeof sizeId !== 'string' || typeof toneId !== 'string') return []
+      const q = clampQty(qty)
+      if (q < 1) return []
+      return [{ key: lineKey(productId, sizeId, toneId, opts), productId, sizeId, toneId, opts, qty: q }]
+    })
+    return { lines: lines.slice(0, MAX_LINES) }
   } catch {
     return { lines: [] }
   }

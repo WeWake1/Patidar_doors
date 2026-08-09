@@ -44,7 +44,7 @@ export function Footer() {
       </div>
       <div className="footer__bar">
         <span>© 2026 {config.brand}. {config.city}.</span>
-        <span>Free measurement visit · {config.warrantyYears}-year warranty</span>
+        <span>Free measurement in {config.serviceCity} · Warranty included</span>
       </div>
     </footer>
   )

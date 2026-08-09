@@ -1,5 +1,39 @@
 import { supabase } from '../lib/supabase'
 import type { PhotoPresentation, Product, ProductImage, WorldId } from '../data/products'
+import { t } from '../lib/i18n'
+
+/**
+ * Turn whatever came back into something a non-technical store owner can act
+ * on.
+ *
+ * This admin is used by one person who is not a developer, on a phone as often
+ * as a laptop. Postgres and Supabase speak in `new row violates row-level
+ * security policy for table "products"` and `duplicate key value violates
+ * unique constraint "products_slug_key"` — true, unactionable, and alarming.
+ * Each of these maps to the thing the owner would actually do next; anything
+ * unrecognised keeps its original text rather than being flattened into
+ * "Something went wrong", because an unknown error is exactly the one worth
+ * reading out over the phone.
+ */
+export function humanError(e: unknown): string {
+  const err = e as { code?: string; status?: number; message?: string; name?: string } | null
+  const code = err?.code ?? ''
+  const msg = err?.message ?? String(e)
+
+  // Offline / DNS / CORS all surface as a bare TypeError from fetch.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return t('ax.offline')
+  if (err?.name === 'TypeError' && /fetch|network/i.test(msg)) return t('ax.offline')
+
+  if (code === '23505') return t('ax.duplicateSlug')
+  if (code === '23503') return t('ax.stillReferenced')
+  // 42501 is Postgres "insufficient privilege"; PostgREST returns it for a
+  // blocked RLS write, which here means "signed in but not in `admins`".
+  if (code === '42501' || err?.status === 403) return t('ax.notAllowed')
+  if (err?.status === 401 || /jwt|token is expired/i.test(msg)) return t('ax.sessionExpired')
+  if (/invalid login credentials/i.test(msg)) return t('ax.badCredentials')
+
+  return msg
+}
 
 /** Admin-side shapes (superset of the public Product — carries db ids). */
 export interface DbSubcategory {
@@ -62,7 +96,14 @@ export async function listProducts(): Promise<DbProduct[]> {
 
 export async function getProduct(id: string): Promise<DbProduct | null> {
   const { data, error } = await db().from('products').select('*, images:product_images(*)').eq('id', id).single()
-  if (error) return null
+  // "No rows" is a real answer (a deleted product, a stale bookmark) and
+  // returns null. Anything else is a failure and has to be thrown — swallowing
+  // it handed the editor a blank form that looked like an empty product, and
+  // saving that would have overwritten the real one.
+  if (error) {
+    if (error.code === 'PGRST116') return null
+    throw error
+  }
   const p = data as DbProduct
   return { ...p, images: (p.images ?? []).slice().sort((a, b) => a.sort_order - b.sort_order) }
 }

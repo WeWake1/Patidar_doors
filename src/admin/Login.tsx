@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { t } from '../lib/i18n'
+import { humanError } from './api'
 
 export function Login({ onSignIn }: { onSignIn: (email: string, password: string) => Promise<void> }) {
   const [email, setEmail] = useState('')
@@ -13,7 +15,9 @@ export function Login({ onSignIn }: { onSignIn: (email: string, password: string
     try {
       await onSignIn(email, password)
     } catch (e) {
-      setErr((e as Error).message ?? 'Sign-in failed')
+      // "Invalid login credentials" is Supabase's phrasing, not something to
+      // hand a store owner who has just mistyped their password on a phone.
+      setErr(humanError(e))
       setBusy(false)
     }
   }
@@ -23,7 +27,11 @@ export function Login({ onSignIn }: { onSignIn: (email: string, password: string
       <form className="ax-login__box" onSubmit={submit}>
         <div className="ax-login__brand">PATIDAR DOORS</div>
         <h1>Admin sign in</h1>
-        {err && <div className="ax-error">{err}</div>}
+        {err && (
+          <div className="ax-note ax-note--fault" role="alert">
+            {err}
+          </div>
+        )}
         <label className="ax-field">
           <span>Email</span>
           <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -33,7 +41,7 @@ export function Login({ onSignIn }: { onSignIn: (email: string, password: string
           <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
         <button type="submit" className="ax-btn ax-btn--primary ax-btn--block" disabled={busy}>
-          {busy ? 'Signing in…' : 'Sign in'}
+          {busy ? t('ax.signingIn') : t('ax.signIn')}
         </button>
       </form>
     </div>

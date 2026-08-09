@@ -6,6 +6,7 @@ import { WORLDS } from '../data/worlds'
 import { smoothScrollTo } from '../lib/smoothScroll'
 import { easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
 import { DoorArt } from './DoorArt'
+import { ErrorBoundary } from './ErrorBoundary'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
 import { MaterialArt } from './MaterialArt'
 /* Beams pulls in three + @react-three/fiber + drei — ~220kB gzipped, which is
@@ -206,7 +207,14 @@ export function HeroPortal() {
           style={{ opacity: zoomOpacity, visibility: zoomOpacity === 0 ? 'hidden' : 'visible' }}
           aria-hidden="true"
         >
-          <Suspense fallback={null}>
+          {/* If the three.js chunk 404s — the usual cause is a redeploy under an
+              open tab — the hero must simply not have beams. Without a boundary
+              the failed import throws through Suspense and takes the whole home
+              page down over a decorative backdrop. `.portal__rays`' warm
+              gradient is already the standing-in layer, so the fallback is
+              nothing at all. */}
+          <ErrorBoundary label="beams" fallback={null}>
+            <Suspense fallback={null}>
             {/* Mounted only while it can be seen. `visibility: hidden` hides the
                 canvas but does NOT stop @react-three/fiber's render loop — it
                 kept issuing ~120 WebGL draw calls/sec through the corridor and
@@ -225,7 +233,8 @@ export function HeroPortal() {
                  rotation={30}
               />
             )}
-          </Suspense>
+            </Suspense>
+          </ErrorBoundary>
         </div>
 
         <Corridor p={p} interactive={corridorInteractive} />

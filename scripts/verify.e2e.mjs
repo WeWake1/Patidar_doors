@@ -117,7 +117,7 @@ await step('corridor card walks into Timbers world', async () => {
 })
 
 await step('home sections render', async () => {
-  for (const sel of ['.marquee', '.props', '.featured', '.econ', '.process', '.quotes', '.faqteaser', '.cta']) {
+  for (const sel of ['.marquee', '.props', '.featured', '.econ', '.process', '.terms', '.faqteaser', '.cta']) {
     if (!(await page.locator(sel).count())) throw new Error(`missing ${sel}`)
   }
 })
@@ -311,7 +311,7 @@ await shot('08-checkout')
 
 /* ── CHECKOUT VALIDATION + ORDER ───────────────────────── */
 await step('validation blocks bad input', async () => {
-  await page.getByRole('button', { name: /Place order/ }).click()
+  await page.getByRole('button', { name: /Open WhatsApp with my order/ }).click()
   await page.waitForSelector('.field__err')
   const n = await page.locator('.field__err').count()
   if (n < 4) throw new Error(`expected several errors, got ${n}`)
@@ -326,7 +326,7 @@ await step('valid order opens WhatsApp + confirmation', async () => {
   await page.fill('#f-pincode', '380001')
   await page.selectOption('#f-slot', { index: 1 })
   await page.fill('#f-notes', 'Opening is 84.5 inches')
-  await page.getByRole('button', { name: /Place order/ }).click()
+  await page.getByRole('button', { name: /Open WhatsApp with my order/ }).click()
   await page.waitForURL('**/order-confirmed')
   const wa = await page.evaluate(() => window.__waUrl)
   if (!wa) throw new Error('wa.me url not captured')

@@ -31,8 +31,29 @@ export const config = {
   /** Standard leaf the base prices refer to. */
   baseSizeLabel: '8′ × 3′',
 
-  warrantyYears: 10,
+  /**
+   * Where measurement, delivery and installation are handled by our own crews.
+   * Outside it we supply material on enquiry, without fitting — so any copy
+   * promising a visit or an install has to name this city.
+   */
+  serviceCity: 'Bengaluru',
 } as const
+
+/*
+ * ── Removed: `warrantyYears: 10` ───────────────────────────────────────────
+ * A warranty exists, but the client has not confirmed its length or coverage,
+ * and the 10-year terms this site used to print were wrong (PRODUCT.md
+ * § "Capabilities and Constraints"). Rather than keep a number that reads as
+ * confirmed, the site now says a warranty is included and defers the specifics
+ * to the written warranty issued with the invoice.
+ *
+ * When the real terms arrive, put them back in these four places:
+ *   · pages/Policies.tsx      — the "Warranty" section
+ *   · data/content.ts         — the "Is there a warranty?" FAQ
+ *   · components/Footer.tsx   — the footer bar
+ *   · pages/Product.tsx       — the PDP spec list
+ * Add the duration here as `warrantyYears` again so those four read one value.
+ */
 
 /** wa.me deep link with a pre-filled message. */
 export function whatsappLink(message: string): string {

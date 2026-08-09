@@ -1,25 +1,132 @@
 /* ═══════════════════ Patidar Doors design system ═══════════════════ */
 
+/* ── tier 1: primitives ───────────────────────────────────────
+   Physical names for physical things. Nothing here encodes a role; these are
+   the pigments. Every value that a component reaches for lives in tier 2.
+
+   Contrast is not a matter of taste here — every text/surface pair below is
+   checked against WCAG AA (4.5:1 body, 3:1 controls) on the *darkest* surface
+   it can land on, not just on the canvas. The ratios in the comments are
+   measured, and four of them are corrections: --mut2 used to be #8a7a62
+   (3.67:1 — it carried every nav link, hint and caption on the site), brass
+   used to be set as small text at 2.85:1, the footer bar ran at 2.94:1 and the
+   economics chain arrow at 2.15:1. */
 :root {
-  --cream: #f5f0e6;
-  --cream2: #fbf7ef;
-  --panel: #efe7d6;
-  --line: #e6dcc6;
-  --line2: #d9cdb2;
-  --ink: #211a12;
-  --night: #241c13;
-  --deep: #1c1610;
-  --frame: #3b2e1f;
-  --brass: #a98b4f;
-  --brass-d: #8c6f3f;
+  /* paper — the warm ground, raised → sunken */
+  --cream2: #fbf7ef;  /* raised: cards, inputs, drawer, summary panels */
+  --cream: #f5f0e6;   /* canvas */
+  --panel: #efe7d6;   /* sunken: the stage a product stands on */
+  --panel2: #e8dec7;  /* the stage's own floor — was a literal in three places */
+  --line: #e6dcc6;    /* hairline divider inside cream */
+  --line2: #d9cdb2;   /* input + chip border */
+  --line3: #c9bb9c;   /* resting control border, one step heavier */
+
+  /* night — the dark bands, raised → deep */
+  --night2: #2b2218;  /* raised on dark: the door-wall frame */
+  --night: #241c13;   /* the standard band */
+  --deep: #1c1610;    /* footer, door wall, the deepest band */
+  --deep2: #17110b;   /* the portal's ground */
+  --deep3: #16110b;   /* the corridor floor */
+  --frame: #3b2e1f;   /* rules on dark */
+  --frame2: #33281c;  /* the quietest rule on dark */
+
+  /* ink — text on paper. Three steps, each ≥4.5:1 on --panel. */
+  --ink: #211a12;   /* 15.1:1 — body and every primary fill */
+  --mut: #5f5342;   /*  6.6:1 — secondary */
+  --mut2: #70624c;  /*  5.2:1 — tertiary: hints, captions, meta */
+
+  /* lamp — text on night. Three steps, each ≥4.5:1 on --night. */
+  --lamp-hot: #fdf6e4;       /* the brightest step: a label at full intent. There is no
+                                white in this system — a cold #fff next to cream logo
+                                type reads as a different brand. */
+  --cream-on-dark: #f0e3c2;  /* 14.1:1 — the cream that reads on dark, and the cream logo */
+  --lamp2: #c3b394;          /*  8.7:1 — secondary on dark */
+  --lamp3: #968771;          /*  4.8:1 — tertiary on dark */
+
+  /* metal — The Two Golds Rule: brass belongs to cream, gold to dark.
+     Brass has a third step because a 12px letterform tracked at 0.34em is not
+     an edge and cannot be read at the edge's weight. */
+  --brass: #a98b4f;      /* the edge: rules, rings, diamonds, the badge fill */
+  --brass-d: #8c6f3f;    /* the heavier edge: focus ring, active state border — 4.1:1 */
+  --brass-ink: #7d6234;  /* brass *as text* — 5.0:1 */
   --gold: #c9a964;
   --gold-l: #d9b873;
-  --mut: #6f6354;
-  --mut2: #8a7a62;
-  --err: #a8442a;
+
+  /* ── the shop floor ──────────────────────────────────────────
+     Every colour this interface is allowed to use for *meaning* is a colour
+     of a material standing on Patidar's floor. Clay is the Ply world and the
+     Terracotta Clay paint tone; teak is the Timbers world; slate is WPC. The
+     system never has to import a signal palette it would then have to justify
+     — and none of these is a hue the catalogue photography doesn't contain.
+     WhatsApp green is the exception and stays what it is: a platform colour,
+     borrowed under licence, used on the float and its button and nowhere else. */
+  --clay: #a8442a;          /* fault — border and mark */
+  --clay-ink: #9c3d24;      /* fault as text — 6.0:1 on cream */
+  --clay-surface: #f7e6df;  /* the failing field's own ground */
+  --teak: #c9903f;          /* caution / in-progress */
+  --teak-ink: #8a5a15;      /* caution as text — 5.2:1 on cream */
+  --slate: #1f6156;         /* confirm — 6.4:1 on cream */
+  --slate-lit: #5cb3a3;     /* confirm on a dark ground — 7.2:1 on --deep */
+  --slate-surface: #e2efeb;
+  --err: var(--clay);       /* the name the field styles already use */
+  /* WhatsApp's own lockup, borrowed under licence and never restyled: the
+     platform mandates the white glyph, and the cast is tinted to its green so
+     the one non-palette control still sits in a lit room. */
   --wa: #1fa855;
-  --serif: 'Cormorant Garamond', Georgia, serif;
-  --sans: 'Archivo', system-ui, sans-serif;
+  --wa-on: #ffffff;
+  --wa-cast: rgba(24, 40, 20, 0.35);
+
+  /* Cormorant and Archivo cover Latin only. Without an explicit Indic tail the
+     browser picks its own fallback per glyph, which lands on a face at a
+     different optical size and drops the line off its baseline mid-sentence.
+     The Sangam faces are Apple's, the Noto ones Android's and Linux's — one of
+     each script is present on every device this store is browsed from, and
+     none of them is a download. */
+  --serif: 'Cormorant Garamond', Georgia, 'Noto Serif Devanagari', 'Devanagari Sangam MN',
+    'Noto Serif Kannada', 'Kannada Sangam MN', serif;
+  --sans: 'Archivo', system-ui, 'Noto Sans Devanagari', 'Devanagari Sangam MN', 'Noto Sans Kannada',
+    'Kannada Sangam MN', sans-serif;
+}
+
+/* ── tier 2: roles ────────────────────────────────────────────
+   What a component actually reaches for. Declared on :root so the storefront
+   is the default theme, and re-declared wholesale under [data-world] so a
+   world page re-skins every card, control and rule inside it without any
+   component having to know which world it is in. Adding a world is now a
+   token block, not a list of overrides per component.
+
+   Global chrome — nav, footer, cart drawer, toast — deliberately reads the
+   primitives instead, because those four are what hold the four worlds
+   together as one brand. */
+:root,
+.world {
+  --surface: var(--cream);          /* the canvas */
+  --surface-raised: var(--cream2);  /* above the page: cards, fields, panels */
+  --surface-sunk: var(--panel);     /* below the page: the product stage */
+  --surface-sunk-2: var(--panel2);
+  --surface-band: var(--panel);     /* a full-bleed tonal band inside the page */
+  --text: var(--ink);
+  --text-2: var(--mut);
+  --text-3: var(--mut2);
+  --border: var(--line);
+  --border-strong: var(--line2);
+  --border-control: var(--line3);
+  --accent: var(--brass);           /* the edge */
+  --accent-deep: var(--brass-d);    /* the heavier edge */
+  --accent-text: var(--brass-ink);  /* the accent when it has to be read */
+  --action: var(--ink);             /* the primary fill */
+  --action-text: var(--cream);
+  /* The dark button warms to Hinge Brass rather than darkening. The label
+     turns to ink with it: cream on brass measures 2.8:1, ink on brass 5.5:1 —
+     and a brass plate with dark stamped lettering is the more hardware-like
+     of the two anyway. */
+  --action-hover: var(--brass);
+  --action-hover-text: var(--deep);
+  --focus: var(--brass-d);
+  --focus-halo: rgba(140, 111, 63, 0.22);
+  /* the product stage, as one value — worlds restate it rather than each
+     restating the gradient */
+  --stage: linear-gradient(180deg, var(--surface-sunk), var(--surface-sunk-2));
 }
 
 * , *::before, *::after { box-sizing: border-box; }
@@ -42,7 +149,7 @@ body {
 /* grey flash on every tap reads as cheap — components own their pressed state */
 a, button, summary, [role='button'] { -webkit-tap-highlight-color: transparent; }
 
-::selection { background: rgba(169, 139, 79, 0.28); }
+::selection { background: rgba(169, 139, 79, 0.3); }
 
 img, svg { display: block; max-width: 100%; }
 
@@ -51,7 +158,7 @@ a { color: inherit; }
 button { font-family: var(--sans); }
 
 :focus-visible {
-  outline: 2px solid var(--brass);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -91,11 +198,14 @@ button { font-family: var(--sans); }
   display: inline-block;
   flex: none;
 }
+/* The Two Golds Rule: brass belongs to cream, gold to dark grounds. A brass
+   diamond on --deep goes muddy. */
+.diamond--gold { background: var(--gold); }
 
 .kicker {
   font: 600 12px var(--sans);
   letter-spacing: 0.34em;
-  color: var(--brass-d);
+  color: var(--accent-text);
   text-transform: uppercase;
 }
 .kicker--gold { color: var(--gold); }
@@ -130,9 +240,9 @@ button { font-family: var(--sans); }
 .btn {
   display: inline-block;
   cursor: pointer;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--action);
   background: none;
-  color: var(--ink);
+  color: var(--action);
   padding: 13px 24px;
   font: 500 12px var(--sans);
   letter-spacing: 0.22em;
@@ -141,17 +251,17 @@ button { font-family: var(--sans); }
   text-align: center;
   transition: background 0.25s, color 0.25s, border-color 0.25s;
 }
-.btn--dark { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.btn--dark { background: var(--action); color: var(--action-text); border-color: var(--action); }
 .btn--ghost { padding: 10px 16px; font-size: 11px; letter-spacing: 0.2em; }
-.btn--night { background: #241c13; color: #f0e3c2; border-color: #241c13; padding: 14px 26px; }
+.btn--night { background: var(--night); color: var(--cream-on-dark); border-color: var(--night); padding: 14px 26px; }
 /* Touch screens latch :hover on the last thing tapped — an "Add to cart" you
    just pressed would sit in its hover colour until you tapped elsewhere. Every
    hover that changes colour is therefore pointer-only. (The door-swing hovers
    below are exempt: useAjarInView gives touch its own equivalent.) */
 @media (hover: hover) {
-  .btn:hover { background: var(--ink); color: var(--cream); }
-  .btn--dark:hover { background: var(--brass); border-color: var(--brass); color: var(--cream); }
-  .btn--night:hover { background: var(--brass); border-color: var(--brass); }
+  .btn:hover { background: var(--action); color: var(--action-text); }
+  .btn--dark:hover { background: var(--action-hover); border-color: var(--action-hover); color: var(--action-hover-text); }
+  .btn--night:hover { background: var(--action-hover); border-color: var(--action-hover); color: var(--action-hover-text); }
 }
 .btn--big { padding: 17px 36px; font-size: 13px; letter-spacing: 0.26em; }
 .btn--block { display: block; width: 100%; }
@@ -224,7 +334,7 @@ button { font-family: var(--sans); }
   text-transform: uppercase;
 }
 @media (hover: hover) {
-  .nav__cart:hover { background: var(--brass); }
+  .nav__cart:hover { background: var(--brass); color: var(--deep); }
 }
 .nav__badge {
   background: var(--brass);
@@ -295,7 +405,7 @@ button { font-family: var(--sans); }
   text-decoration: none;
   border-bottom: 1px solid var(--line);
 }
-.nav__menu-link--active { color: var(--brass-d); }
+.nav__menu-link--active { color: var(--accent-text); }
 .nav__menu-call {
   margin-top: 18px;
   display: flex;
@@ -414,8 +524,8 @@ button { font-family: var(--sans); }
 
 /* ── product card ────────────────────────────────────────── */
 .card {
-  background: var(--cream2);
-  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   text-decoration: none;
@@ -428,7 +538,7 @@ button { font-family: var(--sans); }
   }
 }
 .card__stage {
-  background: linear-gradient(180deg, var(--panel), #e8dec7);
+  background: var(--stage);
   padding: 44px 0 38px;
   display: flex;
   justify-content: center;
@@ -445,10 +555,10 @@ button { font-family: var(--sans); }
   font: 500 11px var(--sans);
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: var(--accent-text);
 }
-.card__name { margin: 0; font: 500 25px/1.1 var(--serif); color: var(--ink); }
-.card__tag { margin: 0; font: 400 13.5px var(--sans); color: var(--mut); }
+.card__name { margin: 0; font: 500 25px/1.1 var(--serif); color: var(--text); }
+.card__tag { margin: 0; font: 400 13.5px var(--sans); color: var(--text-2); }
 .card__row {
   display: flex;
   align-items: center;
@@ -456,10 +566,10 @@ button { font-family: var(--sans); }
   gap: 12px;
   margin-top: 14px;
 }
-.card__price { font: 600 16px var(--sans); color: var(--ink); }
-.card__from { font: 400 12px var(--sans); color: var(--mut2); }
+.card__price { font: 600 16px var(--sans); color: var(--text); }
+.card__from { font: 400 12px var(--sans); color: var(--text-3); }
 @media (hover: hover) {
-  .card:hover .card__cta { background: var(--ink); color: var(--cream); }
+  .card:hover .card__cta { background: var(--action); color: var(--action-text); }
 }
 
 .grid { display: grid; gap: 28px; }
@@ -469,7 +579,7 @@ button { font-family: var(--sans); }
 .hero__kicker {
   font: 600 12px var(--sans);
   letter-spacing: 0.38em;
-  color: var(--brass-d);
+  color: var(--accent-text);
   text-transform: uppercase;
   text-align: center;
   display: flex;
@@ -487,7 +597,7 @@ button { font-family: var(--sans); }
   text-align: center;
   letter-spacing: -0.015em;
 }
-.hero__title em { font-style: italic; color: var(--brass); }
+.hero__title em { font-style: italic; color: var(--accent-deep); }
 .hero__sub {
   margin: 18px 0 0;
   max-width: 540px;
@@ -513,7 +623,7 @@ button { font-family: var(--sans); }
   text-transform: uppercase;
   color: var(--mut2);
 }
-.hero__arrow { color: var(--brass); font-size: 16px; animation: bob 1.8s ease-in-out infinite; }
+.hero__arrow { color: var(--accent-text); font-size: 16px; animation: bob 1.8s ease-in-out infinite; }
 
 /* ── marquee ─────────────────────────────────────────────── */
 .marquee {
@@ -541,7 +651,7 @@ button { font-family: var(--sans); }
   max-width: 1280px;
   margin: 0 auto;
 }
-.props__num { font: 500 13px var(--sans); letter-spacing: 0.26em; color: var(--brass); }
+.props__num { font: 500 13px var(--sans); letter-spacing: 0.26em; color: var(--accent-text); }
 .props__head { margin: 14px 0 10px; font: 500 30px/1.15 var(--serif); color: var(--ink); }
 .props__body { margin: 0; font: 400 15px/1.7 var(--sans); color: var(--mut); }
 
@@ -572,17 +682,17 @@ button { font-family: var(--sans); }
 .econ__chain {
   margin-top: 14px;
   font: 400 clamp(20px, 2.6vw, 30px) / 1.5 var(--serif);
-  color: #9b8c75;
+  color: var(--lamp2);
   display: flex;
   flex-wrap: wrap;
   gap: 6px 0;
   align-items: baseline;
 }
 .econ__link { white-space: nowrap; }
-.econ__arrow { color: #5e503c; padding: 0 0.5em; }
-.econ__cut { text-decoration: line-through; text-decoration-color: var(--brass); opacity: 0.6; }
+.econ__arrow { color: var(--lamp3); padding: 0 0.5em; }
+.econ__cut { text-decoration: line-through; text-decoration-color: var(--gold); opacity: 0.6; }
 .econ__punch { margin-top: 10px; font: 500 clamp(44px, 6.5vw, 88px) / 1.05 var(--serif); color: var(--gold-l); }
-.econ__body { margin: 30px 0 0; max-width: 560px; font: 400 15.5px/1.75 var(--sans); color: #b5a78e; }
+.econ__body { margin: 30px 0 0; max-width: 560px; font: 400 15.5px/1.75 var(--sans); color: var(--lamp2); }
 
 /* ── process ─────────────────────────────────────────────── */
 .process { padding: 120px 6vw; max-width: 1280px; margin: 0 auto; }
@@ -597,41 +707,64 @@ button { font-family: var(--sans); }
   border-top: 1px solid var(--line2);
   padding-top: 22px;
 }
-.process__num { font: 500 13px var(--sans); letter-spacing: 0.26em; color: var(--brass); }
+.process__num { font: 500 13px var(--sans); letter-spacing: 0.26em; color: var(--accent-text); }
 .process__step h3 { margin: 12px 0 8px; font: 500 26px/1.15 var(--serif); color: var(--ink); }
 .process__step p { margin: 0; font: 400 14.5px/1.7 var(--sans); color: var(--mut); }
-.process__note {
-  margin-top: 48px;
-  padding: 18px 22px;
-  border: 1px solid var(--line2);
-  background: var(--cream2);
-  font: 500 13.5px var(--sans);
-  color: var(--brass-d);
-  display: inline-block;
+/* ── payment sequence (replaced the testimonials band) ────
+   Not a card grid — the page already runs two of those above it. This is a
+   measuring rule: one hairline crossing the band with a gold mark at each
+   point money moves. A store that measures things for a living gets to borrow
+   its own instrument. */
+.terms { background: var(--deep); padding: 110px 6vw; }
+.terms__inner { max-width: 1280px; margin: 0 auto; }
+.terms__title {
+  margin: 10px 0 0;
+  font: 500 clamp(34px, 4vw, 54px) / 1.08 var(--serif);
+  color: var(--cream-on-dark);
 }
-
-/* ── testimonials ────────────────────────────────────────── */
-.quotes { background: var(--deep); padding: 110px 6vw; }
-.quotes__grid {
-  max-width: 1280px;
-  margin: 44px auto 0;
+.terms__track {
+  list-style: none;
+  margin: 62px 0 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 44px 34px;
 }
-.quotes .kicker { max-width: 1280px; margin: 0 auto; display: block; }
-.quotes__card {
-  border: 1px solid #33291d;
-  padding: 30px 28px;
-  background: rgba(245, 240, 230, 0.02);
+.terms__stop {
+  /* the rule itself: each stop carries its own segment, so the line wraps with
+     the grid instead of being one absolutely-positioned bar that breaks the
+     moment the columns reflow */
+  border-top: 1px solid var(--frame);
+  padding-top: 26px;
+  position: relative;
 }
-.quotes__text { margin: 0; font: 500 20px/1.5 var(--serif); font-style: italic; color: #e8dcc2; }
-.quotes__who {
-  margin-top: 18px;
+/* the mark sits on the rule, not under it */
+.terms__stop .diamond {
+  position: absolute;
+  top: -5px;
+  left: 0;
+}
+.terms__amount {
+  display: block;
+  font: 500 clamp(38px, 4.4vw, 56px) / 1 var(--serif);
+  color: var(--gold-l);
+}
+.terms__when {
+  display: block;
+  margin-top: 14px;
   font: 500 12px var(--sans);
-  letter-spacing: 0.18em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--mut2);
+  color: var(--cream-on-dark);
+}
+.terms__body { margin: 12px 0 0; max-width: 34ch; font: 400 14.5px/1.7 var(--sans); color: var(--lamp2); }
+.terms__foot {
+  margin: 54px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--frame);
+  font: 500 13.5px var(--sans);
+  letter-spacing: 0.04em;
+  color: var(--gold);
 }
 
 /* ── FAQ ─────────────────────────────────────────────────── */
@@ -663,7 +796,7 @@ button { font-family: var(--sans); }
   top: 50%;
   transform: translateY(-50%);
   font: 400 22px var(--serif);
-  color: var(--brass);
+  color: var(--accent-text);
   transition: transform 0.25s;
 }
 .faq[open] summary::after { transform: translateY(-50%) rotate(45deg); }
@@ -671,12 +804,12 @@ button { font-family: var(--sans); }
 
 .faqpage { max-width: 860px; }
 .faqpage__sub { margin: 16px 0 34px; color: var(--mut); max-width: 60ch; }
-.faqpage__sub a { color: var(--brass-d); }
+.faqpage__sub a { color: var(--accent-text); }
 
 /* ── CTA ─────────────────────────────────────────────────── */
 .cta { padding: 140px 6vw; text-align: center; }
 .cta__title { margin: 0; font: 500 clamp(44px, 6vw, 84px) / 1.05 var(--serif); color: var(--ink); }
-.cta__title em { font-style: italic; color: var(--brass); }
+.cta__title em { font-style: italic; color: var(--accent-deep); }
 .cta__sub { margin: 20px auto 36px; max-width: 460px; font: 400 15.5px/1.7 var(--sans); color: var(--mut); }
 
 /* ── shop ────────────────────────────────────────────────── */
@@ -692,8 +825,8 @@ button { font-family: var(--sans); }
 .chips { display: flex; gap: 10px; flex-wrap: wrap; margin: 38px 0 40px; }
 .chip {
   background: none;
-  color: var(--ink);
-  border: 1px solid #c9bb9c;
+  color: var(--text);
+  border: 1px solid var(--border-control);
   cursor: pointer;
   padding: 10px 20px;
   font: 500 12px var(--sans);
@@ -701,7 +834,7 @@ button { font-family: var(--sans); }
   text-transform: uppercase;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
-.chip--on { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.chip--on { background: var(--action); color: var(--action-text); border-color: var(--action); }
 
 /* ── door wall (catalogue showpiece) ─────────────────────── */
 /* Dark band so the DriftWall's radial mask can fade its tiles into the
@@ -711,8 +844,8 @@ button { font-family: var(--sans); }
   background: var(--deep);
   color: var(--cream);
   padding: 88px 6vw 96px;
-  border-top: 1px solid #33281c;
-  border-bottom: 1px solid #33281c;
+  border-top: 1px solid var(--frame2);
+  border-bottom: 1px solid var(--frame2);
   overflow: hidden;
 }
 .doorwall__head { max-width: 1040px; margin: 0 auto; text-align: center; }
@@ -734,7 +867,7 @@ button { font-family: var(--sans); }
   margin: 20px auto 0;
   max-width: 500px;
   font: 400 15px/1.7 var(--sans);
-  color: #b5a78e;
+  color: var(--lamp2);
 }
 
 .doorwall__split {
@@ -754,8 +887,8 @@ button { font-family: var(--sans); }
   align-items: center;
   justify-content: center;
   padding: 22px;
-  border: 1px solid #3d3122;
-  background: linear-gradient(158deg, #2b2218, #191310);
+  border: 1px solid var(--frame);
+  background: linear-gradient(158deg, var(--night2), var(--deep2));
   overflow: hidden;
 }
 .doorwall__frame img {
@@ -764,7 +897,7 @@ button { font-family: var(--sans); }
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 30px 70px -30px rgba(10, 6, 2, 0.85);
   animation: doorfade 0.5s ease both;
 }
 @keyframes doorfade {
@@ -775,7 +908,7 @@ button { font-family: var(--sans); }
   margin-top: 14px;
   font: 400 13px var(--sans);
   letter-spacing: 0.04em;
-  color: #b5a78e;
+  color: var(--lamp2);
 }
 
 /* .drift-wall is width/height:100% — the pane has to state a height */
@@ -836,10 +969,10 @@ button { font-family: var(--sans); }
   height: auto;
   max-width: 100%;
   max-height: 72vh;
-  box-shadow: 0 30px 80px -30px #000;
+  box-shadow: 0 30px 80px -30px rgba(10, 6, 2, 0.95);
   animation: doorfade 0.32s ease both;
 }
-.doorzoom__cap { font: 400 13px var(--sans); color: #cbbb9d; }
+.doorzoom__cap { font: 400 13px var(--sans); color: var(--lamp2); }
 .doorzoom__close {
   position: relative;
   margin-top: 24px;
@@ -847,7 +980,7 @@ button { font-family: var(--sans); }
   padding: 12px 28px;
   background: none;
   color: var(--cream);
-  border: 1px solid #6b5a3d;
+  border: 1px solid var(--lamp3);
   font: 500 12px var(--sans);
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -856,7 +989,7 @@ button { font-family: var(--sans); }
 
 /* ── product page ────────────────────────────────────────── */
 .crumbs { font: 400 13px var(--sans); color: var(--mut2); margin-bottom: 34px; }
-.crumbs a { color: var(--brass-d); text-decoration: none; }
+.crumbs a { color: var(--accent-text); text-decoration: none; }
 @media (hover: hover) {
   .crumbs a:hover { text-decoration: underline; }
 }
@@ -869,7 +1002,7 @@ button { font-family: var(--sans); }
 .pdp__stage {
   position: sticky;
   top: 120px;
-  background: linear-gradient(180deg, var(--panel), #e8dec7);
+  background: var(--stage);
   border: 1px solid var(--line);
   padding: 56px 0 30px;
   display: flex;
@@ -878,7 +1011,7 @@ button { font-family: var(--sans); }
 }
 .pdp__scene { width: 46%; min-width: 170px; max-width: 230px; }
 .pdp__stage-note { margin-top: 24px; font: 400 12px var(--sans); color: var(--mut2); letter-spacing: 0.08em; }
-.pdp__cat { font: 500 11.5px var(--sans); letter-spacing: 0.24em; text-transform: uppercase; color: var(--brass); }
+.pdp__cat { font: 500 11.5px var(--sans); letter-spacing: 0.24em; text-transform: uppercase; color: var(--accent-text); }
 .pdp__name { margin: 8px 0 0; font: 500 clamp(38px, 4.4vw, 60px) / 1.02 var(--serif); }
 .pdp__story { margin: 18px 0 0; font: 400 15.5px/1.75 var(--sans); color: var(--mut); max-width: 56ch; }
 .pdp__motif {
@@ -888,7 +1021,7 @@ button { font-family: var(--sans); }
   gap: 10px;
   font: 500 12px var(--sans);
   letter-spacing: 0.1em;
-  color: var(--brass-d);
+  color: var(--accent-text);
 }
 .pdp__price-row { display: flex; align-items: baseline; gap: 14px; margin: 30px 0 6px; }
 .pdp__price { font: 600 32px var(--sans); color: var(--ink); }
@@ -916,7 +1049,7 @@ button { font-family: var(--sans); }
   transition: border-color 0.2s, background 0.2s;
 }
 @media (hover: hover) {
-  .cfg__size:hover { border-color: var(--brass); }
+  .cfg__size:hover { border-color: var(--accent-deep); }
 }
 .cfg__size--on { border-color: var(--ink); background: var(--ink); }
 .cfg__size--on .cfg__size-label { color: var(--cream); }
@@ -935,11 +1068,11 @@ button { font-family: var(--sans); }
   transition: box-shadow 0.2s, border-color 0.2s;
 }
 @media (hover: hover) {
-  .cfg__tone:hover { border-color: var(--brass-d); }
+  .cfg__tone:hover { border-color: var(--accent-deep); }
 }
-.cfg__tone--on { border-color: var(--brass); box-shadow: 0 0 0 3px rgba(169, 139, 79, 0.28); }
+.cfg__tone--on { border-color: var(--accent-deep); box-shadow: 0 0 0 3px var(--focus-halo); }
 .cfg__tone-name { margin-top: 10px; font: 500 12.5px var(--sans); letter-spacing: 0.1em; text-transform: uppercase; color: var(--mut); }
-.cfg__tone-delta { color: var(--brass-d); }
+.cfg__tone-delta { color: var(--accent-text); }
 
 /* ── made-to-measure sliders ─────────────────────────── */
 .dim + .dim { margin-top: 18px; }
@@ -966,7 +1099,7 @@ button { font-family: var(--sans); }
   transition: border-color 0.2s, background 0.2s;
 }
 @media (hover: hover) {
-  .dim__nudge:hover:not(:disabled) { border-color: var(--brass); }
+  .dim__nudge:hover:not(:disabled) { border-color: var(--accent-deep); }
 }
 .dim__nudge:disabled { opacity: 0.35; cursor: default; }
 .dim__input {
@@ -1012,8 +1145,8 @@ button { font-family: var(--sans); }
   box-shadow: 0 1px 5px rgba(33, 26, 18, 0.24);
 }
 .dim__input:focus-visible { outline: none; }
-.dim__input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(169, 139, 79, 0.35); }
-.dim__input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px rgba(169, 139, 79, 0.35); }
+.dim__input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--focus-halo); }
+.dim__input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px var(--focus-halo); }
 .dim__ends {
   display: flex;
   justify-content: space-between;
@@ -1042,7 +1175,7 @@ button { font-family: var(--sans); }
   transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
 @media (hover: hover) {
-  .cfg__tick:hover { border-color: var(--brass); color: var(--ink); }
+  .cfg__tick:hover { border-color: var(--accent-deep); color: var(--ink); }
 }
 .cfg__tick--on { border-color: var(--ink); background: var(--ink); color: var(--cream); }
 
@@ -1056,7 +1189,7 @@ button { font-family: var(--sans); }
   font: 500 12.5px var(--sans);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--brass-d);
+  color: var(--accent-text);
   list-style: none;
 }
 .cfg__break > summary::-webkit-details-marker { display: none; }
@@ -1149,12 +1282,12 @@ button { font-family: var(--sans); }
   gap: 16px;
   align-items: center;
   padding: 20px 0;
-  border-bottom: 1px solid #eee5d2;
+  border-bottom: 1px solid var(--border);
 }
 .drawer__thumb {
   width: 44px;
   flex: none;
-  border: 3px solid #d3c4a4;
+  border: 3px solid var(--border-strong);
   box-shadow: 0 4px 10px rgba(35, 25, 12, 0.18);
 }
 .drawer__thumb svg { width: 100%; height: auto; aspect-ratio: 3 / 8; }
@@ -1195,7 +1328,7 @@ button { font-family: var(--sans); }
   color: var(--mut);
 }
 .drawer__foot-row--total { margin-top: 10px; align-items: baseline; color: var(--ink); }
-.drawer__included { color: var(--brass); }
+.drawer__included { color: var(--accent-text); }
 .drawer__subtotal { font: 600 22px var(--sans); }
 .drawer__foot .btn { margin-top: 18px; }
 .drawer__note { margin-top: 12px; text-align: center; font: 400 12px var(--sans); color: var(--mut2); }
@@ -1249,12 +1382,41 @@ button { font-family: var(--sans); }
 .field textarea:focus,
 .field select:focus {
   outline: none;
-  border-color: var(--brass);
-  box-shadow: 0 0 0 3px rgba(169, 139, 79, 0.18);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px var(--focus-halo);
 }
+/* A 1px border is not enough to find a failed field on a phone after the form
+   scrolls — the whole control takes the clay ground so it is visible at a
+   glance, and the message names the problem underneath. Colour is never the
+   only code: .field__err carries text and role="alert". */
 .field--error input,
-.field--error textarea { border-color: var(--err); }
-.field__err { font: 400 12.5px var(--sans); color: var(--err); }
+.field--error textarea,
+.field--error select {
+  border-color: var(--clay);
+  background: var(--clay-surface);
+}
+.field--error input:focus,
+.field--error textarea:focus {
+  border-color: var(--clay);
+  box-shadow: 0 0 0 3px rgba(168, 68, 42, 0.22);
+}
+.field__err {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font: 400 12.5px var(--sans);
+  color: var(--clay-ink);
+}
+/* the system's own mark, not a warning triangle borrowed from an OS */
+.field__err::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 1px;
+  background: var(--clay);
+  transform: rotate(45deg);
+}
 .field__hint { font: 400 12.5px var(--sans); color: var(--mut2); }
 .field-row { display: flex; gap: 18px; }
 .checkout__fine { margin-top: 12px; font: 400 12.5px/1.6 var(--sans); color: var(--mut2); text-align: center; }
@@ -1270,7 +1432,7 @@ button { font-family: var(--sans); }
   justify-content: space-between;
   gap: 14px;
   padding: 12px 0;
-  border-bottom: 1px solid #eee5d2;
+  border-bottom: 1px solid var(--border);
 }
 .checkout__line-name { font: 500 16px var(--serif); color: var(--ink); }
 .checkout__line-meta { font: 400 12.5px var(--sans); color: var(--mut); }
@@ -1297,16 +1459,16 @@ button { font-family: var(--sans); }
   font: 400 13px var(--sans);
   color: var(--mut);
 }
-.checkout__pay-step strong { color: var(--brass-d); font-weight: 600; }
+.checkout__pay-step strong { color: var(--accent-text); font-weight: 600; }
 .checkout--empty { text-align: left; }
 .checkout__empty-msg { margin: 16px 0 26px; color: var(--mut); }
 
 /* ── confirmed ───────────────────────────────────────────── */
 .confirmed { max-width: 760px; }
 .confirmed__mark { margin-bottom: 18px; }
-.confirmed__mark .diamond { width: 16px; height: 16px; }
+.confirmed__mark .diamond { width: 16px; height: 16px; background: var(--slate); }
 .confirmed__sub { margin: 18px 0 0; color: var(--mut); max-width: 58ch; }
-.confirmed__sub a { color: var(--brass-d); }
+.confirmed__sub a { color: var(--accent-text); }
 .confirmed__card {
   margin: 34px 0;
   background: var(--cream2);
@@ -1316,7 +1478,7 @@ button { font-family: var(--sans); }
 .confirmed__next h2 { font: 500 26px var(--serif); margin: 0 0 14px; }
 .confirmed__next ol { margin: 0; padding-left: 20px; color: var(--mut); display: flex; flex-direction: column; gap: 10px; }
 .confirmed__contact { margin-top: 22px; color: var(--mut); }
-.confirmed__contact a { color: var(--brass-d); }
+.confirmed__contact a { color: var(--accent-text); }
 .confirmed > .linkline { margin-top: 40px; }
 
 /* ── policies / notfound ─────────────────────────────────── */
@@ -1324,13 +1486,13 @@ button { font-family: var(--sans); }
 .policies section { margin-top: 46px; }
 .policies h2 { font: 500 28px var(--serif); margin: 0 0 12px; }
 .policies p { color: var(--mut); line-height: 1.75; margin: 0 0 12px; }
-.policies a { color: var(--brass-d); }
+.policies a { color: var(--accent-text); }
 .notfound { text-align: center; padding-top: 180px; padding-bottom: 160px; }
 .notfound__code { font: 500 15vw/1 var(--serif); color: var(--line2); }
 .notfound p { color: var(--mut); margin: 14px 0 30px; }
 
 /* ── footer ──────────────────────────────────────────────── */
-.footer { background: var(--deep); color: #b5a78e; padding: 80px 6vw 36px; }
+.footer { background: var(--deep); color: var(--lamp2); padding: 80px 6vw 36px; }
 .footer__grid {
   max-width: 1280px;
   margin: 0 auto;
@@ -1338,7 +1500,7 @@ button { font-family: var(--sans); }
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 48px;
 }
-.footer__brand { display: flex; align-items: center; gap: 12px; font: 600 15px var(--sans); letter-spacing: 0.32em; color: #f0e3c2; }
+.footer__brand { display: flex; align-items: center; gap: 12px; font: 600 15px var(--sans); letter-spacing: 0.32em; color: var(--cream-on-dark); }
 .footer__mark { height: 27px; width: auto; display: block; flex: none; }
 .footer__blurb { margin: 18px 0 0; font: 400 14px/1.7 var(--sans); max-width: 300px; }
 .footer__head {
@@ -1349,21 +1511,21 @@ button { font-family: var(--sans); }
   margin-bottom: 16px;
 }
 .footer__col { display: flex; flex-direction: column; gap: 10px; font: 400 14px var(--sans); }
-.footer__col a { color: #b5a78e; text-decoration: none; }
+.footer__col a { color: var(--lamp2); text-decoration: none; }
 @media (hover: hover) {
-  .footer__col a:hover { color: #f0e3c2; }
+  .footer__col a:hover { color: var(--cream-on-dark); }
 }
 .footer__bar {
   max-width: 1280px;
   margin: 60px auto 0;
   padding-top: 24px;
-  border-top: 1px solid #33291d;
+  border-top: 1px solid var(--frame2);
   display: flex;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
   font: 400 12.5px var(--sans);
-  color: #6e604c;
+  color: var(--lamp3);
 }
 
 /* ── toast & whatsapp float ──────────────────────────────── */
@@ -1385,7 +1547,10 @@ button { font-family: var(--sans); }
   align-items: center;
   gap: 10px;
 }
-.toast .diamond { width: 7px; height: 7px; flex: none; }
+/* The toast has exactly one caller and it is always a confirmation, so the
+   mark can carry that meaning outright — slate reads before the words do,
+   and the words are still there for anyone the colour doesn't reach. */
+.toast .diamond { width: 7px; height: 7px; flex: none; background: var(--slate-lit); }
 /* with the cart drawer open the bottom strip belongs to "Proceed to checkout" —
    the confirmation moves out from under the primary action */
 .has-overlay .toast {
@@ -1401,15 +1566,15 @@ button { font-family: var(--sans); }
   height: 54px;
   border-radius: 50%;
   background: var(--wa);
-  color: #fff;
+  color: var(--wa-on);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12px 30px rgba(24, 40, 20, 0.35);
+  box-shadow: 0 12px 30px var(--wa-cast);
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 @media (hover: hover) {
-  .wa-float:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 18px 40px rgba(24, 40, 20, 0.4); }
+  .wa-float:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 18px 40px var(--wa-cast); }
 }
 /* Nothing may sit on top of an open overlay (cart drawer, burger menu) — the
    float steps aside instead of competing for the same thumb zone. useScrollLock
@@ -1464,7 +1629,7 @@ button { font-family: var(--sans); }
   aspect-ratio: 4 / 3;
   display: block;
 }
-.card__price--enquire { font: 500 13px var(--sans); color: var(--mut); }
+.card__price--enquire { font: 500 13px var(--sans); color: var(--text-2); }
 
 /* PDP — material stage, photo gallery, enquiry panel */
 .pdp__stage--material { display: block; }
@@ -1495,8 +1660,19 @@ button { font-family: var(--sans); }
 }
 .pdp__enquire-note { font: 400 13.5px/1.6 var(--sans); color: var(--mut); }
 
-/* world pages — structural skeleton; palettes live in worlds.css */
-.world { --w-bg: var(--cream); --w-surface: var(--cream2); --w-ink: var(--ink); --w-mut: var(--mut); --w-accent: var(--brass); --w-line: var(--line); }
+/* world pages — structural skeleton; palettes live in worlds.css.
+   The --w-* names are now aliases of the role layer rather than a second,
+   parallel palette: a world block in worlds.css restates the roles once and
+   every card, button, chip and rule inside it follows, so these six exist only
+   for the world-specific rules that were written against them. */
+.world {
+  --w-bg: var(--surface);
+  --w-surface: var(--surface-band);
+  --w-ink: var(--text);
+  --w-mut: var(--text-2);
+  --w-accent: var(--accent);
+  --w-line: var(--border);
+}
 .world__intro {
   position: relative;
   padding: 170px 6vw 74px;
@@ -1509,7 +1685,7 @@ button { font-family: var(--sans); }
   font: 600 12px var(--sans);
   letter-spacing: 0.38em;
   text-transform: uppercase;
-  color: var(--w-accent);
+  color: var(--accent-text);
 }
 .world__title {
   margin: 16px 0 0;
@@ -1522,12 +1698,12 @@ button { font-family: var(--sans); }
 .world__section-title {
   margin: 0 0 26px;
   font: 500 30px/1.1 var(--serif);
-  color: var(--ink);
+  color: var(--text);
 }
 .world__why { padding: 80px 6vw 90px; }
 .world__why-inner { max-width: 640px; }
-.world__why h2 { margin: 0; font: 500 34px/1.15 var(--serif); color: var(--ink); }
-.world__why p { margin: 16px 0 24px; font: 400 15.5px/1.7 var(--sans); color: var(--mut); }
+.world__why h2 { margin: 0; font: 500 34px/1.15 var(--serif); color: var(--text); }
+.world__why p { margin: 16px 0 24px; font: 400 15.5px/1.7 var(--sans); color: var(--text-2); }
 .world__why-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
 /* visit page */
@@ -1552,7 +1728,7 @@ button { font-family: var(--sans); }
   font: 500 11px var(--sans);
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: var(--accent-text);
 }
 /* the number itself dials, not just the button under it */
 .visit__tel {
@@ -1565,7 +1741,7 @@ button { font-family: var(--sans); }
   border-bottom: 1px solid var(--brass);
 }
 .visit__card p:has(> .visit__tel) { margin: -6px 0; }
-.btn--wa { background: var(--wa); color: #fff; border-color: var(--wa); }
+.btn--wa { background: var(--wa); color: var(--wa-on); border-color: var(--wa); }
 @media (hover: hover) {
   .btn--wa:hover { filter: brightness(1.06); }
 }
@@ -1605,7 +1781,7 @@ button { font-family: var(--sans); }
 /* the track carries the colour too, so any sub-pixel rounding under the sticky
    pane can never flash the cream page background through */
 .portal--dark,
-.portal--dark .portal__sticky { background: #17110b; }
+.portal--dark .portal__sticky { background: var(--deep2); }
 .portal__rays {
   position: absolute;
   inset: 0;
@@ -1627,8 +1803,8 @@ button { font-family: var(--sans); }
 .portal--dark .hero__kicker { color: var(--gold-l); }
 .portal--dark .hero__title { color: var(--cream); }
 .portal--dark .hero__title em { color: var(--gold-l); }
-.portal--dark .hero__sub { color: #d9ccb2; }
-.portal--dark .hero__scrollcue span:first-child { color: #b8a988; }
+.portal--dark .hero__sub { color: var(--lamp2); }
+.portal--dark .hero__scrollcue span:first-child { color: var(--lamp2); }
 
 /* phase A/B — the zooming layer (transform + opacity only) */
 .portal__zoom {
@@ -1657,7 +1833,7 @@ button { font-family: var(--sans); }
 .portal__glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(80% 60% at 50% 45%, rgba(255, 236, 190, 0.5), transparent 75%);
+  background: radial-gradient(80% 60% at 50% 45%, rgba(246, 223, 172, 0.5), transparent 75%);
 }
 
 /* the photographed hero door (HeroDoorPhoto) — leaf overlaid on its own
@@ -1744,7 +1920,7 @@ button { font-family: var(--sans); }
   justify-content: center;
   gap: 40px;
   padding: 90px 24px 40px;
-  background: radial-gradient(120% 100% at 50% 0%, #3a2e1e 0%, #241c13 55%, #16110b 100%);
+  background: radial-gradient(120% 100% at 50% 0%, #3a2e1e 0%, var(--night) 55%, var(--deep3) 100%);
   will-change: opacity;
 }
 /* The room the arches stand in. Everything here is soft on purpose — the old
@@ -1756,7 +1932,7 @@ button { font-family: var(--sans); }
   pointer-events: none;
   background:
     /* pooled light on the floor, no hard horizon line */
-    radial-gradient(78% 40% at 50% 96%, rgba(214, 178, 108, 0.16), transparent 72%),
+    radial-gradient(78% 40% at 50% 96%, rgba(201, 169, 100, 0.16), transparent 72%),
     linear-gradient(180deg, transparent 0 58%, rgba(20, 14, 8, 0.22) 82%, rgba(12, 8, 4, 0.55) 100%),
     /* light spilling in from the ceiling above the arches */
     radial-gradient(52% 30% at 50% 2%, rgba(246, 223, 172, 0.14), transparent 72%);
@@ -1772,7 +1948,7 @@ button { font-family: var(--sans); }
 .portal__corridor-head h2 {
   margin: 10px 0 0;
   font: 500 clamp(30px, 4vw, 52px) / 1.05 var(--serif);
-  color: #f0e3c2;
+  color: var(--cream-on-dark);
 }
 /* four openings down the hall */
 .portal__doors {
@@ -1804,7 +1980,7 @@ button { font-family: var(--sans); }
      margins and gaps, and a black backdrop turned those into hard graphic
      bands instead of shadow between planks/sheets */
   background: color-mix(in srgb, var(--wd, #c9a964) 26%, #17110a);
-  box-shadow: 0 34px 60px -34px rgba(0, 0, 0, 0.95);
+  box-shadow: 0 34px 60px -34px rgba(10, 6, 2, 0.95);
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s ease;
   /* Give the art its own compositor layer. `.wcard` is scroll-scrubbed
      (transform + opacity per frame) and this box holds the expensive pixels:
@@ -1847,7 +2023,7 @@ button { font-family: var(--sans); }
     inset 0 0 0 1px rgba(240, 227, 194, 0.22),
     inset 0 0 0 4px rgba(12, 8, 3, 0.5),
     inset 0 0 0 5px color-mix(in srgb, var(--wd, #c9a964) 42%, transparent),
-    inset 0 -40px 60px -30px rgba(0, 0, 0, 0.8);
+    inset 0 -40px 60px -30px rgba(10, 6, 2, 0.8);
   transition: box-shadow 0.45s ease;
 }
 .wcard__body {
@@ -1862,7 +2038,7 @@ button { font-family: var(--sans); }
 .wcard__name {
   font: 600 13px var(--sans);
   letter-spacing: 0.3em;
-  color: #f0e3c2;
+  color: var(--cream-on-dark);
   transition: color 0.3s ease;
 }
 .wcard__tag {
@@ -1881,9 +2057,9 @@ button { font-family: var(--sans); }
     inset 0 0 0 1px rgba(240, 227, 194, 0.4),
     inset 0 0 0 4px rgba(12, 8, 3, 0.5),
     inset 0 0 0 5px var(--wd, #c9a964),
-    inset 0 -40px 60px -30px rgba(0, 0, 0, 0.75);
+    inset 0 -40px 60px -30px rgba(10, 6, 2, 0.75);
 }
-.wcard:focus-visible .wcard__name { color: #fff; }
+.wcard:focus-visible .wcard__name { color: var(--lamp-hot); }
 @media (hover: hover) {
   .wcard:hover .wcard__art { transform: translateY(-6px); }
   .wcard:hover .wcard__scrim { opacity: 0.72; }
@@ -1892,9 +2068,9 @@ button { font-family: var(--sans); }
       inset 0 0 0 1px rgba(240, 227, 194, 0.4),
       inset 0 0 0 4px rgba(12, 8, 3, 0.5),
       inset 0 0 0 5px var(--wd, #c9a964),
-      inset 0 -40px 60px -30px rgba(0, 0, 0, 0.75);
+      inset 0 -40px 60px -30px rgba(10, 6, 2, 0.75);
   }
-  .wcard:hover .wcard__name { color: #fff; }
+  .wcard:hover .wcard__name { color: var(--lamp-hot); }
 }
 @media (prefers-reduced-motion: reduce) {
   .wcard__art { transition: none; }
@@ -1953,14 +2129,13 @@ button { font-family: var(--sans); }
   text-transform: uppercase;
   opacity: 0.75;
 }
-.worldstrip__tile--timbers { background: #2b2419; color: #efe6d4; border-color: #2b2419; }
-.worldstrip__tile--timbers .worldstrip__name { color: #c9903f; }
-.worldstrip__tile--doors { background: #f5f0e6; color: #211a12; }
-.worldstrip__tile--doors .worldstrip__name { color: #a98b4f; }
-.worldstrip__tile--ply { background: #efe7d8; color: #241c13; border-bottom: 6px solid; border-image: repeating-linear-gradient(90deg, #c9ae85 0 24px, #8a7355 24px 27px, #e2cda8 27px 50px, #8a7355 50px 53px) 6; }
-.worldstrip__tile--ply .worldstrip__name { color: #b0725a; }
-.worldstrip__tile--wpc { background: #e9eeec; color: #1e3634; border-color: #c8d4d0; border-radius: 10px; }
-.worldstrip__tile--wpc .worldstrip__name { color: #2f7e72; }
+/* Each tile carries data-world, so it reads that world's token block straight
+   from worlds.css — the strip and the page it opens cannot drift apart, and a
+   fifth world would need no rule here at all. Only the signature edge that
+   worlds.css puts on a section rule is restated at tile scale. */
+.worldstrip__tile { background: var(--surface); color: var(--text); border-color: var(--border); }
+.worldstrip__name { color: var(--accent-text); }
+.worldstrip__tile--wpc { border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65); }
 
 .cta__row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
 
@@ -2013,8 +2188,9 @@ button { font-family: var(--sans); }
   .econ__body { margin-top: 22px; }
   .process { padding: 74px 5vw; }
   .process__grid { margin-top: 40px; gap: 30px; }
-  .quotes { padding: 70px 5vw; }
-  .quotes__grid { margin-top: 32px; }
+  .terms { padding: 70px 5vw; }
+  .terms__track { margin-top: 44px; gap: 34px 30px; }
+  .terms__foot { margin-top: 38px; }
   .faqteaser { padding: 70px 5vw; }
   .cta { padding: 88px 5vw; }
   .cta__sub { margin-bottom: 30px; }
@@ -2171,7 +2347,7 @@ button { font-family: var(--sans); }
     height: 48px;
     right: calc(14px + env(safe-area-inset-right));
     bottom: calc(14px + env(safe-area-inset-bottom));
-    box-shadow: 0 8px 22px rgba(24, 40, 20, 0.32);
+    box-shadow: 0 8px 22px var(--wa-cast);
   }
   .wa-float svg { width: 23px; height: 23px; }
   /* the toast is centred at the bottom and the float lives in that same strip —
@@ -2191,4 +2367,290 @@ button { font-family: var(--sans); }
   .card__name { font-size: 18px; }
   .card__row .card__cta { font-size: 10px; letter-spacing: 0.14em; }
   .chip { padding: 10px 14px; font-size: 11px; }
+}
+
+/* ═══════════════════ hardening ═══════════════════
+   Surfaces that only exist when something has gone wrong, plus the rules that
+   keep the type standing up under content the design was never shown: a name
+   the client types into /admin, a translated string, an unbroken URL in a
+   product story. */
+
+/* ── skip link ─────────────────────────────────────────────
+   Sits above everything and only becomes visible on focus. The nav has six
+   links, a cart and a burger in front of the page's first heading; without
+   this a keyboard or switch visitor tabs through all of them on every
+   navigation. It reads as one of the system's own plates, not as a
+   browser-default blue box. */
+.skip-link {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  /* min-height, not padding alone: the label is 12px micro-caps, so padding
+     that reads as generous still lands the box at 42px — under the system's
+     own 44px floor, and this is a target that only ever gets one attempt. */
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 14px 22px;
+  background: var(--ink);
+  color: var(--cream);
+  font: 500 12px var(--sans);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-decoration: none;
+  /* Off-screen rather than display:none — it has to stay focusable. */
+  transform: translateY(-120%);
+  transition: transform 0.18s ease;
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline-offset: -4px;
+}
+/* the target takes focus programmatically; it must not draw a ring for it */
+main:focus { outline: none; }
+
+/* ── the crash screen ──────────────────────────────────────
+   The one page that renders when a render failed. It is deliberately the
+   quietest surface in the system: a drawn hinge in brass, the headline, and
+   the two ways out. */
+.crash {
+  max-width: 660px;
+  padding-top: 180px;
+  padding-bottom: 150px;
+}
+.crash__mark { color: var(--accent); margin-bottom: 30px; }
+.crash__hinge { width: 88px; height: 110px; }
+.crash__title {
+  margin: 0;
+  font: 500 clamp(34px, 5vw, 54px) / 1.04 var(--serif);
+  color: var(--text);
+  text-wrap: balance;
+}
+.crash__body {
+  margin: 20px 0 0;
+  color: var(--text-2);
+  max-width: 52ch;
+}
+.crash__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 34px;
+}
+.crash__call { margin: 30px 0 0; font-size: 13.5px; color: var(--text-3); }
+.crash__call a { color: var(--accent-text); }
+.crash__detail {
+  margin-top: 44px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  font: 400 12.5px var(--sans);
+  color: var(--text-3);
+}
+.crash__detail summary { cursor: pointer; letter-spacing: 0.08em; text-transform: uppercase; }
+.crash__detail pre {
+  margin: 14px 0 0;
+  padding: 14px;
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  font: 400 11.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ── an empty range ────────────────────────────────────────
+   A catalogue section with nothing in it — the client unpublished the range,
+   or a shared link carries a filter that no longer matches. It takes the
+   card stage's ground so the row still reads as part of the catalogue rather
+   than as a hole in it. */
+.empty-range {
+  padding: 64px 6vw 68px;
+  background: var(--stage);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.empty-range__title {
+  margin: 0;
+  font: 500 26px var(--serif);
+  color: var(--text);
+}
+.empty-range__body {
+  margin: 12px auto 26px;
+  max-width: 46ch;
+  color: var(--text-2);
+}
+
+/* ── a photo that didn't load ──────────────────────────────
+   Keeps the leaf's box and the room's warmth. Sawn boards rather than a
+   broken-image glyph: the grain is two repeating gradients, so there is no
+   asset here to fail in turn. */
+.photo-missing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 18px 12px;
+  background: linear-gradient(170deg, var(--panel), var(--panel2) 60%, var(--line2));
+  overflow: hidden;
+}
+.photo-missing__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background:
+    repeating-linear-gradient(
+      92deg,
+      transparent 0 13px,
+      rgba(33, 26, 18, 0.05) 13px 14px
+    ),
+    repeating-linear-gradient(
+      88deg,
+      transparent 0 37px,
+      rgba(33, 26, 18, 0.035) 37px 38px
+    );
+}
+.photo-missing__label {
+  position: relative;
+  font: 500 10px var(--sans);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  text-align: center;
+}
+/* the PDP gallery sizes its children by tag, so the stand-in needs the box too */
+.pdp__gallery .photo-missing {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border: 1px solid var(--line);
+}
+
+/* ── cart: the per-line ceiling ────────────────────────────── */
+.drawer__cap {
+  margin-top: 8px;
+  font: 400 12px/1.45 var(--sans);
+  color: var(--mut2);
+}
+
+/* ── checkout: the one live region ─────────────────────────
+   Reserves nothing when empty — an alert box that occupies space before there
+   is anything wrong reads as a warning about the form itself. */
+.checkout__alert-slot:empty { display: none; }
+.checkout__alert {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 13px 16px;
+  background: var(--clay-surface);
+  border-left: 1px solid var(--clay);
+  font: 400 13.5px/1.5 var(--sans);
+  color: var(--clay-ink);
+}
+.checkout__alert::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 1px;
+  background: var(--clay);
+  transform: rotate(45deg);
+}
+.confirmed__open { margin-top: 24px; }
+
+/* ── long content ──────────────────────────────────────────
+   Product names, tags and stories come from the CMS, and a customer's address
+   comes from a phone keyboard. Anything that can carry either has to be able
+   to break a word rather than push its container sideways — a single overflow
+   here scrolls the whole page horizontally, which on a phone is the most
+   visible breakage there is. */
+.card__name,
+.card__tag,
+.drawer__line-name,
+.checkout__line-name,
+.pdp__name,
+.pdp__story,
+.crumbs,
+.ax-item__name,
+.ax-item__tag {
+  overflow-wrap: anywhere;
+}
+/* Flex and grid children default to min-width:auto, which is the content's
+   intrinsic width — the reason a long word pushes a row wider instead of
+   wrapping inside it. */
+.card__body,
+.drawer__line-main,
+.checkout__line > div:first-child,
+.ax-item__main {
+  min-width: 0;
+}
+
+/* ── non-Latin scripts ─────────────────────────────────────
+   This interface's functional voice is wide-tracked uppercase Archivo. Both
+   halves of that are wrong for Kannada and Devanagari: `text-transform:
+   uppercase` is a no-op in scripts with no case, and letter-spacing is
+   actively destructive — it inserts gaps between a consonant and the matra or
+   conjunct that belongs to it, so the akshara stops reading as one unit.
+
+   `:not(:lang(en))` is what lets a Kannada page keep its tracking on the Latin
+   runs inside it — "WPC", "710 BWP", the brand name. The contract for whoever
+   translates: mark those runs `lang="en"` and they keep the system's voice.
+   Nothing here fires until <html lang> changes, so English is untouched. */
+:is(html:lang(kn), html:lang(hi)) :not(:lang(en)) {
+  letter-spacing: normal !important;
+  text-transform: none !important;
+}
+/* Indic matras and conjuncts sit above and below the base line, so the tight
+   display leading that suits Cormorant clips them. */
+:is(html:lang(kn), html:lang(hi)) :is(h1, h2, h3, .page-title, .crash__title) {
+  line-height: 1.3;
+}
+
+/* ── the door wall, when a photo is gone ───────────────────
+   The wall's photos are the placeholder set awaiting the client's own
+   photography, so a dead reference here is the likeliest of any on the site —
+   and it lands on the darkest band, at the largest size, where the browser's
+   torn-page glyph and the alt text sprawled across the tiles are at their most
+   conspicuous. `color: transparent` suppresses only the *painted* alt text;
+   the attribute stays in the accessibility tree, so a screen reader still
+   hears the caption while a sighted visitor sees an unlit panel — which is
+   what an unphotographed door on a dark wall should look like anyway.
+   Applied to the vendored DriftWall from outside, so that file stays
+   re-syncable with the registry. */
+.drift-wall img {
+  color: transparent;
+  position: relative;
+  background: linear-gradient(165deg, var(--night2), var(--deep) 70%);
+}
+/* `color: transparent` suppresses the painted alt text but not Chrome's own
+   broken-image glyph. Generated content renders on an <img> only while it is
+   falling back to a non-replaced box — that is, only when the photo failed; a
+   loaded photo replaces the pseudo-element and never shows it. So this covers
+   the glyph on exactly the tiles that are broken and nothing else. The tile
+   has a fixed box from DriftWall, so the cover fills it. */
+.drift-wall img::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(165deg, var(--night2), var(--deep) 70%);
+}
+
+/* The two-up viewer and the tap-to-zoom are our own markup and their <img>
+   is `width:auto`, so a failed one collapses instead of holding a box — those
+   two get a real React fallback in DoorWall.tsx rather than a CSS cover. */
+.doorwall__missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(46vh, 300px);
+  aspect-ratio: 3 / 8;
+  padding: 20px;
+  background: linear-gradient(165deg, var(--night2), var(--deep) 70%);
+  border: 1px solid var(--frame2);
+  font: 500 10px var(--sans);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lamp3);
+  text-align: center;
 }

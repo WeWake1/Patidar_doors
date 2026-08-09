@@ -1,0 +1,389 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-08T00:00:00.000Z",
+  "title": "Design System: Patidar Doors",
+  "extensions": {
+    "colorMeta": {
+      "cream": {
+        "role": "neutral",
+        "displayName": "Cream",
+        "canonical": "#f5f0e6",
+        "tonalRamp": ["oklch(15% 0.012 85)", "oklch(26% 0.014 85)", "oklch(38% 0.016 85)", "oklch(50% 0.018 85)", "oklch(62% 0.018 85)", "oklch(74% 0.018 85)", "oklch(86% 0.016 85)", "oklch(95% 0.014 85)"]
+      },
+      "cream-raised": {
+        "role": "neutral",
+        "displayName": "Cream Raised",
+        "canonical": "#fbf7ef",
+        "tonalRamp": ["oklch(15% 0.008 85)", "oklch(26% 0.010 85)", "oklch(38% 0.011 85)", "oklch(50% 0.012 85)", "oklch(62% 0.012 85)", "oklch(74% 0.011 85)", "oklch(86% 0.010 85)", "oklch(97% 0.009 85)"]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "canonical": "#efe7d6",
+        "tonalRamp": ["oklch(15% 0.016 85)", "oklch(26% 0.019 85)", "oklch(38% 0.022 85)", "oklch(50% 0.024 85)", "oklch(62% 0.025 85)", "oklch(74% 0.025 85)", "oklch(86% 0.024 85)", "oklch(94% 0.022 85)"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "canonical": "#e6dcc6",
+        "tonalRamp": ["oklch(15% 0.020 85)", "oklch(26% 0.024 85)", "oklch(38% 0.028 85)", "oklch(50% 0.031 85)", "oklch(62% 0.033 85)", "oklch(74% 0.033 85)", "oklch(89% 0.031 85)", "oklch(95% 0.026 85)"]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Line Strong",
+        "canonical": "#d9cdb2",
+        "tonalRamp": ["oklch(15% 0.026 85)", "oklch(26% 0.031 85)", "oklch(38% 0.036 85)", "oklch(50% 0.040 85)", "oklch(62% 0.043 85)", "oklch(84% 0.043 85)", "oklch(90% 0.038 85)", "oklch(95% 0.030 85)"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#211a12",
+        "tonalRamp": ["oklch(15% 0.014 72)", "oklch(26% 0.018 72)", "oklch(38% 0.021 72)", "oklch(50% 0.023 72)", "oklch(62% 0.024 72)", "oklch(74% 0.023 72)", "oklch(86% 0.020 72)", "oklch(95% 0.016 72)"]
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Night",
+        "canonical": "#241c13",
+        "tonalRamp": ["oklch(15% 0.017 75)", "oklch(26% 0.021 75)", "oklch(38% 0.025 75)", "oklch(50% 0.027 75)", "oklch(62% 0.028 75)", "oklch(74% 0.027 75)", "oklch(86% 0.024 75)", "oklch(95% 0.018 75)"]
+      },
+      "deep": {
+        "role": "neutral",
+        "displayName": "Deep",
+        "canonical": "#1c1610",
+        "tonalRamp": ["oklch(15% 0.012 74)", "oklch(26% 0.015 74)", "oklch(38% 0.018 74)", "oklch(50% 0.020 74)", "oklch(62% 0.021 74)", "oklch(74% 0.020 74)", "oklch(86% 0.018 74)", "oklch(95% 0.014 74)"]
+      },
+      "frame": {
+        "role": "neutral",
+        "displayName": "Frame",
+        "canonical": "#3b2e1f",
+        "tonalRamp": ["oklch(15% 0.021 73)", "oklch(28% 0.028 73)", "oklch(38% 0.033 73)", "oklch(50% 0.036 73)", "oklch(62% 0.038 73)", "oklch(74% 0.036 73)", "oklch(86% 0.031 73)", "oklch(95% 0.024 73)"]
+      },
+      "cream-on-dark": {
+        "role": "neutral",
+        "displayName": "Cream on Dark",
+        "canonical": "#f0e3c2",
+        "tonalRamp": ["oklch(15% 0.030 88)", "oklch(26% 0.036 88)", "oklch(38% 0.042 88)", "oklch(50% 0.047 88)", "oklch(62% 0.050 88)", "oklch(74% 0.051 88)", "oklch(86% 0.049 88)", "oklch(93% 0.045 88)"]
+      },
+      "brass": {
+        "role": "primary",
+        "displayName": "Hinge Brass",
+        "canonical": "#a98b4f",
+        "tonalRamp": ["oklch(15% 0.028 85)", "oklch(26% 0.041 85)", "oklch(38% 0.054 85)", "oklch(50% 0.065 85)", "oklch(63% 0.072 85)", "oklch(74% 0.068 85)", "oklch(86% 0.052 85)", "oklch(95% 0.030 85)"]
+      },
+      "brass-deep": {
+        "role": "primary",
+        "displayName": "Brass Deep",
+        "canonical": "#8c6f3f",
+        "tonalRamp": ["oklch(15% 0.026 83)", "oklch(26% 0.038 83)", "oklch(38% 0.050 83)", "oklch(53% 0.062 83)", "oklch(63% 0.066 83)", "oklch(74% 0.062 83)", "oklch(86% 0.048 83)", "oklch(95% 0.028 83)"]
+      },
+      "gold": {
+        "role": "secondary",
+        "displayName": "Lamplit Gold",
+        "canonical": "#c9a964",
+        "tonalRamp": ["oklch(15% 0.031 86)", "oklch(26% 0.046 86)", "oklch(38% 0.060 86)", "oklch(50% 0.072 86)", "oklch(62% 0.081 86)", "oklch(73% 0.083 86)", "oklch(86% 0.062 86)", "oklch(95% 0.036 86)"]
+      },
+      "gold-light": {
+        "role": "secondary",
+        "displayName": "Lamplit Gold Light",
+        "canonical": "#d9b873",
+        "tonalRamp": ["oklch(15% 0.032 87)", "oklch(26% 0.047 87)", "oklch(38% 0.062 87)", "oklch(50% 0.074 87)", "oklch(62% 0.083 87)", "oklch(79% 0.085 87)", "oklch(88% 0.064 87)", "oklch(96% 0.038 87)"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#6f6354",
+        "tonalRamp": ["oklch(15% 0.011 80)", "oklch(26% 0.014 80)", "oklch(38% 0.017 80)", "oklch(45% 0.019 80)", "oklch(62% 0.020 80)", "oklch(74% 0.019 80)", "oklch(86% 0.016 80)", "oklch(95% 0.012 80)"]
+      },
+      "muted-light": {
+        "role": "neutral",
+        "displayName": "Muted Light",
+        "canonical": "#8a7a62",
+        "tonalRamp": ["oklch(15% 0.014 82)", "oklch(26% 0.019 82)", "oklch(38% 0.023 82)", "oklch(50% 0.026 82)", "oklch(56% 0.028 82)", "oklch(74% 0.026 82)", "oklch(86% 0.021 82)", "oklch(95% 0.015 82)"]
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "Burnt Terracotta",
+        "canonical": "#a8442a",
+        "tonalRamp": ["oklch(15% 0.050 40)", "oklch(26% 0.075 40)", "oklch(38% 0.100 40)", "oklch(48% 0.125 40)", "oklch(62% 0.130 40)", "oklch(74% 0.105 40)", "oklch(86% 0.070 40)", "oklch(95% 0.035 40)"]
+      },
+      "whatsapp": {
+        "role": "tertiary",
+        "displayName": "WhatsApp Green",
+        "canonical": "#1fa855",
+        "tonalRamp": ["oklch(15% 0.050 150)", "oklch(26% 0.078 150)", "oklch(38% 0.105 150)", "oklch(50% 0.130 150)", "oklch(61% 0.152 150)", "oklch(74% 0.130 150)", "oklch(86% 0.085 150)", "oklch(95% 0.040 150)"]
+      },
+      "world-timbers": {
+        "role": "tertiary",
+        "displayName": "Sawmill Amber",
+        "canonical": "#c9903f",
+        "tonalRamp": ["oklch(15% 0.040 72)", "oklch(26% 0.060 72)", "oklch(38% 0.080 72)", "oklch(50% 0.098 72)", "oklch(66% 0.112 72)", "oklch(76% 0.095 72)", "oklch(87% 0.065 72)", "oklch(95% 0.035 72)"]
+      },
+      "world-doors": {
+        "role": "tertiary",
+        "displayName": "Doors Brass",
+        "canonical": "#a98b4f",
+        "tonalRamp": ["oklch(15% 0.028 85)", "oklch(26% 0.041 85)", "oklch(38% 0.054 85)", "oklch(50% 0.065 85)", "oklch(63% 0.072 85)", "oklch(74% 0.068 85)", "oklch(86% 0.052 85)", "oklch(95% 0.030 85)"]
+      },
+      "world-ply": {
+        "role": "tertiary",
+        "displayName": "Ply Terracotta",
+        "canonical": "#b0725a",
+        "tonalRamp": ["oklch(15% 0.030 45)", "oklch(26% 0.045 45)", "oklch(38% 0.060 45)", "oklch(50% 0.072 45)", "oklch(60% 0.080 45)", "oklch(74% 0.070 45)", "oklch(86% 0.048 45)", "oklch(95% 0.026 45)"]
+      },
+      "world-wpc": {
+        "role": "tertiary",
+        "displayName": "WPC Slate Green",
+        "canonical": "#2f7e72",
+        "tonalRamp": ["oklch(15% 0.028 180)", "oklch(26% 0.042 180)", "oklch(38% 0.056 180)", "oklch(50% 0.068 180)", "oklch(62% 0.072 180)", "oklch(74% 0.060 180)", "oklch(86% 0.040 180)", "oklch(95% 0.020 180)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The portal hero title and the closing CTA. One per page at most. Italic within it is set in Hinge Brass — the only place the accent carries a word."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page and world titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heads, card names, drawer and checkout heads. Always serif — a product's name is set the way a name is set."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base prose. Long-form that is the point of a section rises into serif at clamp(20px, 2.6vw, 30px)/1.5."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Every button, nav link, field label and meta line. Uppercase; tracking widens as the size drops."
+      },
+      "kicker": {
+        "displayName": "Kicker",
+        "purpose": "The eyebrow above a headline, in Brass Deep. The widest tracking in the system (0.34em–0.38em)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "object-cast",
+        "value": "6px 8px 26px rgba(28, 20, 10, 0.3)",
+        "purpose": "A door leaf or any depicted physical slab. Offset on x as well as y — the light has a direction."
+      },
+      {
+        "name": "card-lift",
+        "value": "0 26px 50px rgba(35, 25, 12, 0.12)",
+        "purpose": "Card hover, pointer devices only, paired with translateY(-5px). Deepens to rgba(0,0,0,0.45) on dark worlds."
+      },
+      {
+        "name": "aperture-inset",
+        "value": "inset 0 0 0 2px rgba(245, 240, 230, 0.08), 0 26px 60px rgba(35, 25, 12, 0.24)",
+        "purpose": "The framed opening in the hero and the world cards."
+      },
+      {
+        "name": "aperture-deep",
+        "value": "inset 0 0 0 3px rgba(22, 14, 5, 0.55), inset 0 0 24px rgba(22, 14, 5, 0.38)",
+        "purpose": "The dark room behind an open door leaf."
+      },
+      {
+        "name": "floating-chrome",
+        "value": "0 16px 40px rgba(24, 17, 9, 0.3)",
+        "purpose": "Toast and other fixed chrome. The cart drawer uses -30px 0 70px rgba(24, 17, 9, 0.25) for its left-cast edge."
+      },
+      {
+        "name": "focus-halo",
+        "value": "0 0 0 3px rgba(169, 139, 79, 0.18)",
+        "purpose": "Field focus, paired with a brass border. Global focus is outline: 2px solid var(--brass) at 2px offset."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-state",
+        "value": "0.2s–0.25s ease",
+        "purpose": "Colour and border transitions on buttons, links, chips and fields."
+      },
+      {
+        "name": "ease-lift",
+        "value": "0.45s ease",
+        "purpose": "Card hover lift and its shadow."
+      },
+      {
+        "name": "ease-swing",
+        "value": "0.7s cubic-bezier(0.2, 0.7, 0.15, 1)",
+        "purpose": "The door leaf opening. Decelerating hard at the end so the leaf settles like weight, not like a tween."
+      },
+      {
+        "name": "ease-overshoot",
+        "value": "0.45s cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Door Wall tiles and other pop-forward transforms."
+      },
+      {
+        "name": "rise",
+        "value": "0.8s ease both, translateY(26px) → 0 with opacity",
+        "purpose": "Entrance for stacked page content; staggered at 0.08s / 0.16s / 0.26s."
+      },
+      {
+        "name": "reveal",
+        "value": "0.7s ease, translateY(24px) → 0 with opacity",
+        "purpose": "Scroll-triggered section reveal via IntersectionObserver."
+      }
+    ],
+    "breakpoints": [
+      { "name": "wide", "value": "1080px" },
+      { "name": "desktop", "value": "900px" },
+      { "name": "tablet", "value": "760px" },
+      { "name": "phone", "value": "620px" },
+      { "name": "phone-sm", "value": "380px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The default action plate: square, hairline Ink border, wide-tracked micro-caps. Inverts to Ink-on-Cream on hover.",
+      "html": "<button class=\"ds-btn\">Browse the catalogue</button>",
+      "css": ".ds-btn { display: inline-block; cursor: pointer; border: 1px solid var(--ink, #211a12); background: none; color: var(--ink, #211a12); padding: 13px 24px; font: 500 12px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.22em; text-transform: uppercase; text-align: center; border-radius: 0; transition: background 0.25s, color 0.25s, border-color 0.25s; } @media (hover: hover) { .ds-btn:hover { background: var(--ink, #211a12); color: var(--cream, #f5f0e6); } } .ds-btn:focus-visible { outline: 2px solid var(--brass, #a98b4f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-dark",
+      "description": "The committed action. Ink fill that warms to Hinge Brass on hover — the system's one sanctioned moment of brass as a field.",
+      "html": "<button class=\"ds-btn-primary\">Add to cart</button>",
+      "css": ".ds-btn-primary { display: inline-block; cursor: pointer; border: 1px solid var(--ink, #211a12); background: var(--ink, #211a12); color: var(--cream, #f5f0e6); padding: 13px 24px; font: 500 12px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.22em; text-transform: uppercase; text-align: center; border-radius: 0; transition: background 0.25s, color 0.25s, border-color 0.25s; } @media (hover: hover) { .ds-btn-primary:hover { background: var(--brass, #a98b4f); border-color: var(--brass, #a98b4f); color: var(--cream, #f5f0e6); } } .ds-btn-primary:focus-visible { outline: 2px solid var(--brass, #a98b4f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Quick-pick Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "The one pill in a square system. Deliberately the softest control on the page so the size shortcuts read as suggestions beneath the sliders that own the real decision.",
+      "html": "<div style=\"display:flex;gap:8px;flex-wrap:wrap\"><button class=\"ds-chip\">7′ × 3′</button><button class=\"ds-chip ds-chip--on\">8′ × 3′</button><button class=\"ds-chip\">8′ × 3′6″</button></div>",
+      "css": ".ds-chip { background: none; border: 1px solid var(--line2, #d9cdb2); border-radius: 999px; padding: 7px 12px; font: 400 12.5px var(--sans, Archivo, system-ui, sans-serif); color: var(--mut, #6f6354); cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s; } @media (hover: hover) { .ds-chip:hover { border-color: var(--brass, #a98b4f); color: var(--ink, #211a12); } } .ds-chip--on { border-color: var(--ink, #211a12); background: var(--ink, #211a12); color: var(--cream, #f5f0e6); } .ds-chip:focus-visible { outline: 2px solid var(--brass, #a98b4f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Product Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Square, hairline-bordered, flat at rest. The product stands on a Panel-gradient stage at 44% of the stage width; the category is a brass micro-cap, the name is serif.",
+      "html": "<a class=\"ds-card\" href=\"#\"><div class=\"ds-card__stage\"><div class=\"ds-card__leaf\"></div></div><div class=\"ds-card__body\"><span class=\"ds-card__cat\">Designer Studio</span><h3 class=\"ds-card__name\">Fluted Sage</h3><p class=\"ds-card__tag\">Grooved membrane leaf in a muted sage lacquer</p><div class=\"ds-card__row\"><span class=\"ds-card__price\">₹18,400</span><span class=\"ds-card__from\">from</span></div></div></a>",
+      "css": ".ds-card { background: var(--cream2, #fbf7ef); border: 1px solid var(--line, #e6dcc6); display: flex; flex-direction: column; text-decoration: none; border-radius: 0; max-width: 300px; transition: transform 0.45s ease, box-shadow 0.45s ease; } @media (hover: hover) { .ds-card:hover { transform: translateY(-5px); box-shadow: 0 26px 50px rgba(35, 25, 12, 0.12); } } .ds-card__stage { background: linear-gradient(180deg, var(--panel, #efe7d6), #e8dec7); padding: 44px 0 38px; display: flex; justify-content: center; } .ds-card__leaf { width: 44%; min-width: 100px; aspect-ratio: 3 / 8; background: linear-gradient(100deg, #8a6a3c, #b08c4e 40%, #7d5f34); box-shadow: 6px 8px 26px rgba(28, 20, 10, 0.3); } .ds-card__body { padding: 22px 26px 26px; display: flex; flex-direction: column; gap: 6px; } .ds-card__cat { font: 500 11px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.24em; text-transform: uppercase; color: var(--brass, #a98b4f); } .ds-card__name { margin: 0; font: 500 25px/1.1 var(--serif, 'Cormorant Garamond', Georgia, serif); color: var(--ink, #211a12); } .ds-card__tag { margin: 0; font: 400 13.5px var(--sans, Archivo, system-ui, sans-serif); color: var(--mut, #6f6354); } .ds-card__row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 14px; } .ds-card__price { font: 600 16px var(--sans, Archivo, system-ui, sans-serif); color: var(--ink, #211a12); } .ds-card__from { font: 400 12px var(--sans, Archivo, system-ui, sans-serif); color: var(--mut2, #8a7a62); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Square, 48px minimum, 16px type — below 16px iOS Safari zooms the page on focus and never zooms back. Focus is a brass border with a soft brass halo, never the UA outline.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field__label\">Delivery pincode</span><input class=\"ds-field__input\" type=\"text\" placeholder=\"560073\" /><span class=\"ds-field__hint\">We install across Bengaluru.</span></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 7px; max-width: 320px; } .ds-field__label { font: 500 11px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.2em; text-transform: uppercase; color: var(--mut2, #8a7a62); } .ds-field__input { font: 400 16px var(--sans, Archivo, system-ui, sans-serif); color: var(--ink, #211a12); background: var(--cream2, #fbf7ef); border: 1px solid var(--line2, #d9cdb2); border-radius: 0; -webkit-appearance: none; appearance: none; min-height: 48px; padding: 12px 14px; width: 100%; transition: border-color 0.2s, box-shadow 0.2s; } .ds-field__input:focus { outline: none; border-color: var(--brass, #a98b4f); box-shadow: 0 0 0 3px rgba(169, 139, 79, 0.18); } .ds-field__hint { font: 400 12.5px var(--sans, Archivo, system-ui, sans-serif); color: var(--mut2, #8a7a62); }"
+    },
+    {
+      "name": "Navigation Bar",
+      "kind": "nav",
+      "refersTo": "nav-cart",
+      "description": "Fixed, translucent cream with a 14px backdrop blur over a hairline rule. Active links carry a brass underline; the cart is an Ink plate with a brass badge.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav__brand\" href=\"#\"><span class=\"ds-nav__mark\">PP</span><span class=\"ds-nav__word\">PATIDAR<span class=\"ds-nav__sub\">Doors · Plywoods · Boards</span></span></a><div class=\"ds-nav__links\"><a class=\"ds-nav__link ds-nav__link--active\" href=\"#\">Doors</a><a class=\"ds-nav__link\" href=\"#\">Timbers</a><a class=\"ds-nav__link\" href=\"#\">Ply</a></div><button class=\"ds-nav__cart\">Cart <span class=\"ds-nav__badge\">2</span></button></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; background: rgba(245, 240, 230, 0.86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line, #e6dcc6); } .ds-nav__brand { display: flex; align-items: center; gap: 12px; min-height: 44px; text-decoration: none; } .ds-nav__mark { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--ink, #211a12); font: 600 12px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.04em; color: var(--ink, #211a12); } .ds-nav__word { display: flex; flex-direction: column; gap: 1px; font: 600 15px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.32em; color: var(--ink, #211a12); } .ds-nav__sub { font: 500 9px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.22em; text-transform: uppercase; color: var(--mut2, #8a7a62); } .ds-nav__links { display: flex; align-items: center; gap: 30px; } .ds-nav__link { padding: 4px 2px; font: 500 13px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut2, #8a7a62); text-decoration: none; border-bottom: 1px solid transparent; transition: color 0.2s; } @media (hover: hover) { .ds-nav__link:hover { color: var(--ink, #211a12); } } .ds-nav__link--active { color: var(--ink, #211a12); border-bottom-color: var(--brass, #a98b4f); } .ds-nav__cart { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; background: var(--ink, #211a12); color: var(--cream, #f5f0e6); border: none; border-radius: 0; cursor: pointer; padding: 10px 18px; font: 500 12px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.18em; text-transform: uppercase; } @media (hover: hover) { .ds-nav__cart:hover { background: var(--brass, #a98b4f); } } .ds-nav__badge { background: var(--brass, #a98b4f); color: var(--deep, #1c1610); font: 600 11px var(--sans, Archivo, system-ui, sans-serif); min-width: 20px; height: 20px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; }"
+    },
+    {
+      "name": "Door Scene",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The signature component. A leaf hinged on its left edge swings open in 3D over a warm aperture, with an edge shade that fades in as it opens. Everything else in the system is downstream of this gesture.",
+      "html": "<div class=\"ds-door\"><div class=\"ds-door__aperture\"></div><div class=\"ds-door__leaf\"><span class=\"ds-door__panel\"></span><span class=\"ds-door__panel\"></span><i class=\"ds-door__knob\"></i></div></div>",
+      "css": ".ds-door { position: relative; width: 132px; aspect-ratio: 3 / 8; perspective: 1400px; } .ds-door__aperture { position: absolute; inset: 0; background: linear-gradient(180deg, #3a2a19, #17100a); box-shadow: inset 0 0 0 3px rgba(22, 14, 5, 0.55), inset 0 0 24px rgba(22, 14, 5, 0.38); } .ds-door__leaf { position: absolute; inset: 0; transform-origin: left center; transform: rotateY(0deg); transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.15, 1), box-shadow 0.7s ease; background: linear-gradient(100deg, #8a6a3c, #b08c4e 42%, #7d5f34); box-shadow: 6px 8px 26px rgba(28, 20, 10, 0.3); display: flex; flex-direction: column; gap: 10px; padding: 12px; } .ds-door__leaf::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(20, 13, 6, 0.55), transparent 45%); opacity: 0; transition: opacity 0.7s ease; } .ds-door__panel { flex: 1; border: 1px solid rgba(38, 26, 12, 0.5); box-shadow: inset 0 1px 0 rgba(255, 236, 190, 0.14); } .ds-door__knob { position: absolute; right: 10px; top: 52%; width: 6px; height: 6px; border-radius: 50%; background: var(--brass, #a98b4f); box-shadow: 0 0 0 1px rgba(30, 20, 8, 0.5); } @media (hover: hover) { .ds-door:hover .ds-door__leaf { transform: rotateY(-26deg); } .ds-door:hover .ds-door__leaf::after { opacity: 1; } }"
+    },
+    {
+      "name": "Kicker + Headline",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The system's standard section opener: a brass micro-cap eyebrow with a rotated diamond, then a Cormorant headline. The clearest single view of the serif/sans division of labour.",
+      "html": "<div class=\"ds-head\"><span class=\"ds-kicker\"><i class=\"ds-diamond\"></i> Made in our own factory</span><h2 class=\"ds-headline\">Every leaf cut to <em>your</em> frame</h2></div>",
+      "css": ".ds-head { max-width: 640px; } .ds-kicker { display: inline-flex; align-items: center; gap: 10px; font: 600 12px var(--sans, Archivo, system-ui, sans-serif); letter-spacing: 0.34em; color: var(--brass-d, #8c6f3f); text-transform: uppercase; } .ds-diamond { width: 9px; height: 9px; background: var(--brass, #a98b4f); transform: rotate(45deg); display: inline-block; flex: none; } .ds-headline { margin: 14px 0 0; font: 500 clamp(40px, 5vw, 68px)/1.04 var(--serif, 'Cormorant Garamond', Georgia, serif); color: var(--ink, #211a12); } .ds-headline em { font-style: italic; color: var(--brass, #a98b4f); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Threshold",
+    "overview": "Every surface behaves like a door. The site is not a page you scroll but a sequence of openings you pass through — the hero door swings and you are pushed through it into a corridor of four more; a product card's leaf falls ajar as you approach; a world page is an arched opening with the material full-bleed behind it. The reward for moving is always something opening. Nothing here is a container with content inside it; everything is a frame with something beyond it.\n\nThe ground is warm paper — a cream family from #f5f0e6 up to #fbf7ef — ruled with hairlines and set in a Cormorant Garamond that reads like a printed catalogue rather than a web headline. Against that paper, the only colour that belongs to the interface is brass: never a fill, always an edge. Everything with actual chroma in it is the material itself — teak, golden-teak, birch ply, slate-green WPC, and the client's own door photography. The system is deliberately drained so the wood is the loudest thing on screen.\n\nCorners are square as a rule (border-radius: 0, asserted even over iOS's default input rounding). Controls are hardware, not software: thin metal rules, wide-tracked uppercase micro-caps, plates that look screwed to a door rather than tapped on a phone. The confirmed rejection is anything toy-like — the glass-globe world cards were removed in August 2026 because a spinning specular sweep and a bobbing float read as a toy against the rest of the site — and anything that looks like default browser feedback.",
+    "keyCharacteristics": [
+      "Warm paper ground; all chroma comes from real material, not from the UI",
+      "Square corners, hairline borders, no radius unless a shape demands it",
+      "Brass as an edge and a rule; gold reserved for dark grounds only",
+      "Serif names the thing, sans explains it",
+      "Depth is light falling on an object, not elevation stacking",
+      "Phone-first: 44px targets, 16px fields, safe-area padding, hover behind a query"
+    ],
+    "rules": [
+      {
+        "name": "The Two Golds Rule",
+        "body": "Brass belongs to cream grounds; gold belongs to dark grounds. They never swap. Brass on a dark band goes muddy and gold on cream goes weak — the split is what keeps both of them looking like metal and light rather than two yellows.",
+        "section": "colors"
+      },
+      {
+        "name": "The Brass Edge Rule",
+        "body": "On cream, brass is an edge, a rule, a ring or a diamond — never a field. If a large area needs to be dark, it is Ink; if it needs to be warm, it is Panel. A brass block is always wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Material Owns the Colour Rule",
+        "body": "Saturation comes from teak, veneer, ply and WPC — the actual product. The interface stays neutral so the material reads as the only real thing on the page. A decorative colour with no material behind it does not belong in this system.",
+        "section": "colors"
+      },
+      {
+        "name": "The Serif Names, The Sans Explains Rule",
+        "body": "Cormorant carries names, titles and prose that wants to be read slowly. Archivo carries everything functional — controls, labels, prices, specs, meta. A serif inside a button is wrong; so is a sans product name outside the Ply world, which deliberately runs its titles in uppercase sans because a spec sheet should not be lyrical.",
+        "section": "typography"
+      },
+      {
+        "name": "The Micro-Caps Rule",
+        "body": "Functional text is uppercase Archivo at 11–13px with at least 0.18em tracking, and it never grows. Emphasis in this system comes from scale in the serif, never from a bigger label.",
+        "section": "typography"
+      },
+      {
+        "name": "The 44px Rule",
+        "body": "Every interactive target is at least 44px in its smallest dimension inside the phone breakpoints, and every form control is at least 16px of type — below that iOS Safari zooms the page on focus and never zooms back.",
+        "section": "layout"
+      },
+      {
+        "name": "The Centred-Without-Translate Rule",
+        "body": "Absolutely positioned centred elements use left: 0; right: 0 with width: fit-content; margin: 0 auto, never left: 50% plus translateX(-50%). The latter shrink-to-fits inside half the available width and wraps the text.",
+        "section": "layout"
+      },
+      {
+        "name": "The Offset Cast Rule",
+        "body": "Any shadow depicting a real object is offset on both axes. A centred, evenly-diffused shadow says \"CSS box\"; an offset one says \"there is a lamp in this room\". Interface shadows may be centred; object shadows may not.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Flat Chrome Rule",
+        "body": "Buttons, inputs, chips, nav and cards carry no shadow at rest. If a surface needs separating, it gets a hairline rule or a tonal step in the cream family, not a shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Square Corner Rule",
+        "body": "A new control starts at radius 0. Rounding is a decision that must name which of the four sanctioned curves it is using and why; \"it looked softer\" is not a reason.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do start every control at border-radius: 0 and justify any curve against one of the four sanctioned shapes.",
+      "Do keep brass on cream and gold on dark (The Two Golds Rule).",
+      "Do use brass as an edge — rule, ring, underline, diamond — not as a field.",
+      "Do set names and headlines in Cormorant and everything functional in uppercase Archivo at 0.18em or wider.",
+      "Do wrap every colour-changing :hover in @media (hover: hover). Touch latches :hover on the last thing tapped, so an \"Add to cart\" you just pressed would sit lit until you tapped elsewhere.",
+      "Do give a touch equivalent to anything that only reveals itself on hover — the door swing's --ajar class is the pattern to copy.",
+      "Do keep form controls at 16px or larger and interactive targets at 44px or larger inside the phone breakpoints.",
+      "Do pad fixed chrome with env(safe-area-inset-*).",
+      "Do offset object shadows on both axes and leave interface chrome flat.",
+      "Do let the material carry the saturation; keep the interface neutral."
+    ],
+    "donts": [
+      "Don't add toy-like or glossy 3D — spheres, specular sweeps, bobbing floats, glass. The glass-globe world cards were removed for exactly this, and the replacement is flat material under an arch.",
+      "Don't ship default browser feedback. The grey tap-highlight is killed globally because it reads as cheap; every component owns its pressed and hover state, and focus is the brass ring, never the UA outline.",
+      "Don't let iOS restyle a control — inputs are explicitly de-rounded and de-appearanced, and a new control must do the same.",
+      "Don't put a serif inside a button, or grow a label to create emphasis.",
+      "Don't introduce a colour that no material on the floor actually has.",
+      "Don't use left: 50% + translateX(-50%) to centre absolutely positioned content (The Centred-Without-Translate Rule).",
+      "Don't reuse the arch on anything that is not an opening."
+    ]
+  }
+}

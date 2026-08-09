@@ -1,8 +1,24 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
-/** Fades/rises children in when they enter the viewport. */
-export function Reveal({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null)
+/**
+ * Fades/rises children in when they enter the viewport.
+ *
+ * `as` exists so a reveal can be the list item it is semantically — the home
+ * page's payment sequence is an <ol>, and a bare <div> child would drop the
+ * list semantics a screen reader uses to count the steps.
+ */
+export function Reveal({
+  children,
+  className,
+  delay = 0,
+  as: Tag = 'div',
+}: {
+  children: ReactNode
+  className?: string
+  delay?: number
+  as?: 'div' | 'li'
+}) {
+  const ref = useRef<HTMLDivElement & HTMLLIElement>(null)
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -21,8 +37,8 @@ export function Reveal({ children, className, delay = 0 }: { children: ReactNode
     return () => io.disconnect()
   }, [])
   return (
-    <div ref={ref} className={`reveal${className ? ' ' + className : ''}`} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
+    <Tag ref={ref} className={`reveal${className ? ' ' + className : ''}`} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
       {children}
-    </div>
+    </Tag>
   )
 }

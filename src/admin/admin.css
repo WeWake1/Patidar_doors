@@ -94,7 +94,46 @@
 .ax-btn--block { width: 100%; justify-content: center; }
 .ax-btn:disabled { opacity: 0.5; cursor: default; }
 .ax-link { background: none; border: none; color: var(--ax-accent); cursor: pointer; font: inherit; font-size: 13px; padding: 2px 4px; text-decoration: none; }
-.ax-error { background: #fdecea; color: #a3271a; border: 1px solid #f5c6c0; border-radius: 7px; padding: 9px 12px; font-size: 13px; }
+/* Status is the one place this tool borrows from the storefront. The chassis
+   stays deliberately plain (see the note at the top of this file), but "did my
+   save land?" and "why did it fail?" are the two questions a non-technical
+   owner actually has, and they deserve the same shop-floor colours the store
+   uses — clay for a fault, slate for a confirmation. Both carry their own
+   text and a mark, so neither depends on the colour being seen. */
+.ax-note {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  border-radius: 7px;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+.ax-note::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 1px;
+  transform: rotate(45deg);
+}
+.ax-note--fault { background: var(--clay-surface); color: var(--clay-ink); border: 1px solid #e6bfb2; }
+.ax-note--fault::before { background: var(--clay); }
+.ax-note--ok { background: var(--slate-surface); color: var(--slate); border: 1px solid #bcd8d1; }
+.ax-note--ok::before { background: var(--slate); }
+
+/* an unpublished product is invisible on the site — that is worth more than
+   an italic aside, and the word does the work if the colour doesn't land */
+.ax-badge {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #f4e8d2;
+  color: var(--teak-ink);
+  font: 600 11px/1.6 system-ui;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
 
 /* thumbnails */
 .ax-thumb { display: flex; align-items: center; gap: 10px; }
@@ -120,3 +159,36 @@
   .ax-grid2 { grid-template-columns: 1fr; }
 }
 .ax-item__thumb--none { background: repeating-linear-gradient(45deg, #e7edf3 0 6px, #dde5ec 6px 12px); }
+
+/* ── hardening: the states the owner sees when something is wrong ──────────
+   This dashboard is used by one non-technical person, often on a phone. Every
+   one of these replaced a screen that rendered as an empty catalogue. */
+.ax-state {
+  margin: 24px 0;
+  padding: 34px 28px;
+  border: 1px solid var(--ax-line);
+  background: #fbfcfe;
+  border-radius: 8px;
+  color: var(--ax-mut);
+  font-size: 14px;
+}
+.ax-state p { margin: 0 0 16px; max-width: 52ch; }
+.ax-state--fault { border-color: #e6bfb2; background: var(--clay-surface); color: var(--clay-ink); }
+.ax-sub__note { margin: 0; font-size: 13px; color: var(--ax-mut); max-width: 60ch; }
+/* a row mid-request: legible, but clearly not accepting another click */
+.ax-item--busy { opacity: 0.55; pointer-events: none; }
+
+/* Three round trips, and the owner needs to see which one is running — on
+   mobile data the original can take a minute on its own. */
+.ax-crop__progress {
+  height: 3px;
+  margin-top: 10px;
+  background: var(--ax-line);
+  overflow: hidden;
+}
+.ax-crop__progress span {
+  display: block;
+  height: 100%;
+  background: var(--ax-accent);
+  transition: width 0.3s ease;
+}

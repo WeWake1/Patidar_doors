@@ -6,6 +6,7 @@ import { DoorScene } from '../components/DoorScene'
 import { MaterialArt } from '../components/MaterialArt'
 import { PhotoShowcase } from '../components/PhotoShowcase'
 import { ProductCard } from '../components/ProductCard'
+import { ProductPhoto } from '../components/ProductPhoto'
 import { useToast } from '../components/Toast'
 import { config, whatsappLink } from '../config'
 import { DEFAULT_CONFIG, formatSizeLabel, toSizeId } from '../data/pricing'
@@ -62,7 +63,7 @@ function ProductStage({ product }: { product: ProductT }) {
         {visual.gallery && visual.gallery.length > 0 && (
           <div className="pdp__gallery">
             {visual.gallery.map((g) => (
-              <img key={g.src} src={g.src} srcSet={g.srcSet} sizes="30vw" alt={g.alt} loading="lazy" decoding="async" />
+              <ProductPhoto key={g.src} photo={g} sizes="30vw" />
             ))}
           </div>
         )}
@@ -157,13 +158,15 @@ function ProductInner({ product }: { product: ProductT }) {
             {product.motif && (
               <div className="pdp__motif">
                 <span className="diamond" aria-hidden="true" />
-                Recreated from a trending motif: {product.motif}
+                Styled after the {product.motif}
               </div>
             )}
 
             <div className="pdp__price-row">
               <div className="pdp__price">{fmtINR(price)}</div>
-              <div className="pdp__price-note">installed · {formatSizeLabel(cfg.heightIn, cfg.widthIn)}</div>
+              <div className="pdp__price-note">
+                incl. GST & installation · {formatSizeLabel(cfg.heightIn, cfg.widthIn)}
+              </div>
             </div>
 
             {quote && <DoorConfigurator config={cfg} onChange={setCfg} quote={quote} />}
@@ -203,8 +206,8 @@ function ProductInner({ product }: { product: ProductT }) {
               {product.specs.map((s) => (
                 <li key={s}>{s}</li>
               ))}
-              <li>Free measurement visit & installation included</li>
-              <li>10-year warranty</li>
+              <li>Measurement visit & installation included in {config.serviceCity}</li>
+              <li>Covered against manufacturing defects</li>
             </ul>
           </div>
         ) : (
