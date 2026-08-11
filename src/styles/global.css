@@ -51,6 +51,13 @@
   --brass-ink: #7d6234;  /* brass *as text* — 5.0:1 */
   --gold: #c9a964;
   --gold-l: #d9b873;
+  /* Depiction, not interface: the colour of the light in the hero's beams.
+     Held as channels because every use of it is an alpha wash — the CSS
+     backdrop that stands in for the WebGL one, which reads the hex form. It is
+     lighter than --gold-l because it is a source of light rather than a lit
+     metal; do not substitute one for the other. */
+  --beam-light: #f2d18a;
+  --beam-light-rgb: 242 209 138;
 
   /* ── the shop floor ──────────────────────────────────────────
      Every colour this interface is allowed to use for *meaning* is a colour
@@ -215,6 +222,13 @@ button { font-family: var(--sans); }
   max-width: 1320px;
   margin: 0 auto;
 }
+
+/* Held space while a split route's chunk arrives. Every page is at least a
+   viewport tall, so reserving that keeps the footer where it was standing and
+   the navigation from shifting under a thumb already reaching for it. It draws
+   nothing: a route chunk is a few kB and usually beats this to the screen, and
+   a spinner that flashes for 80ms reads as a fault rather than as progress. */
+.route-hold { min-height: 100vh; }
 
 .page-title {
   margin: 10px 0 0;
@@ -1782,19 +1796,49 @@ button { font-family: var(--sans); }
    pane can never flash the cream page background through */
 .portal--dark,
 .portal--dark .portal__sticky { background: var(--deep2); }
+/* The standing-in backdrop, drawn to look like the thing it stands in for.
+   The Beams canvas is a lazy 230 kB chunk that cannot even begin downloading
+   until the bundle has parsed, so on any real connection it lands a beat after
+   the hero photograph. What made that read as a fault was not the delay itself
+   but the *jump*: this layer used to be a warm brown wash, and the canvas
+   paints an opaque near-black scene with gold slabs across it, so the hero
+   visibly changed colour once the chunk arrived.
+
+   So this gradient is now built to the same recipe as the WebGL one — a warm
+   near-black ground, broad gold bands raked at the shader's own 30°, and the
+   light strongest at top centre. When the canvas fades over it, it is replacing
+   a picture of itself: the beams gain their noise and their drift, and nothing
+   about the composition changes. Keep the two in step if either is retuned. */
 .portal__rays {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: radial-gradient(115% 78% at 50% -6%, rgba(120, 88, 42, 0.55) 0%, rgba(40, 30, 18, 0.4) 42%, transparent 72%);
+  background:
+    /* the light falls off toward the lower right, as it does in the shader */
+    linear-gradient(150deg, rgb(var(--beam-light-rgb) / 0.1) 0%, transparent 55%),
+    /* The slabs: broad, soft-edged, raked to the shader's 30°.
+       Sized in vh, not %, because that is how the real ones scale. The camera
+       is fov-30 at z=20, so it always sees ~10.7 world units vertically whatever
+       the aspect ratio — a beamWidth of 4 is therefore a fixed ~37% of viewport
+       *height* on every screen, and only its share of the width changes. In
+       percent these bands stayed desktop-shaped and a phone showed a dozen thin
+       stripes where the canvas shows one broad slab. */
+    repeating-linear-gradient(
+      30deg,
+      transparent 0 8vh,
+      rgb(var(--beam-light-rgb) / 0.06) 18vh,
+      rgb(var(--beam-light-rgb) / 0.2) 34vh,
+      rgb(var(--beam-light-rgb) / 0.06) 50vh,
+      transparent 60vh 76vh
+    ),
+    radial-gradient(130% 95% at 50% 0%, rgba(120, 88, 42, 0.3) 0%, rgba(23, 17, 11, 0.72) 52%, #0a0602 88%);
   will-change: opacity;
 }
-/* The Beams canvas paints its own opaque black scene background, so it lands
-   on top of .portal__rays' warm gradient. It arrives late (lazy chunk) —
-   fade it in, or the hero visibly snaps from warm brown to black. */
+/* Long and eased, because this is a dissolve between two versions of the same
+   image rather than an element entering. */
 .portal__rays .beams-container {
   z-index: 0;
-  animation: beams-in 700ms ease-out both;
+  animation: beams-in 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 @keyframes beams-in {
   from { opacity: 0; }

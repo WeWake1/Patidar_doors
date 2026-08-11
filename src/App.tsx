@@ -11,17 +11,28 @@ import { WhatsAppFloat } from './components/WhatsAppFloat'
 import { getWorld } from './data/worlds'
 import { t } from './lib/i18n'
 import { smoothScrollTo, useSmoothScroll } from './lib/smoothScroll'
-import { Checkout } from './pages/Checkout'
-import { DevGallery } from './pages/DevGallery'
-import { Faq } from './pages/Faq'
 import { Home } from './pages/Home'
 import { NotFound } from './pages/NotFound'
-import { OrderConfirmed } from './pages/OrderConfirmed'
-import { Policies } from './pages/Policies'
-import { Product } from './pages/Product'
-import { Shop } from './pages/Shop'
-import { Visit } from './pages/Visit'
-import { WorldPage } from './pages/WorldPage'
+
+/* Home and NotFound stay eager: Home is the landing route for nearly every
+   visitor, so splitting it would only buy it a second round trip, and NotFound
+   is both tiny and the fallback that WorldRoute and Product render inline.
+   Everything else is split.
+
+   This is a client-rendered site on Indian mobile data, so the first bundle IS
+   the time to first paint — and it was carrying the whole catalogue: the
+   pricing table and the configurator, the Door Wall's 3D drift, the checkout
+   form and its order serialiser, all downloaded and parsed before the hero
+   could draw. None of it is reachable from the home page without a tap first. */
+const Shop = lazy(() => import('./pages/Shop').then((m) => ({ default: m.Shop })))
+const Product = lazy(() => import('./pages/Product').then((m) => ({ default: m.Product })))
+const WorldPage = lazy(() => import('./pages/WorldPage').then((m) => ({ default: m.WorldPage })))
+const Visit = lazy(() => import('./pages/Visit').then((m) => ({ default: m.Visit })))
+const Checkout = lazy(() => import('./pages/Checkout').then((m) => ({ default: m.Checkout })))
+const OrderConfirmed = lazy(() => import('./pages/OrderConfirmed').then((m) => ({ default: m.OrderConfirmed })))
+const Faq = lazy(() => import('./pages/Faq').then((m) => ({ default: m.Faq })))
+const Policies = lazy(() => import('./pages/Policies').then((m) => ({ default: m.Policies })))
+const DevGallery = lazy(() => import('./pages/DevGallery').then((m) => ({ default: m.DevGallery })))
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -66,23 +77,30 @@ function Storefront() {
       <Nav />
       <main id="main" tabIndex={-1}>
         <ErrorBoundary key={pathname} label="page">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/timbers" element={<WorldRoute id="timbers" />} />
-            <Route path="/doors" element={<WorldRoute id="doors" />} />
-            <Route path="/ply" element={<WorldRoute id="ply" />} />
-            <Route path="/wpc" element={<WorldRoute id="wpc" />} />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/product/:id" element={<Product />} />
-            <Route path="/door/:id" element={<LegacyDoorRedirect />} />
-            <Route path="/visit" element={<Visit />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/order-confirmed" element={<OrderConfirmed />} />
-            <Route path="/faq" element={<Faq />} />
-            <Route path="/policies" element={<Policies />} />
-            {import.meta.env.DEV && <Route path="/dev/gallery" element={<DevGallery />} />}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          {/* A route chunk is a few kB and normally lands before this ever
+              paints, so the hold is deliberately not a spinner — it reserves
+              the height the page would have taken and nothing else. Without the
+              reserve <main> collapses to zero and the footer jumps up the
+              screen, which is a layout shift paid on every navigation. */}
+          <Suspense fallback={<div className="route-hold" aria-hidden="true" />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/timbers" element={<WorldRoute id="timbers" />} />
+              <Route path="/doors" element={<WorldRoute id="doors" />} />
+              <Route path="/ply" element={<WorldRoute id="ply" />} />
+              <Route path="/wpc" element={<WorldRoute id="wpc" />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/product/:id" element={<Product />} />
+              <Route path="/door/:id" element={<LegacyDoorRedirect />} />
+              <Route path="/visit" element={<Visit />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/order-confirmed" element={<OrderConfirmed />} />
+              <Route path="/faq" element={<Faq />} />
+              <Route path="/policies" element={<Policies />} />
+              {import.meta.env.DEV && <Route path="/dev/gallery" element={<DevGallery />} />}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </ErrorBoundary>
       </main>
       <Footer />

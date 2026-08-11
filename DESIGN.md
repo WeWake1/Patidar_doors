@@ -53,6 +53,7 @@ colors:
   lamp-room-far: "#9a7440"
   corridor-lit: "#3a2e1e"
   portal-wash: "#78582a"
+  beam-light: "#f2d18a"
   room-groove: "#3c280f"
   ply-face: "#e2cda8"
   ply-face-warm: "#c9ae85"
@@ -342,7 +343,7 @@ dashes on all four sides.
 
 ### Depiction
 
-Five colours in the palette belong to the *artwork*, not the interface, and are
+Six colours in the palette belong to the *artwork*, not the interface, and are
 listed so they are documented rather than read as drift. The lamplit room
 (`#f6dfac` → `#ddb371` → `#9a7440`) is what you see through an open door — the
 hero aperture and every card's door scene share it. The corridor's lit ceiling
@@ -350,6 +351,15 @@ is `#3a2e1e`, and `#78582a` is the warm wash the hero's light beams sit in.
 `#3c280f` is the groove between wall panels inside the doorway. The three ply
 tones (`#e2cda8`, `#c9ae85`, `#8a7355`) are the face and core of a sheet, drawn
 in the Ply world's edge strip.
+
+**Beam Light** (`#f2d18a`, token `--beam-light` / `--beam-light-rgb`) is the
+colour of the light in the hero's beams. It is lighter than Lamplit Gold Light
+because it is a *source* of light rather than a lit metal, and the two are not
+interchangeable. It is the one depiction colour held as a token, because it has
+to be stated twice and kept identical: the WebGL backdrop takes it as a literal
+prop, and the CSS layer that stands in for that backdrop — same colour, same 30°
+rake — washes it at low alpha so the canvas fades in over a picture of itself
+instead of visibly changing the hero's colour when its chunk lands.
 
 The shadow, scrim and highlight alphas are governed by **Elevation & Depth**
 below rather than listed here; they are opacities of a depiction, not palette
