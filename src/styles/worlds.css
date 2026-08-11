@@ -1,9 +1,16 @@
 /* ═══════════════ World themes — Timbers · Doors · Ply · WPC ═══════════════
    Four sub-brands under one roof. Each world restates the *role* layer from
-   global.css — surfaces, text ramp, borders, accent, action pair — and every
-   card, button, chip and rule inside it follows without knowing which world
-   it is in. What used to be six --w-* tokens plus a hand-written override per
-   component is now one token block plus that world's signature move.
+   global.css — surfaces, text ramp, borders, accent, action pair, focus and
+   the card lift — and every card, button, chip and rule inside it follows
+   without knowing which world it is in. What used to be six --w-* tokens plus
+   a hand-written override per component is now one token block plus that
+   world's signature move.
+
+   The lift was the last of those overrides to go: Timbers used to carry its
+   own `.card:hover` rule because a cream-weight cast is invisible on a shed
+   floor. It is a role now, which also means the home page's four world tiles —
+   which carry `data-world` on themselves — each lift with their own world's
+   cast instead of all four borrowing the storefront's.
 
    The signature is deliberately not just a hue. Each world separates its
    content by a different physical logic, because that is what the material
@@ -72,13 +79,16 @@
   --action-hover-text: #221c13;
   --focus: #f0c078;
   --focus-halo: rgba(210, 154, 69, 0.28);
+  /* a 12%-opacity warm cast is invisible on a shed floor: the lift has to go
+     most of the way to the deep cast before the card reads as off the ground */
+  --shadow-lift: 0 26px 50px rgb(var(--cast-deep-rgb) / 0.5);
 }
 /* the saw line: log ends stacked against the far wall, and the horizontal
    marks a blade leaves in a face */
 [data-world='timbers'] .world__intro {
   background:
     radial-gradient(circle at 88% 30%, transparent 0 54px, rgba(210, 154, 69, 0.16) 54px 57px, transparent 57px 86px, rgba(210, 154, 69, 0.13) 86px 89px, transparent 89px 122px, rgba(210, 154, 69, 0.1) 122px 125px, transparent 125px 160px, rgba(210, 154, 69, 0.08) 160px 163px, transparent 163px),
-    repeating-linear-gradient(178deg, transparent 0 26px, rgba(10, 6, 2, 0.26) 26px 28px, transparent 28px 61px, rgba(242, 233, 214, 0.03) 61px 63px),
+    repeating-linear-gradient(178deg, transparent 0 26px, rgb(var(--cast-deep-rgb) / 0.26) 26px 28px, transparent 28px 61px, rgba(242, 233, 214, 0.03) 61px 63px),
     var(--surface);
 }
 /* signature — the section rule is a kerf, not a bar: a full-width cut with
@@ -92,9 +102,6 @@
 [data-world='timbers'] .card__stage {
   /* end grain glowing under the light, warmest at the top */
   background: radial-gradient(120% 90% at 50% 8%, #4a3c27, #322819 62%, #2a2217);
-}
-@media (hover: hover) {
-  [data-world='timbers'] .card:hover { box-shadow: 0 26px 50px rgba(10, 6, 2, 0.5); }
 }
 
 /* ═══ DOORS — the flagship ══════════════════════════════════
@@ -147,7 +154,7 @@
     var(--surface);
 }
 [data-world='ply'] .world__kicker { font-family: var(--sans); }
-[data-world='ply'] .world__section-title { font: 600 22px/1.2 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; }
+[data-world='ply'] .world__section-title { font: 600 22px/1.2 var(--sans); letter-spacing: var(--track-hair); text-transform: uppercase; }
 [data-world='ply'] .card__name { font: 600 19px/1.2 var(--sans); }
 /* signature — a sheet seen edge-on: face, core, face. The same five-ply strip
    rules the sections and runs along the foot of every card, so a row of cards
@@ -215,10 +222,10 @@
 [data-world='wpc'] .kicker,
 [data-world='wpc'] .card__cat { color: var(--accent-text); }
 /* signature — nothing here has a knife edge */
-[data-world='wpc'] .world__section-title::after { width: 52px; height: 6px; border-radius: 999px; }
+[data-world='wpc'] .world__section-title::after { width: 52px; height: 6px; border-radius: var(--r-pill); }
 [data-world='wpc'] .world__why { border-top: none; }
 [data-world='wpc'] .card {
-  border-radius: 10px;
+  border-radius: var(--r-soft);
   overflow: hidden;
   /* moulded, not cut: the light catches a rolled edge along the top */
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);

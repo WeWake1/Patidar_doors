@@ -71,36 +71,128 @@ typography:
     fontWeight: 500
     lineHeight: 1.04
     letterSpacing: "normal"
+  statement:
+    fontFamily: "Cormorant Garamond, Georgia, serif"
+    fontSize: "clamp(44px, 6.2vw, 86px)"
+    fontWeight: 500
+    lineHeight: 1.05
+    letterSpacing: "normal"
+  section:
+    fontFamily: "Cormorant Garamond, Georgia, serif"
+    fontSize: "clamp(34px, 4.2vw, 56px)"
+    fontWeight: 500
+    lineHeight: 1.06
+    letterSpacing: "normal"
+  heading:
+    fontFamily: "Cormorant Garamond, Georgia, serif"
+    fontSize: "30px"
+    fontWeight: 500
+    lineHeight: 1.12
+    letterSpacing: "normal"
   title:
     fontFamily: "Cormorant Garamond, Georgia, serif"
     fontSize: "26px"
     fontWeight: 500
     lineHeight: 1.15
     letterSpacing: "normal"
+  name:
+    fontFamily: "Cormorant Garamond, Georgia, serif"
+    fontSize: "25px"
+    fontWeight: 500
+    lineHeight: 1.1
+    letterSpacing: "normal"
+  title-sm:
+    fontFamily: "Cormorant Garamond, Georgia, serif"
+    fontSize: "20px"
+    fontWeight: 500
+    lineHeight: 1.25
+    letterSpacing: "normal"
+  name-sm:
+    fontFamily: "Cormorant Garamond, Georgia, serif"
+    fontSize: "17px"
+    fontWeight: 500
+    lineHeight: 1.2
+    letterSpacing: "normal"
+  lead:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.7
+    letterSpacing: "normal"
   body:
     fontFamily: "Archivo, system-ui, sans-serif"
     fontSize: "15px"
     fontWeight: 400
+    lineHeight: 1.7
+    letterSpacing: "normal"
+  body-sm:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "13.5px"
+    fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
+  meta:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: 1.2
+    letterSpacing: "normal"
+  note:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "12.5px"
+    fontWeight: 400
+    lineHeight: 1.6
+    letterSpacing: "normal"
+  fine:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "12.5px"
+    fontWeight: 400
+    lineHeight: 1.2
+    letterSpacing: "normal"
+  label-lg:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 500
+    lineHeight: 1.2
+    letterSpacing: "0.18em"
   label:
     fontFamily: "Archivo, system-ui, sans-serif"
     fontSize: "12px"
     fontWeight: 500
     lineHeight: 1.2
     letterSpacing: "0.22em"
+  label-sm:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "11px"
+    fontWeight: 500
+    lineHeight: 1.2
+    letterSpacing: "0.24em"
+  label-xs:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "10px"
+    fontWeight: 500
+    lineHeight: 1.2
+    letterSpacing: "0.24em"
   kicker:
     fontFamily: "Archivo, system-ui, sans-serif"
     fontSize: "12px"
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "0.34em"
+tracking:
+  widest: "0.34em"
+  wider: "0.3em"
+  wide: "0.26em"
+  open: "0.24em"
+  mid: "0.22em"
+  snug: "0.18em"
+  tight: "0.12em"
+  hair: "0.06em"
 rounded:
   none: "0"
-  arch: "50% 50% 3px 3px / 33% 33% 3px 3px"
-  swatch: "2px"
-  track: "3px"
+  hair: "3px"
   soft: "10px"
+  arch: "50% 50% 3px 3px / 33% 33% 3px 3px"
   pill: "999px"
   circle: "50%"
 spacing:
@@ -109,9 +201,35 @@ spacing:
   md: "14px"
   lg: "28px"
   xl: "48px"
+  section-sm: "88px"
   section: "110px"
-  section-tall: "140px"
+  section-lg: "140px"
+  section-phone: "72px"
+  nav-clear: "148px"
+  grid-gap: "28px"
+  touch: "44px"
   gutter: "6vw"
+  gutter-phone: "5vw"
+  page-max: "1320px"
+  band-max: "1280px"
+  measure: "58ch"
+  measure-px: "560px"
+motion:
+  quick: "0.2s"
+  base: "0.25s"
+  mid: "0.35s"
+  slow: "0.45s"
+  door: "0.7s"
+  ease-out: "cubic-bezier(0.22, 1, 0.36, 1)"
+  ease-door: "cubic-bezier(0.2, 0.7, 0.15, 1)"
+shadow:
+  object: "6px 8px 26px rgba(28, 20, 10, 0.3)"
+  aperture: "inset 0 0 0 2px rgba(245, 240, 230, 0.08), 0 26px 60px rgba(35, 25, 12, 0.24)"
+  chrome: "0 16px 40px rgba(24, 17, 9, 0.3)"
+  chrome-side: "-30px 0 70px rgba(24, 17, 9, 0.25)"
+  sheet: "0 26px 50px rgba(24, 17, 9, 0.18)"
+  lift: "0 26px 50px rgba(35, 25, 12, 0.12)"
+  ring-focus: "0 0 0 3px var(--focus-halo)"
 components:
   button:
     backgroundColor: "transparent"
@@ -225,10 +343,18 @@ nothing in tier 1 encodes a role. **Tier 2** is roles — `--surface`,
 `--surface-raised`, `--surface-sunk`, `--surface-band`, `--text`, `--text-2`,
 `--text-3`, `--border`, `--border-strong`, `--border-control`, `--accent`,
 `--accent-deep`, `--accent-text`, `--action`, `--action-text`,
-`--action-hover`, `--action-hover-text`, `--focus`, `--focus-halo`, `--stage` —
-and roles are what a component reaches for. Components never name a pigment.
-That indirection is the whole reason a world page can re-skin every card,
-button, chip and rule inside it by restating one token block.
+`--action-hover`, `--action-hover-text`, `--focus`, `--focus-halo`, `--stage`,
+`--shadow-lift` — and roles are what a component reaches for. Components never
+name a pigment. That indirection is the whole reason a world page can re-skin
+every card, button, chip and rule inside it by restating one token block.
+
+Colour is not the only thing on that footing. Alongside the pigments, tier 1 now
+also carries the system's **measures** — the type ramp, the tracking ramp, the
+measure caps, the space scale, the sanctioned curves, the casts and the motion
+speeds — each documented in its own section below. The rule is the same one:
+a component picks a step; it does not invent one. Anything that stays a literal
+after that is legible *as* an exception rather than hiding among ninety
+near-identical neighbours.
 
 Global chrome — nav, footer, cart drawer, toast, the WhatsApp float — reads
 tier 1 directly and deliberately does *not* theme, because those are what hold
@@ -416,19 +542,62 @@ interface reads as stamped hardware rather than typed UI.
 
 ### Hierarchy
 
-- **Display** (500, `clamp(54px, 8vw, 112px)`, 0.95, `-0.015em`): the portal
-  hero title and the closing CTA. One per page at most. Italic within it is set
-  in Hinge Brass — the only place the accent carries a word.
-- **Headline** (500, `clamp(40px, 5vw, 68px)`, 1.04): page and world titles.
-- **Title** (500, 26px/1.15): section heads, card names (25px/1.1), drawer and
-  checkout heads. Always serif — a product's name is set the way a name is set.
-- **Body** (400, 15px/1.6): base. Prose columns and long descriptions run to
-  `clamp(20px, 2.6vw, 30px)` serif at 1.5 when they are the point of the section
-  rather than support.
-- **Label** (500, 11–13px, `0.18em`–`0.26em`, uppercase): every button, nav link,
-  field label and meta line. The tracking widens as the size drops.
-- **Kicker** (600, 12px, `0.34em`–`0.38em`, uppercase, Brass Deep): the eyebrow
-  above a headline. The widest tracking in the system.
+Every step is a token (`--type-*` in `global.css`), and the token is composite —
+size, leading and weight together — because a type style in this system is never
+just a size, and three separate tokens is how a pairing drifts apart again. A
+component sets `font: var(--type-title)`, not a size.
+
+The ramp exists because the stylesheet had thirteen different serif clamps for
+what are five headline slots, and eleven sans sizes between 11px and 16px in
+half-pixel steps. None of that was decided; it accumulated.
+
+Serif — Cormorant does the naming:
+
+- **display** (500, `clamp(54px, 8vw, 112px)`, 0.95, `-0.015em`): the portal
+  hero. One per page at most. Italic within it is set in Hinge Brass — the only
+  place the accent carries a word.
+- **statement** (500, `clamp(44px, 6.2vw, 86px)`, 1.05): the closing CTA and the
+  economics punchline. A sentence meant to be read across the room.
+- **page** (500, `clamp(40px, 5vw, 68px)`, 1.04): page titles, world titles and
+  the PDP's product name. These are all the same slot and now the same size.
+- **section** (500, `clamp(34px, 4.2vw, 56px)`, 1.06): the head of a band.
+- **heading** (500, 30px/1.12) · **title** (500, 26px/1.15) ·
+  **name** (500, 25px/1.1, the card) · **title-sm** (500, 20px/1.25) ·
+  **name-sm** (500, 17px/1.2, a product name inside a summary row).
+
+Sans — Archivo does the work, and never grows past 16px:
+
+- **lead** (400, 16px/1.7) · **body** (400, 15px/1.7) · **body-sm** (400,
+  13.5px/1.6). Prose columns that are the point of a section rather than support
+  run to `clamp(20px, 2.6vw, 30px)` serif at 1.5.
+- **meta** (400, 13px) and **fine** (400, 12.5px) are single lines in a row and
+  take the font's own leading; **note** (400, 12.5px/1.6) wraps. That is the
+  whole difference between them, and setting 1.6 on the first grows every row it
+  sits in.
+- **label-lg / label / label-sm / label-xs** (500, 13 / 12 / 11 / 10px,
+  uppercase): every button, nav link, field label and meta line. `label-xs` is
+  the floor and it is for a stand-in, not for copy.
+- **kicker** (600, 12px, uppercase, Brass Deep): the eyebrow above a headline.
+
+Figures are deliberately **not** on this ramp. A line total, a subtotal, a
+slider readout and the PDP's headline price are seven sizes because each is
+sized against the thing beside it — the number is the one place here where scale
+carries meaning rather than hierarchy.
+
+### Tracking
+
+An eight-step ramp (`--track-*`), named by amount rather than by element,
+because the same step does different jobs in different places and a name like
+`--track-nav` only ever gets copied into the next thing that is not a nav.
+
+`widest` 0.34em · `wider` 0.3em · `wide` 0.26em · `open` 0.24em · `mid` 0.22em ·
+`snug` 0.18em · `tight` 0.12em · `hair` 0.06em.
+
+It runs the other way from the size ramp: the smaller the letterform, the more
+air it needs to still read as stamped rather than as a smudge. A label step and
+its tracking step are chosen as a pair — 13px takes `snug`, 12px takes `mid`,
+10–11px takes `open`. Only a kicker goes past `wider`; only mixed-case text
+comes below `snug`. This replaced nineteen hand-set values.
 
 ### Named Rules
 
@@ -444,11 +613,22 @@ scale in the serif, never from a bigger label.
 
 ## Layout
 
-The page is a single centred column: `6vw` gutters with a `1280–1320px` max
-width, and vertical sections at `110–140px` of padding that compress to roughly
-`70–88px` under 760px. Interior pages open at `148px` of top padding to clear the
-fixed nav. Grids are `repeat(auto-fill, minmax(280px, 1fr))` at a 28px gap, so
-the catalogue reflows by itself rather than by breakpoint.
+The page is a single centred column, and every measure in it is a token:
+`--gutter` (6vw) at the edge, `--page-max` (1320px) on the catalogue column and
+`--band-max` (1280px) inside a full-bleed band. Vertical rhythm is three steps —
+`--section-sm` 88px, `--section` 110px, `--section-lg` 140px — collapsing to one
+`--section-phone` (72px) with `--gutter-phone` (5vw) under 620px. Interior pages
+open at `--nav-clear` (148px) to clear the fixed nav. Grids are
+`repeat(auto-fill, minmax(280px, 1fr))` at `--grid-gap` (28px), so the catalogue
+reflows by itself rather than by breakpoint.
+
+Text columns are capped by `--measure` (58ch), or `--measure-px` (560px) where a
+grid needs a pixel cap. That one decision used to be made seven times, at
+everything from 34ch to 62ch.
+
+⚠️ These are custom properties, so they work in a declaration and **not** in a
+media query — a breakpoint stays a literal. That is a language limit, not an
+oversight, and it is the one place a raw px is still correct.
 
 Full-bleed dark bands interrupt the cream at intervals — the marquee, the
 economics band, the quotes band, the footer, and the Door Wall at the top of
@@ -469,6 +649,8 @@ offset.
 **The 44px Rule.** Every interactive target is at least 44px in its smallest
 dimension inside the phone breakpoints, and every form control is at least 16px
 of type — below that iOS Safari zooms the page on focus and never zooms back.
+The 44px is `--touch`, and it is a floor: it belongs on `min-height` and
+`min-width`, never on `width`.
 
 **The Centred-Without-Translate Rule.** Absolutely positioned centred elements
 use `left: 0; right: 0` with `width: fit-content; margin: 0 auto`, never
@@ -490,20 +672,33 @@ exception is fixed chrome, which floats over content and earns a real cast.
 
 ### Shadow Vocabulary
 
-- **Object cast** (`box-shadow: 6px 8px 26px rgba(28, 20, 10, 0.3)`): a door leaf
-  or any depicted physical slab. Offset on x as well as y — the light has a
-  direction.
-- **Card lift** (`box-shadow: 0 26px 50px rgba(35, 25, 12, 0.12)` with
-  `translateY(-5px)`): hover only, pointer only. On dark worlds the same lift
-  deepens to `rgba(0, 0, 0, 0.45)`.
-- **Aperture inset** (`inset 0 0 0 2px rgba(245, 240, 230, 0.08)`,
+Six casts, all tokens. There were twenty-three hand-mixed values before this,
+which is the same warm cast guessed twenty-three times.
+
+- **`--cast-object`** (`6px 8px 26px rgba(28, 20, 10, 0.3)`): a door leaf or any
+  depicted physical slab. Offset on x as well as y — the light has a direction.
+- **`--shadow-lift`** (`0 26px 50px rgba(35, 25, 12, 0.12)` with
+  `translateY(-5px)`): hover only, pointer only. **This one is a role, not a
+  measure** — it sits with the colour roles in tier 2 and each world restates it,
+  because how far a card must lift before you can see it moved depends entirely
+  on its ground. Timbers takes it most of the way to Cast Deep; a 12% warm cast
+  is invisible on a shed floor. It is also why the home page's four world tiles
+  each lift with their own world's cast: they carry `data-world` themselves.
+- **`--cast-aperture`** (`inset 0 0 0 2px rgba(245, 240, 230, 0.08)`,
   `0 26px 60px rgba(35, 25, 12, 0.24)`): the framed opening in the hero and the
   world cards.
-- **Floating chrome** (`box-shadow: 0 16px 40px rgba(24, 17, 9, 0.3)` for the
-  toast, `-30px 0 70px rgba(24, 17, 9, 0.25)` for the cart drawer): the only
-  shadows that exist purely to say "this is above the page".
-- **Focus ring** (`0 0 0 3px rgba(169, 139, 79, 0.18)` on fields; `2px solid
-  var(--brass)` with 2px offset globally): brass, always.
+- **`--cast-chrome`** (the toast), **`--cast-chrome-side`** (the cart drawer)
+  and **`--cast-sheet`** (the burger menu): the only shadows that exist purely to
+  say "this is above the page".
+- **`--ring-focus`** (`0 0 0 3px var(--focus-halo)`; plus `2px solid var(--focus)`
+  at 2px offset globally): brass, always. The ring is one shape, so a failing
+  field re-points `--focus-halo` to clay rather than drawing a second ring —
+  and because `--focus-halo` is a per-world role, the ring is already correct in
+  all four worlds without a rule each.
+
+**Cast Deep** (`--cast-deep` / `--cast-deep-rgb`) is the pigment those bottom out
+in on the near-black grounds. Held in channels as well as hex for the same reason
+`--beam-light` is: most uses are an alpha wash.
 
 ### Named Rules
 
@@ -529,18 +724,23 @@ it is asserted explicitly on inputs because iOS rounds them by default and that
 alone breaks the language. Separation is done with 1px hairlines in `Line` or
 `Line Strong`, not with corners.
 
-Four sanctioned curves exist, each for a reason:
+Five sanctioned curves exist, each a token (`--r-*`) and each for a reason:
 
-- **The arch** (`border-radius: 50% 50% 3px 3px / 33% 33% 3px 3px`): the world
+- **The arch** (`--r-arch`, `50% 50% 3px 3px / 33% 33% 3px 3px`): the world
   card's opening. This is the system's one piece of real geometry — a doorway —
   and it should not be reused as decoration on things that are not openings.
-- **The pill** (`999px`): quick-pick size chips only, where the shape signals
-  "tap me, I'm a shortcut" against the square controls around it.
-- **The circle** (`50%`): the WhatsApp float, slider thumbs, and the cart badge's
-  10px capsule.
-- **WPC's soft card** (`10px`): the one world permitted to round its cards,
-  because moulded WPC has no sharp arris and the material would be misdescribed
-  by a knife edge.
+- **The pill** (`--r-pill`, `999px`): quick-pick size chips, the cart badge, and
+  WPC's moulded section mark — shapes that signal "tap me, I'm a shortcut", or
+  that have no edge at all.
+- **The circle** (`--r-circle`, `50%`): the WhatsApp float and slider thumbs.
+- **WPC's soft card** (`--r-soft`, `10px`): the one world permitted to round its
+  cards, because moulded WPC has no sharp arris and the material would be
+  misdescribed by a knife edge.
+- **The ground arris** (`--r-hair`, `3px`): the fifth and smallest, and the one
+  this vocabulary was missing while `2px` and `3px` sat in the stylesheet
+  unnamed. Below about 4px a radius is not a corner, it is the edge ground off a
+  moulded part — a 6px slider track, a finish swatch. Nothing with a visible
+  face takes it.
 
 The recurring silhouette across the whole system is the door leaf itself: a tall
 3:8 rectangle. Product art is drawn to it, `MaterialArt` slices to fill it, and
@@ -551,6 +751,27 @@ photographs are cropped to it rather than letterboxed inside it.
 **The Square Corner Rule.** A new control starts at radius 0. Rounding is a
 decision that must name which of the four sanctioned curves it is using and why;
 "it looked softer" is not a reason.
+
+## Motion
+
+Five speeds and two curves, all tokens (`--dur-*`, `--ease-*`). There were
+twenty-three transition declarations before this, drawing on eight durations and
+four beziers, which is not a motion language — it is eight people's afternoons.
+
+`--dur-quick` 0.2s (a colour, a border) · `--dur` 0.25s (a control changing
+state) · `--dur-mid` 0.35s (a tile lifting) · `--dur-slow` 0.45s (a card
+lifting, an arch sliding) · `--dur-door` 0.7s (the swing).
+
+`--ease-out` (`cubic-bezier(0.22, 1, 0.36, 1)`) is the general deceleration.
+`--ease-door` (`cubic-bezier(0.2, 0.7, 0.15, 1)`) belongs to the leaf: it
+decelerates harder, because a real leaf on a real hinge does.
+
+### Named Rules
+
+**The One Slow Thing Rule.** The door swing is the only motion in this system
+slow enough to watch, and it is the only one that should be. Everything else
+either confirms a touch or gets out of the way; if a new transition wants
+`--dur-door`, it is competing with the signature rather than joining it.
 
 ## Components
 
@@ -724,7 +945,11 @@ titles in uppercase sans and WPC rounds its cards to 10px.
 
 What is *not* yet taken is type scale, layout rhythm and shape language beyond
 those two exceptions; the four still share one grid and one type ramp. That
-remains available.
+remains available — and it is now actually reachable: there is a `--type-*`,
+`--track-*`, `--section*` and `--r-*` layer to restate, where before a world
+wanting its own scale would have had to override components one at a time. A
+world takes the type axis by restating those tokens in its block, exactly the
+way it restates its surfaces.
 
 Adding a world is now a token block plus a signature, not a list of overrides
 per component — if you find yourself writing `[data-world='x'] .card__name`,

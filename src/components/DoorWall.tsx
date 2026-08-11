@@ -111,7 +111,7 @@ export function DoorWall() {
           <Suspense fallback={<span className="doorwall__title-fb">{TITLE}</span>}>
             <StrokeText
               text={TITLE}
-              trigger="hover"
+              trigger="scroll"
               fillMode="fade"
               /* brand gold on cream, not the reactbits violet/slate */
               strokeColor="#c9a964"

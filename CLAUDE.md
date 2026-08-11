@@ -22,6 +22,24 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   `[data-world='x'] .card__name`, a role is missing. `--w-*` survive only as aliases.
   Global chrome (nav, footer, drawer, toast, wa-float) reads tier 1 and deliberately does
   **not** theme — it's what holds the four worlds together as one brand.
+  · **Measures are tokens too** (added 2026-08-11, same file, block "tier 1: measures").
+  Type (`--type-*`, composite: size+leading+weight in one value, so `font: var(--type-title)`),
+  tracking (`--track-*`, 8 steps named by amount), `--measure`/`--measure-px`,
+  space (`--gutter --page-max --band-max --section{-sm,-lg,-phone} --nav-clear --grid-gap
+  --touch`), curves (`--r-none --r-hair --r-soft --r-arch --r-pill --r-circle`),
+  casts (`--cast-object --cast-aperture --cast-chrome{,-side} --cast-sheet --ring-focus`
+  + `--cast-deep{,-rgb}`) and motion (`--dur{,-quick,-mid,-slow,-door} --ease-out --ease-door`).
+  This replaced 13 serif clamps, 19 tracking values, 23 hand-mixed shadows and 8 durations.
+  ⚠️ `--shadow-lift` is a **tier-2 role**, not a measure — the lift a card needs depends on
+  its ground, so worlds restate it (Timbers does) and the home tiles pick up their own.
+  ⚠️ Custom properties don't work in media queries — breakpoints stay literals. A migration
+  pass rewrote `@media (max-width: 560px)` to `var(--measure-px)` and lightningcss caught it
+  at build; if you batch-replace values, exclude `@media` lines.
+  ⚠️ Figures (prices, totals, the slider readout) are deliberately **off** the type ramp —
+  each is sized against what's beside it. Don't "fix" them into a step.
+  ⚠️ `src/admin/admin.css` is out of scope by design: it declares itself "deliberately plain
+  and utilitarian, separate from the storefront's design system" and keeps its `--ax-*` tier.
+  Vendored `reactbits/*.css` is left alone to stay re-syncable.
   · **Status = the shop floor**: clay (Ply/terracotta) = fault, teak (Timbers) = caution,
   slate (WPC) = confirmed. Every status colour is a material on the floor, so nothing
   violates "don't introduce a colour no material has". WhatsApp green stays platform-only
