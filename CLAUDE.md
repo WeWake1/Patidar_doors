@@ -22,6 +22,15 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   `[data-world='x'] .card__name`, a role is missing. `--w-*` survive only as aliases.
   Global chrome (nav, footer, drawer, toast, wa-float) reads tier 1 and deliberately does
   **not** theme — it's what holds the four worlds together as one brand.
+  · ⚠️ **Vendor-prefixed properties go FIRST, the standard one LAST.** The build's CSS
+  minifier collapses a prefix pair to whichever declaration is last, so
+  `backdrop-filter` written before `-webkit-backdrop-filter` shipped as the *prefixed
+  one alone* — which Chrome does not implement (`CSS.supports('-webkit-backdrop-filter')`
+  is false there). `.nav` and `.nav__scrim` therefore had no blur at all in every
+  Chromium browser and the page's own text read straight through the fixed nav on
+  every route; it only ever looked right in `npm run dev`. Fixed 2026-08-11 by
+  reordering. Verify after any CSS-toolchain change with
+  `grep -o '\.nav{[^}]*}' dist/assets/index-*.css` — both declarations must be present.
   · **Measures are tokens too** (added 2026-08-11, same file, block "tier 1: measures").
   Type (`--type-*`, composite: size+leading+weight in one value, so `font: var(--type-title)`),
   tracking (`--track-*`, 8 steps named by amount), `--measure`/`--measure-px`,
@@ -63,6 +72,14 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   single map visual→component (cards, PDP, admin preview all use it). `PhotoShowcase.tsx`
   = the non-swinging photo treatment. `purchasable` + `price` ⇒ size(+finish if art)
   configurator & cart; otherwise "Enquire on WhatsApp" PDP. Legacy `/door/:id` → `/product/:id`.
+  ⚠️ `MaterialArt` takes a **`seed`** (always the product id) and draws plank widths, kerf
+  positions, end-grain placement, sheet count/thickness and WPC cell pitch off it. Without
+  it the geometry is fixed, so every board of one species came out of the same mould —
+  four teak cards in a row on `/timbers` and eleven down `/shop` were pixel-identical and
+  read as a loading state. It is a hash, not `Math.random`, and each swatch opens a fresh
+  stream per render, so a board looks the same on the card, on the PDP it opens and in the
+  admin preview. Pass the seed at every call site (`ProductVisual`, `Product`, the hero
+  world cards use `world-<id>`).
 - **CMS = Supabase + custom `/admin`** (replaced Sanity 2026-07-22 — the generic studio
   gave no crop control, so door photos looked wrong swinging). Project `yevrjgmgbguwvluemtsw`.
   Tables `subcategories`/`products`(FK→subcategory)/`product_images`, `admins` allow-list;
@@ -220,9 +237,9 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   with a `-webkit-text-stroke` fallback that holds the same box. Its `fontSize` prop only
   fixes stroke-to-letterform proportions — the rendered size is the CSS height on
   `.stroke-text__svg` (the viewBox is `meet`-scaled into it). Font-family is inherited.
-  ⚠️ it runs on `trigger="hover"`, which starts *at* the finished state and replays the
-  draw on `pointerenter` — so touch visitors only ever see the finished headline. Switch
-  to `trigger="scroll"` if the animation should play for them too.
+  It runs on `trigger="scroll"` + `fillMode="fade"`, so the draw plays once as the band
+  enters and the letters settle to a cream fill — touch visitors see it too. (This note
+  said `trigger="hover"` until 2026-08-11; the code had already moved.)
 - **Hover-open door**: CSS on `.door-scene--hover` (SVG −26°, photos −18° + edge-shade
   `::after`). Touch devices get `door-scene--ajar` via `src/lib/useAjarInView.ts`
   (shared IntersectionObserver, mid-viewport band, `(hover: none)` only).

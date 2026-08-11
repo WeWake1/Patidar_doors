@@ -16,7 +16,17 @@ export function ProductVisual({ product }: { product: Product }) {
   const visual = product.visual
   if (visual.kind === 'material') {
     return (
-      <MaterialArt material={visual.material} base={visual.base} dark={visual.dark} light={visual.light} className="card__material" />
+      <MaterialArt
+        material={visual.material}
+        base={visual.base}
+        dark={visual.dark}
+        light={visual.light}
+        /* The swatch is drawn, not photographed, so without a seed every board
+           of the same species comes out of the same mould — four teak cards
+           side by side were pixel-identical and read as a loading state. */
+        seed={product.id}
+        className="card__material"
+      />
     )
   }
   if (visual.kind === 'photo') {

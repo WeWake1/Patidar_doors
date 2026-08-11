@@ -367,6 +367,10 @@ button { font-family: var(--sans); }
 .diamond--gold { background: var(--gold); }
 
 .kicker {
+  /* the shorthand already pins the weight, and margin is zeroed here so the
+     class carries the same box on a <div> and on a real heading element —
+     "You may also like" on the PDP is an <h2> wearing this look */
+  margin: 0;
   font: var(--type-kicker);
   letter-spacing: var(--track-widest);
   color: var(--accent-text);
@@ -452,8 +456,15 @@ button { font-family: var(--sans); }
     16px
     max(4vw, env(safe-area-inset-left));
   background: rgba(245, 240, 230, 0.86);
-  backdrop-filter: blur(14px);
+  /* ⚠️ Prefixed FIRST, standard LAST, and not the other way round. The build's
+     CSS minifier collapses a prefix pair to whichever declaration comes last —
+     written standard-first it shipped `-webkit-backdrop-filter` alone, which
+     Chrome does not implement at all (`CSS.supports('-webkit-backdrop-filter')`
+     is false there). The nav then rendered as flat 86%-opaque cream in every
+     Chromium browser and the page's own text read straight through the bar,
+     visibly, on every route. It only ever looked right in `npm run dev`. */
   -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
 }
 .nav__brand {
@@ -468,7 +479,10 @@ button { font-family: var(--sans); }
 .nav__word { font: 600 15px var(--sans); letter-spacing: var(--track-wider); color: var(--ink); }
 .nav__wordmark { display: flex; flex-direction: column; gap: 1px; }
 .nav__sub {
-  font: 500 9px var(--sans);
+  /* the parent-brand line. It was 9px here and 8px on phones — below the ramp's
+     own floor and below anything legible at arm's length, on the one string
+     that tells a visitor Patidar Doors *is* Patidar Timbers. */
+  font: var(--type-label-xs);
   letter-spacing: var(--track-mid);
   text-transform: uppercase;
   color: var(--mut2);
@@ -549,8 +563,9 @@ button { font-family: var(--sans); }
   inset: 0;
   z-index: 58;
   background: rgba(24, 17, 9, 0.38);
-  backdrop-filter: blur(2px);
+  /* prefixed first, standard last — see the note on `.nav` */
   -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
   animation: fadein 0.22s ease both;
 }
 .nav__menu {
@@ -1364,8 +1379,26 @@ button { font-family: var(--sans); }
   text-transform: uppercase;
   color: var(--accent-text);
   list-style: none;
+  /* room for the marker */
+  position: relative;
+  padding-right: 30px;
 }
 .cfg__break > summary::-webkit-details-marker { display: none; }
+/* Same `+` the FAQ uses, for the same reason and in the same hand. Every price
+   on this site is a made-to-measure quote, so the line-by-line breakdown is the
+   part that earns it — and with the marker suppressed and no other affordance,
+   nothing said the row could be opened at all. */
+.cfg__break > summary::after {
+  content: '+';
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font: 400 20px var(--serif);
+  color: var(--accent-text);
+  transition: transform var(--dur);
+}
+.cfg__break[open] > summary::after { transform: translateY(-50%) rotate(45deg); }
 .cfg__break-count { font: var(--type-fine); letter-spacing: var(--track-hair); text-transform: none; color: var(--mut2); }
 .cfg__break-count::before { content: '· '; }
 .cfg__break-list { list-style: none; margin: 14px 0 0; padding: 0; }
@@ -1728,12 +1761,14 @@ button { font-family: var(--sans); }
    mark can carry that meaning outright — slate reads before the words do,
    and the words are still there for anyone the colour doesn't reach. */
 .toast .diamond { width: 7px; height: 7px; flex: none; background: var(--slate-lit); }
-/* with the cart drawer open the bottom strip belongs to "Proceed to checkout" —
-   the confirmation moves out from under the primary action */
-.has-overlay .toast {
-  bottom: auto;
-  top: calc(var(--nav-h, 72px) + 14px + env(safe-area-inset-top));
-}
+/* The only toast the site raises is "… added to cart", and the only overlay it
+   can collide with is the cart. Once the drawer is open the drawer *is* the
+   confirmation — the line is right there — so the toast has nothing left to
+   say and every place to say it is on top of the answer. It used to move up
+   under the nav to clear "Proceed to checkout"; on a phone the drawer is
+   full-screen and that landed it squarely on the first cart line. Marked on
+   <body> by useScrollLock, so this needs no plumbing through the tree. */
+.has-overlay .toast { display: none; }
 .wa-float {
   position: fixed;
   right: calc(22px + env(safe-area-inset-right));
@@ -1901,6 +1936,11 @@ button { font-family: var(--sans); }
   align-items: flex-start;
 }
 .visit__card p { margin: 0; font: var(--type-body); color: var(--mut); }
+/* Three cards, three different amounts of copy above the plate — left to the
+   flow the buttons landed at three different heights and the row stopped
+   reading as one row. The cards already stretch to a common height, so the
+   plate takes the foot of whichever card it is in. */
+.visit__card > .btn { margin-top: auto; }
 .visit__head {
   font: var(--type-label-sm);
   letter-spacing: var(--track-open);
@@ -2473,10 +2513,11 @@ button { font-family: var(--sans); }
   }
   .nav__mark { height: 26px; }
   .nav__word { font-size: 13px; letter-spacing: var(--track-open); }
-  .nav__sub { font-size: 8px; }
+  /* .nav__sub keeps its 10px ramp step here — it is dropped outright below
+     380px, which is the honest answer to a nav that has run out of room */
   .nav__cart { padding: 9px 13px; gap: 0; }
   .nav__cart-label { display: none; }
-  .nav__badge { min-width: 18px; height: 18px; font-size: 10.5px; margin-left: 7px; }
+  .nav__badge { min-width: 18px; height: 18px; font-size: 10px; margin-left: 7px; }
 
   /* — thumbs, not cursors: every interactive thing gets a 44px-ish target — */
   .chip { min-height: var(--touch); padding: 10px 18px; }

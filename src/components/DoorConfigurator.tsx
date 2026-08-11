@@ -261,7 +261,9 @@ export function PriceBreakdown({ quote }: { quote: PriceResult }) {
     <details className="cfg__break">
       <summary>
         What makes up {fmtINR(quote.total)}
-        <span className="cfg__break-count">{quote.breakdown.length} items</span>
+        <span className="cfg__break-count">
+          {quote.breakdown.length} {quote.breakdown.length === 1 ? 'item' : 'items'}
+        </span>
       </summary>
       <ul className="cfg__break-list">
         {quote.breakdown.map((line) => (

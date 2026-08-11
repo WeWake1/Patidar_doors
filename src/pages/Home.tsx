@@ -52,7 +52,9 @@ export function Home() {
         ].map((v, i) => (
           <Reveal key={v.n} delay={i * 90}>
             <div className="props__num">{v.n}</div>
-            <h3 className="props__head">{v.h}</h3>
+            {/* h2: these are top-level sections of the page, and there is no
+                heading above them to be a level-3 under */}
+            <h2 className="props__head">{v.h}</h2>
             <p className="props__body">{v.p}</p>
           </Reveal>
         ))}

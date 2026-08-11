@@ -77,7 +77,13 @@ const WorldCardInner = memo(function WorldCardInner({ art }: { art: WorldArt }) 
         {art.kind === 'door' ? (
           <DoorArt art={art.art} tone={art.tone} />
         ) : (
-          <MaterialArt material={art.material} base={art.tone.base} dark={art.tone.dark} light={art.tone.light} />
+          <MaterialArt
+            material={art.material}
+            base={art.tone.base}
+            dark={art.tone.dark}
+            light={art.tone.light}
+            seed={`world-${art.id}`}
+          />
         )}
         <span className="wcard__scrim" />
         <span className="wcard__frame" />
@@ -298,8 +304,6 @@ export function HeroPortal() {
           </ErrorBoundary>
         </div>
 
-        <Corridor p={p} interactive={corridorInteractive} />
-
         <div
           className="portal__zoom"
           style={{
@@ -319,6 +323,13 @@ export function HeroPortal() {
             </HeroDoorPhoto>
           </div>
         </div>
+
+        {/* After the zoom block, not before it. Paint order is set by z-index
+            (corridor 1, zoom 2), so this is free visually — but in the document
+            the corridor's "Choose your world" was an <h2> standing ahead of the
+            page's own <h1>, and a heading outline that opens on a subheading is
+            the first thing a screen-reader user meets on this site. */}
+        <Corridor p={p} interactive={corridorInteractive} />
 
         <button
           type="button"

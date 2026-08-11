@@ -44,7 +44,15 @@ function ProductStage({ product }: { product: ProductT }) {
   if (visual.kind === 'material') {
     return (
       <div className="pdp__stage pdp__stage--material">
-        <MaterialArt material={visual.material} base={visual.base} dark={visual.dark} light={visual.light} className="pdp__material" />
+        {/* same seed as the card that opened this page, so it is the same board */}
+        <MaterialArt
+          material={visual.material}
+          base={visual.base}
+          dark={visual.dark}
+          light={visual.light}
+          seed={product.id}
+          className="pdp__material"
+        />
       </div>
     )
   }
@@ -216,7 +224,10 @@ function ProductInner({ product }: { product: ProductT }) {
       </div>
 
       <div className="pdp__related">
-        <div className="kicker">You may also like</div>
+        {/* This is the section's heading, so it is one — the kicker class is the
+            look, not the level. Without it the card names were h3s hanging off
+            the product's h1 with nothing in between. */}
+        <h2 className="kicker">You may also like</h2>
         <div className="grid grid--3">
           {related.map((p) => (
             <ProductCard key={p.id} product={p} />
