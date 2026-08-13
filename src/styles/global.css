@@ -955,16 +955,10 @@ button { font-family: var(--sans); }
   color: var(--gold);
 }
 
-/* ── FAQ ─────────────────────────────────────────────────── */
-.faqteaser {
-  padding: var(--section) var(--gutter);
-  max-width: var(--band-max);
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: minmax(240px, 0.8fr) 1.2fr;
-  gap: 56px;
-}
-.faqteaser__title { margin: 10px 0 22px; font: var(--type-section); }
+/* ── FAQ ──────────────────────────────────────────────────
+   `.faq` is the accordion itself, shared by /faq and /policies. The home
+   page's `.faqteaser` grid was removed 2026-08-13 with the section — see
+   Home.tsx. */
 .faq {
   border-bottom: 1px solid var(--line2);
 }
@@ -1710,6 +1704,7 @@ button { font-family: var(--sans); }
 
 /* ── policies / notfound ─────────────────────────────────── */
 .policies { max-width: 780px; }
+.policies__sub { margin: 16px 0 0; max-width: var(--measure); }
 .policies section { margin-top: 46px; }
 .policies h2 { font: var(--type-title); margin: 0 0 12px; }
 .policies p { color: var(--mut); line-height: 1.75; margin: 0 0 12px; }
@@ -1821,7 +1816,6 @@ button { font-family: var(--sans); }
   .pdp__scene { width: 52%; }
   .checkout__grid { grid-template-columns: 1fr; }
   .checkout__summary { position: static; order: -1; }
-  .faqteaser { grid-template-columns: 1fr; gap: 24px; }
 }
 @media (max-width: 760px) {
   .nav__links { display: none; }
@@ -2425,7 +2419,6 @@ button { font-family: var(--sans); }
   .terms { padding: var(--section-phone) var(--gutter-phone); }
   .terms__track { margin-top: 44px; gap: 34px 30px; }
   .terms__foot { margin-top: 38px; }
-  .faqteaser { padding: var(--section-phone) var(--gutter-phone); }
   .cta { padding: 88px var(--gutter-phone); }
   .cta__sub { margin-bottom: 30px; }
   .world__intro { padding: 126px var(--gutter-phone) 54px; }

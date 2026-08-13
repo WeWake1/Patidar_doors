@@ -3,7 +3,7 @@ import { DoorWallSlot } from '../components/DoorWallSlot'
 import { HeroPortal } from '../components/HeroPortal'
 import { ProductCard } from '../components/ProductCard'
 import { Reveal } from '../components/Reveal'
-import { FAQS, PAYMENT_STEPS, PROCESS } from '../data/content'
+import { PAYMENT_STEPS, PROCESS } from '../data/content'
 import { getProduct } from '../data/products'
 import { usePageMeta } from '../lib/usePageMeta'
 
@@ -171,24 +171,13 @@ export function Home() {
         </div>
       </section>
 
-      {/* ── FAQ TEASER ───────────────────────────────────────── */}
-      <section className="faqteaser">
-        <div className="faqteaser__col">
-          <div className="kicker">Good to know</div>
-          <h2 className="faqteaser__title">Questions, answered.</h2>
-          <Link to="/faq" className="linkline">
-            Read the full FAQ →
-          </Link>
-        </div>
-        <div className="faqteaser__list">
-          {FAQS.slice(0, 3).map((f) => (
-            <details key={f.q} className="faq">
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      {/* A `.faqteaser` — three <details> from FAQS with a "read the full FAQ"
+          link — sat here until 2026-08-13. Removed, not moved: accordions of
+          shipping questions are the oldest furniture on a storefront, and the
+          page had just answered the two that matter (`.process` = how it works,
+          `.terms` = what you pay and when) in its own voice. What was left in
+          the teaser was fine print, which belongs on /policies and /faq — both
+          in the footer, and now cross-linked to each other. */}
 
       {/* ── CTA ──────────────────────────────────────────────── */}
       <section className="cta">

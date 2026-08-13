@@ -117,9 +117,12 @@ await step('corridor card walks into Timbers world', async () => {
 })
 
 await step('home sections render', async () => {
-  for (const sel of ['.marquee', '.props', '.featured', '.econ', '.process', '.terms', '.faqteaser', '.cta']) {
+  for (const sel of ['.marquee', '.props', '.featured', '.econ', '.process', '.terms', '.cta']) {
     if (!(await page.locator(sel).count())) throw new Error(`missing ${sel}`)
   }
+  // the FAQ accordion teaser was removed from `/` 2026-08-13 — the full set
+  // lives on /faq and /policies, both in the footer
+  if (await page.locator('.faq').count()) throw new Error('.faq is back on the home page')
 })
 await page.locator('.featured').scrollIntoViewIfNeeded()
 await page.waitForTimeout(900)

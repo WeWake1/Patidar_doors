@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { config } from '../config'
 import { usePageMeta } from '../lib/usePageMeta'
 
@@ -7,6 +8,13 @@ export function Policies() {
     <div className="page-pad policies">
       <div className="kicker">The fine print, in plain words</div>
       <h1 className="page-title">Warranty & policies</h1>
+      {/* /faq has pointed here since it shipped; this is the other half of that
+          pair. It matters more since 2026-08-13, when the home page's FAQ
+          teaser was removed — the footer is now the only other way in. */}
+      <p className="policies__sub">
+        The terms below are the long form. For the shorter questions — sizes, timelines, what to bring to the store —{' '}
+        <Link to="/faq">read the FAQ</Link>.
+      </p>
 
       <section>
         <h2>Warranty</h2>

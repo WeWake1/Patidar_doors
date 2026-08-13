@@ -264,6 +264,15 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   (2) the click is delegated to the wall and falls back to the tiles' projected rects when
   `elementFromPoint` still misses near the plane's edges. Also `dim`/`.drift-wall__overlay`
   go near-opaque under `(hover: none)`: the scrim only pays for itself if hover can lift it.
+- **No FAQ accordion on `/`.** A `.faqteaser` (three `<details>` off `FAQS` + "read the
+  full FAQ") sat between `.terms` and `.cta` until 2026-08-13. Removed, not moved: a
+  stack of collapsed shipping questions is the oldest furniture on a storefront, and the
+  page had already answered the two that matter in its own voice one section earlier —
+  `.process` is how it works, `.terms` is what you pay and when. The rest was fine print.
+  It is not lost: `FAQS` renders in full on `/faq`, and `/faq` + `/policies` now link to
+  each other (the footer carries both). The `.faq` accordion CSS stays — those two pages
+  use it; only the `.faqteaser` grid went. `verify.e2e.mjs`'s "home sections render" step
+  now asserts `.faq` is **absent** from `/`, so a re-add trips the smoke test.
 - **StrokeText** (`src/components/reactbits/StrokeText.tsx`): SVG draw-on headline, used
   for the Door Wall title. Needs `gsap` + ScrollTrigger (~46 KB gz) so it is **lazy-loaded**
   with a `-webkit-text-stroke` fallback that holds the same box. Its `fontSize` prop only
