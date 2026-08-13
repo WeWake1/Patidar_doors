@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
+import { DoorWallSlot } from '../components/DoorWallSlot'
 import { HeroPortal } from '../components/HeroPortal'
 import { ProductCard } from '../components/ProductCard'
 import { Reveal } from '../components/Reveal'
 import { FAQS, PAYMENT_STEPS, PROCESS } from '../data/content'
 import { getProduct } from '../data/products'
-import { WORLDS } from '../data/worlds'
 import { usePageMeta } from '../lib/usePageMeta'
 
 const MARQUEE = 'Timbers  ✦  Doors  ✦  Ply  ✦  WPC  ✦  Our yard, our factory, our store  ✦  Made to measure  ✦  '
@@ -60,30 +60,20 @@ export function Home() {
         ))}
       </section>
 
-      {/* ── WORLD TILES ──────────────────────────────────────── */}
-      <section className="worldstrip">
-        <div className="featured__top">
-          <div>
-            <div className="kicker">Four worlds, one roof</div>
-            <h2 className="featured__title">Where do you want to start?</h2>
-          </div>
-        </div>
-        <div className="worldstrip__grid">
-          {WORLDS.map((w, i) => (
-            <Reveal key={w.id} delay={i * 80}>
-              {/* data-world hands the tile that world's whole token block, so the
-                  strip can never drift from the page it opens */}
-              <Link to={`/${w.id}`} data-world={w.id} className={`worldstrip__tile worldstrip__tile--${w.id}`}>
-                <span className="worldstrip__name">{w.short}</span>
-                <span className="worldstrip__tag">{w.tagline}</span>
-                <span className="worldstrip__go" aria-hidden="true">
-                  Enter →
-                </span>
-              </Link>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      {/* ── DOOR WALL ────────────────────────────────────────────
+          Moved off /shop 2026-08-13. `.props` above it makes the claim — "see
+          it, touch it, then decide" — and the wall is the evidence: real doors
+          standing in the real store, before `.featured` narrows to three with
+          prices. It also keeps the page's dark-band rhythm even — hero, wall,
+          econ, terms — with `.featured` as the light breather between this band
+          and the next. Lazy + mounted on approach: see DoorWallSlot.
+
+          (It followed a `.worldstrip` of four world tiles until 2026-08-13.
+          That strip was removed, not moved: it rendered the same `w.short` +
+          `w.tagline` to the same four routes as the hero corridor's "Choose
+          your world", which every visitor scrolls through to reach any of this
+          page. The worlds are still in the nav and the footer.) */}
+      <DoorWallSlot />
 
       {/* ── FEATURED ─────────────────────────────────────────── */}
       <section className="featured">

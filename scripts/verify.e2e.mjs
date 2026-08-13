@@ -128,29 +128,49 @@ await page.locator('.process').scrollIntoViewIfNeeded()
 await page.waitForTimeout(900)
 await shot('04-home-process')
 
-/* ── SHOP / CATALOGUE ──────────────────────────────────── */
-await step('catalogue shows all 49 products', async () => {
-  await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
-  await page.waitForSelector('.card')
-  const n = await page.locator('.card').count()
-  if (n !== 49) throw new Error(`expected 49 cards, got ${n}`)
-})
-await page.waitForTimeout(600)
-await shot('05-shop-all', { fullPage: true })
+/* ── DOOR WALL (home) ──────────────────────────────────── */
+/* The band moved off /shop on 2026-08-13 and now sits below the portal hero,
+   lazy and mounted only on approach — so it cannot be reached by a fixed
+   offset any more, and `.doorwall` does not exist until we get near it. Walk
+   to the reserve (`.doorwall-hold`, which is in the page from the start), let
+   the chunk mount, then centre the pane on what actually rendered. */
+async function gotoDoorWall() {
+  await page.goto(BASE + '/', { waitUntil: 'networkidle' })
+  const reserve = await page.evaluate(() => {
+    const el = document.querySelector('.doorwall, .doorwall-hold')
+    if (!el) return null
+    return el.getBoundingClientRect().top + window.scrollY
+  })
+  if (reserve === null) throw new Error('no door wall (or its reserve) on the home page')
+  await wheelTo(reserve)
+  await page.waitForSelector('.drift-wall__tile')
+  const centre = await page.evaluate(() => {
+    const r = document.querySelector('.doorwall__wall').getBoundingClientRect()
+    return Math.max(0, r.top + window.scrollY + r.height / 2 - window.innerHeight / 2)
+  })
+  await wheelTo(centre)
+  await page.waitForTimeout(700)
+}
 
 /* The wall's tiles drift continuously, so there is no stable locator to click —
    aim at the middle of the pane and let the component resolve the tile. */
 async function clickDoorWall() {
-  await wheelTo(620)
-  await page.waitForTimeout(700)
   const box = await page.locator('.doorwall__wall').boundingBox()
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
   await page.waitForTimeout(500)
 }
 
+await step('home reserves the door wall band without loading it', async () => {
+  await page.goto(BASE + '/', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.hero__title')
+  // At the top of the page the band is still a viewport away: the reserve holds
+  // its height, and mounting it here would put DriftWall's rAF under the hero.
+  if (!(await page.locator('.doorwall-hold').count())) throw new Error('no reserve holding the door wall band')
+  if (await page.locator('.drift-wall').count()) throw new Error('door wall mounted at the top of the page')
+})
+
 await step('door wall: click a tile, big viewer follows', async () => {
-  await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
-  await page.waitForSelector('.drift-wall__tile')
+  await gotoDoorWall()
   const before = await page.locator('.doorwall__viewer img').getAttribute('src')
   // up to three tries: the middle of the pane can land on the one photo already
   // showing, which is a legitimate click with no visible change
@@ -162,6 +182,19 @@ await step('door wall: click a tile, big viewer follows', async () => {
   if (after === before) throw new Error('viewer never changed photo')
   if (!(await page.locator('.drift-wall__tile.is-selected').count())) throw new Error('no tile marked selected')
 })
+await shot('04b-home-doorwall')
+
+/* ── SHOP / CATALOGUE ──────────────────────────────────── */
+await step('catalogue shows all 49 products', async () => {
+  await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.card')
+  const n = await page.locator('.card').count()
+  if (n !== 49) throw new Error(`expected 49 cards, got ${n}`)
+  // it moved to the home page — showing it twice would halve it
+  if (await page.locator('.doorwall, .doorwall-hold').count()) throw new Error('door wall still on the catalogue')
+})
+await page.waitForTimeout(600)
+await shot('05-shop-all', { fullPage: true })
 
 await step('world filter works', async () => {
   await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
@@ -391,8 +424,7 @@ await step('mobile home + burger menu', async () => {
 })
 
 await step('mobile door wall taps open the full-screen photo', async () => {
-  await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
-  await page.waitForSelector('.drift-wall__tile')
+  await gotoDoorWall()
   if (await page.locator('.doorwall__viewer').count()) throw new Error('split viewer should be desktop-only')
   await clickDoorWall()
   await page.waitForSelector('.doorzoom', { timeout: 3000 })

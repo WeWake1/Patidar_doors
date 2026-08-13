@@ -1001,13 +1001,10 @@ button { font-family: var(--sans); }
 .cta__sub { margin: 20px auto 36px; max-width: 460px; font: var(--type-body); color: var(--mut); }
 
 /* ── shop ────────────────────────────────────────────────── */
-/* the page splits into two padded blocks around the full-bleed door wall.
-   `.page-pad` keeps owning the outer edges (its own breakpoints rewrite the
-   shorthand later in this file) — these only close the seam, and carry two
-   classes so they win wherever they land in the cascade. */
-.shop__head.page-pad { padding-bottom: 56px; }
-.shop__list.page-pad { padding-top: 76px; }
-
+/* The page was two padded blocks split by the full-bleed door wall until
+   2026-08-13; the wall moved to the home page and `.shop` is one `.page-pad`
+   again, so `.shop__head` / `.shop__list` are now plain wrappers with no
+   seam to close. `.chips` already carries the gap between them. */
 .shop__title { margin: 10px 0 0; font: var(--type-page); }
 .shop__sub { margin: 14px 0 0; max-width: var(--measure-px); font: var(--type-body); color: var(--mut); }
 .chips { display: flex; gap: 10px; flex-wrap: wrap; margin: 38px 0 40px; }
@@ -1024,7 +1021,7 @@ button { font-family: var(--sans); }
 }
 .chip--on { background: var(--action); color: var(--action-text); border-color: var(--action); }
 
-/* ── door wall (catalogue showpiece) ─────────────────────── */
+/* ── door wall (home showpiece) ──────────────────────────── */
 /* Dark band so the DriftWall's radial mask can fade its tiles into the
    background instead of stopping on a hard edge — `overlayColor` on the
    component is this same --deep. */
@@ -1120,6 +1117,26 @@ button { font-family: var(--sans); }
    scrim that makes the desktop hover pop just leaves the photos muddy */
 @media (hover: none) {
   .doorwall .drift-wall__overlay { opacity: 0.1; }
+}
+
+/* The band's place in the page before its chunk arrives (see DoorWallSlot).
+   It carries the colour as well as the height: the wall mounts a viewport
+   early, so what a visitor actually sees approaching is this, and a cream gap
+   that turns dark just before it enters reads as a fault. Height is the same
+   arithmetic as `.doorwall` above — padding, then the head and the split gap
+   as one measured constant, then the wall pane. The constants were read off
+   the rendered band at 1440 and 390 rather than derived, because the head's
+   height depends on where the title's clamp lands and how the sub-heading
+   wraps; between those widths it is close, which is all it has to be — the
+   band mounts a viewport early, so any correction lands off-screen. */
+.doorwall-hold {
+  background: var(--deep);
+  border-top: 1px solid var(--frame2);
+  border-bottom: 1px solid var(--frame2);
+  min-height: calc(var(--section-sm) * 2 + 261px + min(70vh, 620px));
+}
+@media (max-width: 899px) {
+  .doorwall-hold { min-height: calc(140px + 179px + min(64vh, 460px)); }
 }
 
 /* tap-to-zoom, the phone stand-in for the desktop two-up */
@@ -2346,43 +2363,13 @@ button { font-family: var(--sans); }
 .portal--static .wcard__name { color: var(--ink); }
 .portal--static .wcard__tag { color: var(--mut); }
 
-/* ── home: world tiles strip ─────────────────────────────── */
-.worldstrip { padding: var(--section-sm) var(--gutter) 30px; max-width: var(--page-max); margin: 0 auto; }
-.worldstrip__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 20px;
-  margin-top: 36px;
-}
-.worldstrip__tile {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 30px 26px 26px;
-  min-height: 170px;
-  text-decoration: none;
-  border: 1px solid var(--line);
-  transition: transform var(--dur-mid) ease, box-shadow var(--dur-mid) ease;
-}
-@media (hover: hover) {
-  .worldstrip__tile:hover { transform: translateY(-5px); box-shadow: var(--shadow-lift); }
-}
-.worldstrip__name { font: 600 15px var(--sans); letter-spacing: var(--track-wider); }
-.worldstrip__tag { font: var(--type-title-sm); }
-.worldstrip__go {
-  margin-top: auto;
-  font: var(--type-label-sm);
-  letter-spacing: var(--track-mid);
-  text-transform: uppercase;
-  opacity: 0.75;
-}
-/* Each tile carries data-world, so it reads that world's token block straight
-   from worlds.css — the strip and the page it opens cannot drift apart, and a
-   fifth world would need no rule here at all. Only the signature edge that
-   worlds.css puts on a section rule is restated at tile scale. */
-.worldstrip__tile { background: var(--surface); color: var(--text); border-color: var(--border); }
-.worldstrip__name { color: var(--accent-text); }
-.worldstrip__tile--wpc { border-radius: var(--r-soft); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65); }
+/* The home page's `.worldstrip` — four `data-world` tiles under "Where do you
+   want to start?" — lived here until 2026-08-13. Removed with the section: it
+   rendered the same two fields to the same four routes as the hero corridor's
+   "Choose your world", and the 520vh track means nobody reaches the strip
+   without scrolling through the corridor first. The worlds keep their nav and
+   footer links. The `data-world`-reads-its-own-token-block trick the tiles
+   demonstrated is still live on `.wcard` and on the world pages themselves. */
 
 .cta__row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
 
@@ -2441,10 +2428,6 @@ button { font-family: var(--sans); }
   .faqteaser { padding: var(--section-phone) var(--gutter-phone); }
   .cta { padding: 88px var(--gutter-phone); }
   .cta__sub { margin-bottom: 30px; }
-  /* the four-world strip and the featured row are separate ideas — 22px read
-     as one continuous block, so give the seam the same air as the others */
-  .worldstrip { padding: var(--section-phone) var(--gutter-phone) 56px; }
-  .worldstrip__grid { margin-top: 26px; }
   .world__intro { padding: 126px var(--gutter-phone) 54px; }
   .world__section { padding: 38px var(--gutter-phone) 4px; }
   .world__section-title { margin-bottom: 20px; }
@@ -2491,12 +2474,6 @@ button { font-family: var(--sans); }
     min-height: var(--touch);
     padding: 11px 12px;
   }
-
-  /* — four-world strip → a tidy 2×2 instead of one tall stack — */
-  .worldstrip__grid { grid-template-columns: 1fr 1fr; gap: 12px; }
-  .worldstrip__tile { padding: 20px 16px 18px; min-height: 130px; }
-  .worldstrip__tag { font: var(--type-name-sm); }
-  .worldstrip__name { font-size: 13px; letter-spacing: var(--track-mid); }
 
   /* — hero copy: the kicker has to hold one centred line. At the desktop
        12px/0.38em it runs ~410px and wraps to a stubby second line that reads

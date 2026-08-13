@@ -1,5 +1,4 @@
 import { useSearchParams } from 'react-router-dom'
-import { DoorWall } from '../components/DoorWall'
 import { ProductCard } from '../components/ProductCard'
 import { PRODUCTS } from '../data/products'
 import { WORLDS } from '../data/worlds'
@@ -20,10 +19,12 @@ export function Shop() {
   const products = PRODUCTS.filter((p) => world === 'all' || p.world === world)
 
   return (
-    /* the door wall is a full-bleed dark band, so the page splits into padded
-       blocks around it instead of sitting inside one `.page-pad` */
-    <div className="shop">
-      <div className="shop__head page-pad">
+    /* One padded block again: the door wall was a full-bleed dark band that had
+       to split this page in two, and it now lives on the home page — where it
+       is a teaser that sends people *here*, rather than the thing waiting for
+       them once they arrive. */
+    <div className="shop page-pad">
+      <div className="shop__head">
         <div className="kicker">Everything under one roof</div>
         <h1 className="shop__title">Catalogue</h1>
         <p className="shop__sub">
@@ -32,9 +33,7 @@ export function Shop() {
         </p>
       </div>
 
-      <DoorWall />
-
-      <div className="shop__list page-pad">
+      <div className="shop__list">
         <div className="chips" role="group" aria-label={t('shop.filterLabel')}>
           <button
             type="button"

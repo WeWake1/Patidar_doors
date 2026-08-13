@@ -55,13 +55,18 @@ const ITEMS: DriftWallItem[] = WALL_PHOTOS.map((p) => ({
 }))
 
 /**
- * Catalogue showpiece: a slow 3D wall of door photographs drifting past.
+ * Home-page showpiece: a slow 3D wall of door photographs drifting past.
  *
  * On a wide screen it is a two-up — the wall lives on the right and the door
  * you click blows up on the left. Narrow screens keep the wall exactly as it
  * is (it is the nicest thing on the page at that width) and a tap opens the
  * photo full-screen instead, because a viewer pinned above or below the wall
  * would update off-screen.
+ *
+ * Lived on /shop until 2026-08-13. Nothing here knows where it is mounted, but
+ * two things assume it is not on the catalogue any more: the closing link goes
+ * to /shop, and it must be mounted through `DoorWallSlot` rather than imported
+ * directly — the reasons are in that file.
  */
 export function DoorWall() {
   const split = useMediaQuery(SPLIT_QUERY)
@@ -134,6 +139,10 @@ export function DoorWall() {
             ? 'Every one of these is standing in the store. Click any door on the wall to bring it forward.'
             : 'Every one of these is standing in the store. Tap any door to see it up close.'}
         </p>
+        {/* Deliberately no "see the catalogue" link here, though the band is a
+            teaser now: `.featured` sits directly below it and closes with
+            exactly that link — on a 900px screen both are visible at once, and
+            the pair read as a stutter. The hand-off is the next section's. */}
       </div>
 
       <div className="doorwall__split">

@@ -11,8 +11,15 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   drafted by AI and must be confirmed with the client.
 - **Four worlds IA**: `/timbers` `/doors` `/ply` `/wpc` render one `WorldPage` themed by
   `[data-world]` token scopes in `src/styles/worlds.css`. Worlds/subcategories defined in
-  `src/data/worlds.ts`. The home world-strip tiles carry `data-world` too, so they read the
-  same block and can't drift from the page they open.
+  `src/data/worlds.ts`. The hero corridor's `.wcard`s carry `data-world` too, so they read
+  the same block and can't drift from the page they open.
+  ⚠️ **The four worlds are offered on `/` exactly once** — the hero corridor's "Choose your
+  world" — plus the nav and the footer. A `.worldstrip` section ("Where do you want to
+  start?") duplicated it until 2026-08-13: same `w.short` + `w.tagline`, same four routes,
+  ~600px below a corridor that the 520vh sticky track makes *unskippable* on the way to any
+  of the page. Removed rather than moved — the footer already lists the four worlds, so a
+  strip at the bottom would have landed above another copy of itself. Don't re-add a
+  mid-page world nav without a reason the corridor can't serve.
 - **Colour tokens are two-tier** (`src/styles/global.css`). Tier 1 = primitives, physical
   names for pigments (`--cream --panel --night --brass --gold --lamp2/3 …`). Tier 2 =
   **roles** (`--surface[-raised|-sunk|-band] --text[-2|-3] --border[-strong|-control]
@@ -192,6 +199,8 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   first bundle is the time to first paint on a client-rendered site, and it was carrying
   the pricing table, the configurator, the Door Wall's 3D drift and the checkout
   serialiser — none of it reachable from the home page without a tap. 130 → 96 kB gz.
+  (The Door Wall is on the home page since 2026-08-13 and still out of the entry bundle,
+  via its own lazy boundary in `DoorWallSlot.tsx` — see that bullet.)
   The `Suspense` fallback is `.route-hold`, a `min-height: 100vh` blank: a route chunk
   usually beats it to the screen, and without the reserve `<main>` collapses and the
   footer jumps. Not a spinner — one that flashes for 80ms reads as a fault.
@@ -214,8 +223,9 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   elliptical clip, a 60px drop shadow and a 60px inset one. Unpromoted, Chrome
   re-rasterises all four on every frame of the reveal, which is exactly the phase that
   stuttered on a phone. Verify with CDP `LayerTree`: all 4 must have their own layer.
-- **Door Wall** (`src/components/DoorWall.tsx`, top of `/shop`): full-bleed dark band —
-  reactbits `DriftWall` of door photos drifting in 3D. ≥900px (`useMediaQuery`) it is a
+- **Door Wall** (`src/components/DoorWall.tsx`, on **`/`** between `.props` and
+  `.featured`): full-bleed dark band — reactbits `DriftWall` of door photos drifting in
+  3D. ≥900px (`useMediaQuery`) it is a
   two-up, wall right + clicked photo big on the left; below that the wall stays as-is and
   a tap opens a full-screen `.doorzoom` (through `useScrollLock`), because a viewer above
   or below the wall would update off-screen. Photos = `src/data/wallPhotos.ts`, a list of
@@ -223,8 +233,30 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   28 of them, hand-checked at full size for watermarks (the wall shows photos far bigger
   than a card, so marks photoMap only had to dodge on covers surface here). Swap by
   editing `WALL_IDS`; captions are opt-in via `CAPTIONS` and blank by default while copy
-  is unconfirmed. `.shop` is no longer one `.page-pad` — it is head / wall / list so the
-  band can go edge to edge.
+  is unconfirmed.
+  · **Moved off `/shop` 2026-08-13.** It reads as proof, not as catalogue chrome:
+  `.props` above it makes the claim ("see it, touch it, then decide") and the wall is the
+  evidence — real doors standing in the real store — before `.featured` narrows to three
+  with prices. It also keeps the page's dark-band rhythm even (hero, wall, econ, terms)
+  with `.featured` as the light breather. `.shop` is one `.page-pad` again. (It landed
+  under the `.worldstrip` first; that section was removed the same day — see the four
+  worlds bullet — which is what put it against `.props`.)
+  ⚠️ It carries **no "see the catalogue" link of its own**, though it is a teaser now —
+  `.featured` closes with exactly that link and both are on screen at once at 900px; the
+  pair read as a stutter. The hand-off is the next section's.
+  ⚠️ **Mount it only through `DoorWallSlot.tsx`**, never by importing `DoorWall` directly.
+  Two separate reasons, both fatal on the home page: (1) `Home` is eager, so a plain
+  import puts `DriftWall` + the photo manifest into the *entry* bundle (the slot's `lazy`
+  boundary has to live in its own module for this — that is why it is a second file);
+  (2) `DriftWall` runs an **unconditional rAF** that writes a transform to every tile for
+  the whole life of the component, so an ungated mount would leave that loop running
+  under the 520vh hero scrub — the same mistake the beams' `beamsLive` gate exists to
+  prevent. `useNearViewport` mounts it one viewport out and unmounts it past 2.2, two
+  boundaries so parking on the edge can't thrash it. `.doorwall-hold` holds the band's
+  height *and its colour* until then (a cream gap turning dark as it enters reads as a
+  fault); its two constants are measured off the rendered band, not derived — re-measure
+  them if the head's copy changes. Entry bundle unmoved at 96 kB gz; the wall is its own
+  4.2 kB chunk.
   ⚠️ two fixes on top of the registry `DriftWall`: (1) the tile is `transform-style: flat`,
   not `preserve-3d` — inside a preserve-3d subtree Chrome resolves `elementFromPoint` (so
   also mouse events) to the track for ~half the wall and the clicks vanish; the hover
@@ -316,6 +348,12 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   tap-to-zoom), redirect, the door configurator (panel-snap steps, conditional frame
   groups, breakdown sums to the headline, mobile 44px targets), full cart→wa.me flow,
   mobile. Keep it green.
+  ⚠️ The door-wall steps go through `gotoDoorWall()`, which walks to the band's *reserve*
+  (`.doorwall-hold`, the only thing in the page before the chunk mounts) and re-centres on
+  `.doorwall__wall` once it renders. No fixed offset can find it — it is lazy, mounted on
+  approach and sits under a 520vh hero. A companion step asserts the opposite at scroll 0:
+  the reserve is present and `.drift-wall` is *not*, which is what keeps the rAF off the
+  hero. `/shop` is asserted to have neither.
   ⚠️ Scroll the storefront with the script's `wheelTo()`, never a raw `window.scrollTo`:
   Lenis owns wheel scrolling and lerps the page back to its own target, which leaves the
   portal at the wrong phase (its corridor invisible → clicks time out). The admin step

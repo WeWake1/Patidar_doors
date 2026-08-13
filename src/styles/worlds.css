@@ -177,15 +177,9 @@
   background-position: bottom;
   background-size: 100% 5px;
 }
-/* the home tile carries data-world on itself, so this compounds rather than
-   descends */
-[data-world='ply'].worldstrip__tile {
-  padding-bottom: 24px;
-  background-image: var(--ply-edge);
-  background-repeat: no-repeat;
-  background-position: bottom;
-  background-size: 100% 5px;
-}
+/* A second ply-edge rule sat here for `.worldstrip__tile` (compounded, not
+   descended — the home tile carried data-world on itself). Removed with the
+   strip on 2026-08-13; see the note in global.css. */
 
 /* ═══ WPC — moulded, waterproof ═════════════════════════════
    The one cool world. Extruded stock has no arris and no visible edge, so
