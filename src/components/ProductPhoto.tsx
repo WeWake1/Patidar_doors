@@ -31,7 +31,14 @@ export function ProductPhoto({
 
   if (failed) {
     return (
-      <div className={`photo-missing${className ? ' ' + className : ''}`} role="img" aria-label={photo.alt}>
+      <div
+        className={`photo-missing${className ? ' ' + className : ''}`}
+        role="img"
+        /* The state, then the subject. Taking `photo.alt` alone told a screen
+           reader the door was on screen while everyone else saw an empty
+           panel. */
+        aria-label={t('photo.unavailableFor', { alt: photo.alt })}
+      >
         <span className="photo-missing__grain" aria-hidden="true" />
         <span className="photo-missing__label">{t('photo.unavailable')}</span>
       </div>

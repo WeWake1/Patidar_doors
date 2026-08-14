@@ -45,6 +45,15 @@ interface DriftWallProps {
   /** index into `items` of the tile that should stay lit */
   selectedIndex?: number
   onSelect?: (item: DriftWallItem, index: number) => void
+  /**
+   * Accessible name for the wall as a whole. Third local addition on top of the
+   * registry component (see the two in `DoorWall.tsx`'s notes): the hardcoded
+   * default describes the widget rather than what is in it, so a screen reader
+   * on the home page heard "drifting wall of tiles" where the visible heading
+   * says the doors are standing in the store. Defaults to the registry string,
+   * so this stays a superset and the file stays re-syncable.
+   */
+  ariaLabel?: string
   className?: string
   style?: React.CSSProperties
 }
@@ -86,6 +95,7 @@ const DriftWall: React.FC<DriftWallProps> = ({
   overlayColor = '#060010',
   selectedIndex = -1,
   onSelect,
+  ariaLabel = 'Drifting wall of tiles',
   className = '',
   style,
 }) => {
@@ -382,7 +392,7 @@ const DriftWall: React.FC<DriftWallProps> = ({
       }}
       onPointerLeave={handlePointerLeaveWall}
       role="group"
-      aria-label="Drifting wall of tiles"
+      aria-label={ariaLabel}
     >
       <div ref={planeRef} className="drift-wall__plane">
         {columnItems.map((col, c) => {

@@ -5,9 +5,14 @@
  * guarantee the client has not confirmed. The warranty duration, the coverage
  * list and the pan-India service reach were all removed on 2026-08-08 for
  * exactly that reason — see PRODUCT.md § "Evidence on Hand" before adding any
- * of them back. Two claims survive here that are still unverified and are
- * tracked in PRODUCT.md rather than fixed: the 30-working-day refund guarantee
- * in Policies.tsx, and "Screw-holding certified" in products.ts.
+ * of them back. The 30-working-day refund guarantee in Policies.tsx went the
+ * same way on 2026-08-14, confirmed unverified by the client. One claim is
+ * still unverified and tracked in PRODUCT.md rather than fixed:
+ * "Screw-holding certified" in products.ts.
+ *
+ * The 24-hour callback below *is* confirmed (client, 2026-08-14) and is stated
+ * in three places — this FAQ, the checkout intro and the order-confirmed steps.
+ * Change it in all three or none.
  */
 export interface Faq {
   q: string

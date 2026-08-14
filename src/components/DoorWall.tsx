@@ -27,7 +27,7 @@ function WallPhoto({ photo }: { photo: { id: string; full: string; alt: string; 
   const [failed, setFailed] = useState(false)
   if (failed) {
     return (
-      <div className="doorwall__missing" role="img" aria-label={photo.alt}>
+      <div className="doorwall__missing" role="img" aria-label={t('photo.unavailableFor', { alt: photo.alt })}>
         {t('photo.unavailable')}
       </div>
     )
@@ -180,14 +180,25 @@ export function DoorWall() {
             overlayColor="#1c1610"
             selectedIndex={split ? chosen : (zoomed ?? -1)}
             onSelect={onSelect}
+            ariaLabel={t('doorwall.label')}
             style={{ '--dw-ring': 'rgba(201, 169, 100, 0.95)' } as CSSProperties}
           />
         </div>
       </div>
 
       {zoom && (
-        <div className="doorzoom" role="dialog" aria-modal="true" aria-label="Door photograph">
-          <button type="button" className="doorzoom__back" onClick={closeZoom} aria-label="Close photo" />
+        <div className="doorzoom" role="dialog" aria-modal="true" aria-label={zoom.caption || zoom.alt}>
+          {/* The scrim is the tap-outside-to-close affordance, and it duplicates
+              the visible Close button below. Announced, it was a second,
+              unlabelled-on-screen "Close photo" immediately before the real one;
+              keyboard and screen-reader users close with that button or Escape. */}
+          <button
+            type="button"
+            className="doorzoom__back"
+            onClick={closeZoom}
+            tabIndex={-1}
+            aria-hidden="true"
+          />
           <div className="doorzoom__box">
             <WallPhoto key={zoom.id} photo={zoom} />
             {zoom.caption && <div className="doorzoom__cap">{zoom.caption}</div>}

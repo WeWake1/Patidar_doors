@@ -64,11 +64,18 @@ export function Policies() {
 
       <section>
         <h2>Cancellation & refunds</h2>
+        {/* The "full refund if we miss 30 working days" guarantee that used to
+            close this paragraph was removed on 2026-08-14: the client has not
+            confirmed that term, and content.ts's header had it tracked as
+            shipping-but-unverified. Handled the way the warranty was — say what
+            is true, and point at the person who can answer the rest. Put a
+            confirmed term back here and in the "Can I cancel my order?" FAQ
+            together, or the two will disagree. */}
         <p>
           Cancel free of charge any time before production begins — that is, up to your post-measurement confirmation.
           Because each leaf is cut to your exact opening, orders cannot be cancelled once production starts; the 50%
-          production payment covers the made-to-order leaf. If we fail to deliver within 30 working days of
-          confirmation, you may cancel for a full refund of everything paid.
+          production payment covers the made-to-order leaf. If anything delays your order past the 10–14 working days
+          we quote, we will call you — talk to us about it and we will sort it out.
         </p>
       </section>
 

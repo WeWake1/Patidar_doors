@@ -39,6 +39,7 @@ const en = {
   'nav.call': 'Call {phone}',
   'nav.cart': 'Cart',
   'nav.cartOpen': 'Open cart, {count} items',
+  'nav.cartOpen_one': 'Open cart, 1 item',
 
   // ── cart drawer ───────────────────────────────────────────────────────
   'cart.title': 'Your cart',
@@ -52,7 +53,17 @@ const en = {
   'cart.increase': 'Increase quantity of {name}',
   'cart.maxQty': "That's the most we take in one order — call us for a bulk quote.",
   'cart.remove': 'Remove',
-  'cart.included': 'Measurement visit & installation',
+  /* The visible word is just "Remove" — three lines in the cart give three
+     buttons reading the same, which is fine on screen because each sits beside
+     its own door. Out of that column it is three identical announcements of a
+     destructive action, so the accessible name names the door. */
+  'cart.removeNamed': 'Remove {name} from your cart',
+  /* Names the city, like every other line on the site that promises a visit or
+     a fitting — the crews are Bengaluru's (see config.serviceCity). The drawer
+     said "Measurement visit & installation" and the checkout summary said
+     "Measurement & installation in Bengaluru"; same line, two readings, and the
+     one a customer saw first was the one that overpromised. */
+  'cart.included': 'Measurement & installation in {city}',
   'cart.includedValue': 'Included',
   'cart.subtotal': 'Subtotal',
   'cart.checkout': 'Proceed to checkout',
@@ -60,8 +71,20 @@ const en = {
 
   // ── checkout ──────────────────────────────────────────────────────────
   'checkout.title': 'Checkout',
-  'checkout.empty': 'Your cart is empty — every great room starts at the door.',
+  /* An empty checkout is nearly always a customer who tried to buy something
+     the site does not sell — timber, ply, a door outside the Designer Studio
+     twelve. So this says which twelve transact and where the rest are quoted,
+     the way the cart drawer already does, instead of the line that used to sit
+     here ("every great room starts at the door"), which was a slogan standing
+     where an explanation was needed. */
+  'checkout.empty':
+    'There is nothing to check out yet. The twelve Designer Studio doors are the ones priced and ordered on the site — timber, ply, WPC and our other door ranges are quoted in the store or on WhatsApp.',
   'checkout.h.details': 'Delivery details',
+  /* Only two of the eight fields are optional, so the form marks those and
+     states the rule once rather than stamping "required" six times. Without
+     this line the convention was unstated and the only way to learn which
+     fields mattered was to submit and collect five errors. */
+  'checkout.required': 'Everything is required unless it says optional.',
   'checkout.h.doors': 'Your doors',
   'checkout.f.name': 'Full name',
   'checkout.f.phone': 'Mobile number',
@@ -77,6 +100,7 @@ const en = {
   'checkout.submit': 'Open WhatsApp with my order',
   'checkout.submitting': 'Opening WhatsApp…',
   'checkout.errorSummary': '{count} details need fixing before we can write your order.',
+  'checkout.errorSummary_one': 'One detail needs fixing before we can write your order.',
   'checkout.e.name': 'Please enter your full name.',
   'checkout.e.nameLong': 'That name is too long for the order message — please shorten it.',
   'checkout.e.phone': 'Enter a valid 10-digit Indian mobile number.',
@@ -90,13 +114,19 @@ const en = {
     'The order message is longer than WhatsApp accepts. Shorten your notes or address, or send us fewer doors in one go.',
   'checkout.blocked':
     'Your browser blocked the WhatsApp window. Your order is saved — open the message from the button below.',
-  'checkout.charsLeft': '{n} characters left',
+  'checkout.charsLeft': '{count} characters left',
+  'checkout.charsLeft_one': '1 character left',
 
   // ── order confirmed ───────────────────────────────────────────────────
   'confirmed.none.title': 'Nothing to send.',
   'confirmed.send': 'Send it, {firstName}.',
   'confirmed.sendNoName': 'Send it.',
   'confirmed.openAgain': 'open the message again',
+  /* "WhatsApp us" used to reopen `order.waUrl` — the order itself, fully
+     written out. A customer with a question tapped it, found their whole order
+     drafted again, and sending it would have placed the same order twice. A
+     question link carries the order number and nothing else. */
+  'confirmed.askQuestion': 'Hi {brand} — I have a question about order {id}.',
 
   // ── catalogue / empty states ──────────────────────────────────────────
   'shop.filterAll': 'All',
@@ -108,7 +138,17 @@ const en = {
   'world.empty': 'This range is being re-photographed.',
   'world.emptyBody':
     'Everything in it is still on the floor at the store — message us and we’ll send photos and prices of what’s in stock.',
-  'photo.unavailable': 'Photo coming soon',
+  /* Not "Photo coming soon". This panel stands in for a photo whose file did
+     not load — most often one the client deleted in /admin while the build-time
+     snapshot still points at it — not for a door nobody has shot yet, and
+     promising a shoot that may never happen is a claim the site cannot keep. */
+  'photo.unavailable': 'Photo unavailable',
+  /* The fallback panel is `role="img"`, and it used to take the photo's own alt
+     as its accessible name: a screen reader was told the door was on screen
+     while a sighted visitor saw an empty panel. Naming the state first keeps
+     the description without asserting the picture. */
+  'photo.unavailableFor': 'Photo unavailable — {alt}',
+  'doorwall.label': 'Doors standing in our Bengaluru store',
 
   // ── errors ────────────────────────────────────────────────────────────
   'error.title': 'Something came off its hinges.',
@@ -201,9 +241,29 @@ export function intlLocale(): string {
  * Placeholders are named, never positional, because word order is exactly what
  * a translation changes: "{count} items in {name}" has to be free to become
  * "{name} — {count}".
+ *
+ * ── Plurals ──
+ * Pass a `count` var and a key may carry a `_one` sibling that wins when the
+ * count is exactly 1. Three strings shipped without this and all three were
+ * reachable: the nav's cart button announced "Open cart, 1 items", a checkout
+ * with one bad field said "1 details need fixing", and the notes counter
+ * finished at "1 characters left". Two of the three are accessible names, so
+ * the mistake was audible rather than merely visible.
+ *
+ * One extra form is enough for every locale this site plans to ship: English,
+ * Kannada and Hindi all divide at one/other. A language with more forms (Arabic
+ * has six) needs `Intl.PluralRules` and a suffix per category — the call sites
+ * do not change, which is the point of routing plurals through here rather than
+ * through a ternary at each of the three.
  */
 export function t(key: StringKey, vars?: Record<string, string | number>): string {
-  const s = catalogues[locale][key] ?? en[key]
+  const catalogue = catalogues[locale] as Catalogue & Record<string, string | undefined>
+  const fallback = en as Record<string, string | undefined>
+  const pluralKey = vars?.count === 1 ? `${key}_one` : undefined
+  const s =
+    (pluralKey ? (catalogue[pluralKey] ?? fallback[pluralKey]) : undefined) ??
+    catalogue[key] ??
+    en[key]
   if (!vars) return s
   return s.replace(/\{(\w+)\}/g, (whole, name: string) =>
     name in vars ? String(vars[name]) : whole,

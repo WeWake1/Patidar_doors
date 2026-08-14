@@ -8,12 +8,14 @@ import { saveLastOrder, type OrderCustomer } from '../lib/order'
 import { smoothScrollTo } from '../lib/smoothScroll'
 import { usePageMeta } from '../lib/usePageMeta'
 
+/** The store works Mon–Sat, 9–7 (`config.hours`), and these mirror it exactly. */
 const SLOTS = [
   'Weekday morning (9–12)',
   'Weekday afternoon (12–4)',
   'Weekday evening (4–7)',
   'Saturday morning (9–12)',
   'Saturday afternoon (12–4)',
+  'Saturday evening (4–7)',
 ]
 
 /**
@@ -198,8 +200,17 @@ export function Checkout() {
       'aria-invalid'?: true
       'aria-describedby'?: string
       maxLength?: number
+      required?: true
     }) => ReactNode,
     hint?: string,
+    /**
+     * Everything the form validates is required; `email` and `notes` say
+     * "(optional)" in their own label and `slot` always has a value. The flag
+     * carries `required` onto the control so assistive tech hears it *before*
+     * the submit, which is the only thing the old form could not tell anyone —
+     * the form is `noValidate`, so this adds semantics and no browser bubbles.
+     */
+    required = true,
   ) => {
     const id = `f-${k}`
     const err = errors[k]
@@ -211,6 +222,7 @@ export function Checkout() {
           id,
           ...(err ? { 'aria-invalid': true as const } : {}),
           ...(describedBy ? { 'aria-describedby': describedBy } : {}),
+          ...(required ? { required: true as const } : {}),
           maxLength: LIMITS[k as keyof typeof LIMITS],
         })}
         {err ? (
@@ -241,6 +253,7 @@ export function Checkout() {
       <div className="checkout__grid">
         <form className="checkout__form" onSubmit={submit} noValidate>
           <h2 className="checkout__h2">{t('checkout.h.details')}</h2>
+          <p className="checkout__required">{t('checkout.required')}</p>
 
           {/* One live region for the whole form. Per-field `role="alert"` fired
               six announcements at once on a failed submit and the visitor heard
@@ -273,9 +286,13 @@ export function Checkout() {
               ),
               t('checkout.f.phoneHint'),
             )}
-            {field('email', t('checkout.f.email'), (a) => (
-              <input {...a} type="email" autoComplete="email" value={form.email} onChange={set('email')} />
-            ))}
+            {field(
+              'email',
+              t('checkout.f.email'),
+              (a) => <input {...a} type="email" autoComplete="email" value={form.email} onChange={set('email')} />,
+              undefined,
+              false,
+            )}
           </div>
           {field('address', t('checkout.f.address'), (a) => (
             <textarea
@@ -303,15 +320,22 @@ export function Checkout() {
               />
             ))}
           </div>
-          {field('slot', t('checkout.f.slot'), (a) => (
-            <select {...a} value={form.slot} onChange={set('slot')}>
-              {SLOTS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          ))}
+          {/* Always has a value, so it is neither required nor optional to say so. */}
+          {field(
+            'slot',
+            t('checkout.f.slot'),
+            (a) => (
+              <select {...a} value={form.slot} onChange={set('slot')}>
+                {SLOTS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            ),
+            undefined,
+            false,
+          )}
           {field(
             'notes',
             t('checkout.f.notes'),
@@ -326,7 +350,8 @@ export function Checkout() {
             ),
             // Only counts down once it starts to matter — a counter sitting at
             // "500 characters left" under an empty box reads as a warning.
-            notesLeft <= 120 ? t('checkout.charsLeft', { n: notesLeft }) : undefined,
+            notesLeft <= 120 ? t('checkout.charsLeft', { count: notesLeft }) : undefined,
+            false,
           )}
 
           {/* Names what the button actually does. It opens WhatsApp with the
@@ -359,7 +384,7 @@ export function Checkout() {
             </div>
           ))}
           <div className="checkout__row">
-            <span>Measurement & installation in {config.serviceCity}</span>
+            <span>{t('cart.included', { city: config.serviceCity })}</span>
             <span className="drawer__included">{t('cart.includedValue')}</span>
           </div>
           <div className="checkout__row checkout__row--total">
@@ -371,8 +396,12 @@ export function Checkout() {
               <span>Today</span>
               <strong>{fmtINR(0)}</strong>
             </div>
+            {/* "After measurement" was a half-step early: the visit does not
+                trigger the payment, the customer approving what was measured
+                does — and that is the sentence the home page's payment sequence
+                and the cancellation policy both already use. */}
             <div className="checkout__pay-step">
-              <span>After measurement</span>
+              <span>After you approve</span>
               <strong>{fmtINR(Math.round(cart.subtotal / 2 / 100) * 100)}</strong>
             </div>
             <div className="checkout__pay-step">

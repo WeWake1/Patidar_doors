@@ -46,9 +46,14 @@ all four material categories under one roof, and made-to-measure cutting.
 - **WhatsApp is the channel.** Enquiries, quotes and the Designer Studio order
   message all leave the site as a `wa.me` deep link. The workshop cuts from that
   message, so it must carry the full spec.
-- **Confirmed sales flow:** free measurement visit → production begins only
-  after the customer approves measurements → 50% to start production, 50% after
-  installation → 10–14 working day build. Nothing is paid online.
+- **Confirmed sales flow:** order arrives on WhatsApp → **callback within 24
+  hours** to book the visit (confirmed by the client 2026-08-14) → free
+  measurement visit → production begins only after the customer approves
+  measurements → 50% to start production, 50% after installation → 10–14
+  working day build. Nothing is paid online.
+- **Not confirmed:** the "full refund if we miss 30 working days" term that used
+  to close the cancellation policy. Removed 2026-08-14. A cancellation window
+  and a refund rule exist; their terms do not.
 - **Service reach:** measurement and installation crews are local to Bengaluru.
   Timber, ply and doors can be freighted further on enquiry, without fitting.
   ⚠️ The FAQ currently claims free measurement visits in metros and tier-1

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MAX_QTY_PER_LINE, useCart } from '../cart/CartContext'
 import type { ArtId } from '../data/products'
 import { getProduct, getTone } from '../data/products'
+import { config } from '../config'
 import { fmtINR } from '../lib/format'
 import { t } from '../lib/i18n'
 import { useScrollLock } from '../lib/useScrollLock'
@@ -91,7 +92,12 @@ export function CartDrawer() {
                           +
                         </button>
                       </div>
-                      <button type="button" className="drawer__remove" onClick={() => cart.remove(l.key)}>
+                      <button
+                        type="button"
+                        className="drawer__remove"
+                        onClick={() => cart.remove(l.key)}
+                        aria-label={t('cart.removeNamed', { name: l.name })}
+                      >
                         {t('cart.remove')}
                       </button>
                     </div>
@@ -107,7 +113,7 @@ export function CartDrawer() {
         {cart.lines.length > 0 && (
           <div className="drawer__foot">
             <div className="drawer__foot-row">
-              <span>{t('cart.included')}</span>
+              <span>{t('cart.included', { city: config.serviceCity })}</span>
               <span className="drawer__included">{t('cart.includedValue')}</span>
             </div>
             <div className="drawer__foot-row drawer__foot-row--total">

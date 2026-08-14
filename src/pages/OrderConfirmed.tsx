@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { config } from '../config'
+import { config, whatsappLink } from '../config'
 import { fmtINR } from '../lib/format'
 import { t } from '../lib/i18n'
 import { loadLastOrder } from '../lib/order'
@@ -102,9 +102,20 @@ export function OrderConfirmed() {
           <li>Our fitter measures your frame to the millimetre — free, no obligation.</li>
           <li>You confirm the final size and pay 50% to start production. The balance is due only after installation.</li>
         </ol>
+        {/* Not `order.waUrl` — that link is the order, written out in full.
+            A customer with a question tapped "WhatsApp us", found their entire
+            order drafted a second time, and sending it would have ordered the
+            doors twice. This one carries the order number and nothing else. */}
         <p className="confirmed__contact">
-          Questions? <a href={order.waUrl} target="_blank" rel="noreferrer">WhatsApp us</a> or write to{' '}
-          <a href={`mailto:${config.email}`}>{config.email}</a>.
+          Questions?{' '}
+          <a
+            href={whatsappLink(t('confirmed.askQuestion', { brand: config.brand, id: order.id }))}
+            target="_blank"
+            rel="noreferrer"
+          >
+            WhatsApp us
+          </a>{' '}
+          or write to <a href={`mailto:${config.email}`}>{config.email}</a>.
         </p>
       </div>
 
