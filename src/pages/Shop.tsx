@@ -66,11 +66,26 @@ export function Shop() {
             </button>
           </div>
         ) : (
-          <div className="grid grid--3">
-            {products.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
+          <>
+            {/* The cards are <h3>s, so without this the page went <h1> straight
+                to <h3> and the level the grid sits at did not exist. It also
+                says which filter is showing and how many came back, which the
+                chips convey visually by which one is lit and not at all
+                otherwise. Hidden because the chips already say it on screen. */}
+            <h2 className="sr-only">
+              {world === 'all'
+                ? t('shop.resultsAll', { count: products.length })
+                : t('shop.resultsWorld', {
+                    count: products.length,
+                    world: WORLDS.find((w) => w.id === world)?.name ?? '',
+                  })}
+            </h2>
+            <div className="grid grid--3">
+              {products.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

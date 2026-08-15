@@ -56,8 +56,9 @@ all four material categories under one roof, and made-to-measure cutting.
   and a refund rule exist; their terms do not.
 - **Service reach:** measurement and installation crews are local to Bengaluru.
   Timber, ply and doors can be freighted further on enquiry, without fitting.
-  ⚠️ The FAQ currently claims free measurement visits in metros and tier-1
-  cities pan-India — that overstates reach and is not product truth.
+  The FAQ's "Which areas do you serve?" was corrected to match (Bengaluru for
+  visits and fitting, material freighted beyond it) — it used to claim free
+  measurement visits in metros and tier-1 cities pan-India.
 - **Phone-first.** The overwhelming share of visitors are on a phone, often on
   Indian mobile data. Weight and jank are product problems, not polish.
 

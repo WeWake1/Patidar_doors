@@ -2526,7 +2526,11 @@ button { font-family: var(--sans); }
 
   /* — nav: a compact bag button so brand + burger breathe — */
   .nav {
-    padding: 10px max(5vw, env(safe-area-inset-left)) 10px max(5vw, env(safe-area-inset-right));
+    /* right takes inset-right, left takes inset-left. The two were swapped
+       here (the base rule above has them the right way round), which a
+       portrait phone hides — both insets are 0 and 5vw wins either way — and
+       a landscape notch would not. */
+    padding: 10px max(5vw, env(safe-area-inset-right)) 10px max(5vw, env(safe-area-inset-left));
     gap: 10px;
   }
   .nav__mark { height: 26px; }
@@ -2653,6 +2657,23 @@ button { font-family: var(--sans); }
    this a keyboard or switch visitor tabs through all of them on every
    navigation. It reads as one of the system's own plates, not as a
    browser-default blue box. */
+/* Available to the accessibility tree, absent from the page. For a heading the
+   layout has no room to show but the document outline still needs — /shop ran
+   its <h1> straight into the cards' <h3>, so the level the grid belongs to was
+   simply missing. `clip-path` + 1px box rather than `display:none`, which would
+   take it out of the tree along with the layout. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
 .skip-link {
   position: fixed;
   top: 0;

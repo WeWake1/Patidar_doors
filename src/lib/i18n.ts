@@ -135,6 +135,13 @@ const en = {
   'shop.noneInRangeBody':
     'We stock more than is photographed. Ask us what’s on the floor today, or see the whole catalogue.',
   'shop.showAll': 'Show the whole catalogue',
+  /* Never shown — the heading these fill is `.sr-only`, because the lit chip
+     already says which filter is on. They exist so the catalogue grid has a
+     heading at all: the cards are h3 and the page title is h1. */
+  'shop.resultsAll': 'All {count} products',
+  'shop.resultsAll_one': '1 product',
+  'shop.resultsWorld': '{count} products in {world}',
+  'shop.resultsWorld_one': '1 product in {world}',
   'world.empty': 'This range is being re-photographed.',
   'world.emptyBody':
     'Everything in it is still on the floor at the store — message us and we’ll send photos and prices of what’s in stock.',
@@ -260,9 +267,15 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   const catalogue = catalogues[locale] as Catalogue & Record<string, string | undefined>
   const fallback = en as Record<string, string | undefined>
   const pluralKey = vars?.count === 1 ? `${key}_one` : undefined
+  // The active locale is exhausted before English is consulted — both its
+  // plural form and its general form. Checking English's `_one` first (which
+  // this did) meant a translated key whose `_one` had not been written yet
+  // rendered the *English* singular next to translated copy, even though a
+  // perfectly good translated plural was sitting right there.
   const s =
-    (pluralKey ? (catalogue[pluralKey] ?? fallback[pluralKey]) : undefined) ??
+    (pluralKey ? catalogue[pluralKey] : undefined) ??
     catalogue[key] ??
+    (pluralKey ? fallback[pluralKey] : undefined) ??
     en[key]
   if (!vars) return s
   return s.replace(/\{(\w+)\}/g, (whole, name: string) =>

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import DriftWall from './reactbits/DriftWall'
 import type { DriftWallItem } from './reactbits/DriftWall'
@@ -75,6 +75,10 @@ export function DoorWall() {
 
   useScrollLock(zoomed !== null)
 
+  const closeRef = useRef<HTMLButtonElement>(null)
+  /** The tile that opened the overlay, so closing puts the caret back on it. */
+  const openerRef = useRef<HTMLElement | null>(null)
+
   const closeZoom = useCallback(() => setZoomed(null), [])
 
   useEffect(() => {
@@ -85,6 +89,25 @@ export function DoorWall() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [zoomed, closeZoom])
+
+  /**
+   * The overlay declares `aria-modal`, so focus has to actually be inside it —
+   * it was left on the tile behind, which meant a keyboard visitor opened the
+   * photo and then tabbed through the whole page underneath it, and a screen
+   * reader announced nothing. The tiles are real buttons (DriftWall gives them
+   * `tabIndex=0` + `role="button"`), so there is a genuine element to come back
+   * to on close. Same shape as `Nav`'s burger restore and `CartDrawer`'s
+   * focus-the-close-button.
+   */
+  useEffect(() => {
+    if (zoomed === null) return
+    openerRef.current = document.activeElement as HTMLElement | null
+    closeRef.current?.focus()
+    return () => {
+      openerRef.current?.focus?.()
+      openerRef.current = null
+    }
+  }, [zoomed])
 
   // the split view disappearing under a resize would leave a stale overlay
   useEffect(() => {
@@ -203,7 +226,7 @@ export function DoorWall() {
             <WallPhoto key={zoom.id} photo={zoom} />
             {zoom.caption && <div className="doorzoom__cap">{zoom.caption}</div>}
           </div>
-          <button type="button" className="doorzoom__close" onClick={closeZoom}>
+          <button ref={closeRef} type="button" className="doorzoom__close" onClick={closeZoom}>
             Close
           </button>
         </div>

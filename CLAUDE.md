@@ -5,8 +5,23 @@ Showcase site — the goal is footfall to the physical store, not online selling
 WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` / `build` /
 `preview` / `lint` / `images:build` / `fonts:build`.
 
-- **Contact details are placeholders** in `src/config.ts` (`whatsappNumber`, `phoneDisplay`,
-  `email`, `storeAddress`, `mapsUrl`) — replace before launch. Checkout/enquiries go via wa.me.
+- **Contact details are real** and live in `src/config.ts` (`whatsappNumber`, `phoneDisplay`,
+  `email`, `storeAddress`, `mapsUrl`) — the Nagasandra store, its number and its maps link.
+  They were placeholders until 2026-08-15; change them here and the whole site follows.
+  Checkout/enquiries go via wa.me.
+- **The site is served from `patidartimbers.com`**, and that origin is written in exactly
+  two places: `index.html` (canonical, `og:url`, and the **absolute** `og:image`/
+  `twitter:image`) and `ORIGIN` in `scripts/build-sitemap.mjs`. Change both together.
+  ⚠️ `og:image` **must stay absolute**. A relative path is dropped by every scraper that
+  matters — WhatsApp, Facebook, Twitter/X, LinkedIn — and a WhatsApp share is how most
+  visitors meet this site; it shipped relative and rendered no card anywhere until
+  2026-08-15.
+  · `npm run sitemap:build` (also run by `npm run build`, before `vite build` so `public/`
+  is copied) writes `public/robots.txt` + `public/sitemap.xml`. It gets the product list
+  by **evaluating** `src/data/products.ts` through Vite's SSR loader, not by scraping it:
+  the catalogue is a merge of local + `catalog.gen.ts` with Designer Studio protected, so
+  a regex over one file finds 15 of the 49. robots disallows `/admin`, `/checkout` and
+  `/order-confirmed`; the sitemap omits those plus the `/door/:id` legacy redirect.
 - **Product copy is unverified draft** — tags/stories/specs across all four worlds were
   drafted by AI and must be confirmed with the client.
 - **Four worlds IA**: `/timbers` `/doors` `/ply` `/wpc` render one `WorldPage` themed by

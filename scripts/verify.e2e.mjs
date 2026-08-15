@@ -28,16 +28,29 @@ page.on('console', (m) => {
 })
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
 
-// capture wa.me URL instead of opening a popup
+// Capture the wa.me URL instead of opening a popup.
+//
+// ⚠️ This returns a stand-in *window*, not null. A real browser returns a
+// window object here and only returns null when the pop-up was actually
+// refused — so a stub returning null told the site every order was blocked,
+// which is exactly the bug that shipped (`window.open(url, '_blank',
+// 'noopener')` always returns null) and exactly what this stub then hid.
+// Return null here only to test the blocked path on purpose.
 await page.addInitScript(() => {
   window.__waUrl = null
   const orig = window.open
-  window.open = (url, ...rest) => {
+  window.open = (url, target, features, ...rest) => {
     if (typeof url === 'string' && url.includes('wa.me')) {
       window.__waUrl = url
-      return null
+      // Faithful to the spec, and this is the whole point of the stub: a call
+      // passed `noopener` returns null even though the window opened. Without
+      // this line the stub happily returns a window for the one call shape
+      // that never does, and the site's own "was it blocked?" check cannot be
+      // tested at all.
+      if (typeof features === 'string' && /\bnoopener\b/.test(features)) return null
+      return { opener: null, closed: false, close() {}, focus() {} }
     }
-    return orig.call(window, url, ...rest)
+    return orig.call(window, url, target, features, ...rest)
   }
 })
 
@@ -382,6 +395,21 @@ await step('valid order opens WhatsApp + confirmation', async () => {
     if (!decoded.includes(frag)) throw new Error(`wa message missing: ${frag}`)
   }
   console.log('   wa.me OK:', decoded.slice(0, 120).replaceAll('\n', ' | '))
+
+  const waId = decoded.match(/PD-[A-Z0-9]+/)?.[0]
+  if (!waId) throw new Error('no order id in the wa.me message')
+
+  // A handoff that worked must read as one. `blocked` is only true when the
+  // pop-up was refused, and it was true on every order for as long as
+  // `window.open` was passed `noopener` — so the last screen of the funnel
+  // told every customer their order had failed. Assert the receipt, and that
+  // the recovery button that belongs to the blocked path is absent.
+  const sub = await page.locator('.confirmed__sub').innerText()
+  if (/blocked/i.test(sub)) throw new Error(`confirmation claims the popup was blocked: ${sub}`)
+  if (!sub.includes(waId)) throw new Error(`confirmation does not show the order id: ${sub}`)
+  if (await page.locator('.confirmed__open').count()) {
+    throw new Error('blocked-path button rendered after a successful handoff')
+  }
 })
 await shot('10-order-confirmed')
 

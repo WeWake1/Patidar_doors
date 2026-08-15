@@ -161,7 +161,16 @@ export function Checkout() {
     // Opened before the save so it still counts as the submit gesture — an
     // await or a slow write here is enough for Safari to treat the window as
     // unrequested and refuse it.
-    const opened = window.open(waUrl, '_blank', 'noopener')
+    //
+    // ⚠️ `noopener` must NOT go in the features string. Per spec a `window.open`
+    // that is passed `noopener` returns null *whether or not it succeeded*, so
+    // `blocked` was true on every order ever placed and the confirmation page
+    // led every customer with "your browser blocked the WhatsApp window" —
+    // the one screen that had to read as success. The null return is the only
+    // signal a refused pop-up gives us, so we keep it meaningful and sever the
+    // opener by hand, which is what `noopener` would have done for us.
+    const opened = window.open(waUrl, '_blank')
+    if (opened) opened.opener = null
     saveLastOrder({
       id,
       ts: Date.now(),
