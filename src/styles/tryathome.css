@@ -1,0 +1,442 @@
+/**
+ * "See it in your doorway" — the try-at-home surface.
+ *
+ * ⚠️ Imported from src/pages/TryAtHome.tsx, **not** from global.css, and it has
+ * to stay that way. global.css ships in the entry bundle; this is ~250 lines
+ * for a screen nobody reaches without tapping a button on a PDP. Importing it
+ * from the route module makes Vite emit it as route-chunk CSS, the same way
+ * DoorWall's stylesheet already arrives. Don't "tidy" it back into global.css.
+ *
+ * ⚠️ Colour here reads the **tier-1 primitives**, not the world roles, which is
+ * the opposite of the rest of the storefront and is deliberate. The stage is a
+ * neutral dark room the customer judges their own photograph in; skinning it
+ * per world would wrap a hallway photo in terracotta on /ply and green on /wpc
+ * and actively distort how they read the door's colour. Same reasoning that
+ * keeps the nav and footer un-themed — this is chrome, not a page.
+ */
+
+.try {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--deep);
+  color: var(--cream-on-dark);
+}
+
+/* Full-screen means full screen: the fixed chrome steps aside while a photo is
+   up. Same body-class lever useScrollLock already pulls for overlays. */
+body.has-fullscreen .nav,
+body.has-fullscreen .footer,
+body.has-fullscreen .wa-float {
+  display: none;
+}
+
+.try--live {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ── top bar ───────────────────────────────────────────── */
+
+.try__bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: calc(10px + env(safe-area-inset-top)) calc(var(--gutter-phone) + env(safe-area-inset-right)) 10px
+    calc(var(--gutter-phone) + env(safe-area-inset-left));
+  border-bottom: 1px solid var(--frame);
+}
+
+.try__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+  color: var(--lamp2);
+  font: var(--type-label);
+  letter-spacing: var(--track-mid);
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.try__name {
+  margin-left: auto;
+  color: var(--lamp3);
+  font: var(--type-note);
+  text-align: right;
+}
+
+/* ── pick step ─────────────────────────────────────────── */
+
+.try__pick {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: var(--section-phone) var(--gutter);
+  text-align: center;
+}
+
+.try__lede {
+  max-width: 28ch;
+  color: var(--cream-on-dark);
+  font: var(--type-title-sm);
+}
+
+.try__pickrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* The answer to "where does my photo go" has to land before the picker opens,
+   not in a policy page afterwards. */
+.try__privacy {
+  max-width: 32ch;
+  color: var(--lamp3);
+  font: var(--type-note);
+}
+
+.try__err {
+  max-width: 34ch;
+  padding: 12px 16px;
+  border: 1px solid var(--clay);
+  color: var(--clay-surface);
+  font: var(--type-body-sm);
+}
+
+/* The real input is off-screen; the visible control is a real <button>. */
+.try__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── stage ─────────────────────────────────────────────── */
+
+.try__stage {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0; /* or the flex child refuses to shrink and the photo overflows */
+  overflow: hidden;
+  padding: 10px;
+}
+
+.try__frame {
+  position: relative;
+  isolation: isolate; /* so the contact shadow multiplies against the photo, not the page */
+  box-shadow: var(--cast-chrome);
+}
+
+.try__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* The composed picture. `width/height: auto` + max-* so a portrait phone photo
+   and a landscape one both land on their own terms rather than being letter-
+   boxed into a fixed box — same treatment .doorzoom gives its image. */
+.try__out {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: var(--cast-chrome);
+  animation: doorfade 0.32s ease both;
+}
+
+/* ── the warped door ───────────────────────────────────── */
+
+.tryd {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0; /* mandatory — the solve maps the box's own corners */
+  pointer-events: none; /* hit-testing lives entirely in .tryq, see DoorLayer */
+  /* Promote it: this box is re-transformed on every pointermove while holding
+     a filtered SVG. Unpromoted, Chrome re-rasterises the leaf each frame —
+     the same reason .wcard__art carries this. */
+  will-change: transform;
+}
+
+.tryd__contact {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  /* The house near-black is warm, and that matters here: a pure-black multiply
+     pushes the shadow on a customer's terracotta floor cold and grey. */
+  background: linear-gradient(
+    to bottom,
+    transparent 0 90%,
+    rgb(var(--cast-deep-rgb) / 0.45) 94%,
+    transparent 100%
+  );
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.tryd__grade {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* Feather the cut edge by ~1.5px so the leaf doesn't end on a razor line the
+     photograph's own edges never have.
+
+     The #000 stops below are **not** colours — a mask stop is an alpha matte,
+     and only its opacity is read. Nothing here paints a pixel of black, so
+     these are outside the palette by nature rather than by drift.
+
+     ⚠️ Prefixed first, standard last — always. The build's CSS minifier
+     collapses a prefix pair to whichever declaration comes last, which is how
+     .nav once shipped with only the -webkit- form and lost its blur in every
+     Chromium browser. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 1.5px calc(100% - 1.5px), transparent),
+    linear-gradient(to bottom, transparent, #000 1.5px calc(100% - 1.5px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 1.5px calc(100% - 1.5px), transparent),
+    linear-gradient(to bottom, transparent, #000 1.5px calc(100% - 1.5px), transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  /* The reveal gap: a real door sits a millimetre or two inside its frame, and
+     without that line the leaf reads as painted onto the wall. */
+  box-shadow:
+    inset 0 2px 7px -3px rgb(0 0 0 / 0.7),
+    inset 0 0 0 1px rgb(0 0 0 / 0.22);
+}
+
+.tryd__art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tryd__tint,
+.tryd__fall {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Shifts the leaf toward the room's own light. Capped low on purpose — over-
+   tint a walnut door under a CFL and the customer thinks you sent the wrong
+   finish. */
+.tryd__tint {
+  mix-blend-mode: color;
+}
+
+/* ── corner handles ────────────────────────────────────── */
+
+.tryq {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  touch-action: none; /* or the browser scrolls the page instead of dragging */
+}
+
+.tryq__outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.tryq__outline polygon {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.tryq__handle {
+  position: absolute;
+  /* --touch is a floor, and a thumb needs all of it — but the *visible* dot is
+     the ::before, so the target can be generous without looking clumsy. */
+  width: var(--touch);
+  height: var(--touch);
+  margin: 0;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: none;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.tryq__handle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: var(--r-circle);
+  background: var(--lamp-hot);
+  box-shadow: 0 0 0 2px var(--frame), 0 2px 6px rgb(var(--cast-deep-rgb) / 0.5);
+}
+
+.tryq__handle--corner::before {
+  width: 15px;
+  height: 15px;
+}
+
+.tryq__handle--edge::before {
+  width: 10px;
+  height: 10px;
+  background: var(--gold);
+  opacity: 0.85;
+}
+
+.tryq__handle:focus-visible {
+  outline: none;
+}
+
+.tryq__handle:focus-visible::before {
+  box-shadow: var(--ring-focus), 0 0 0 2px var(--frame);
+}
+
+.tryq__handle:active {
+  cursor: grabbing;
+}
+
+/* A thumb covers the corner it is placing; without this nobody can be accurate. */
+.tryq__loupe {
+  position: absolute;
+  z-index: 2;
+  border: 2px solid var(--lamp-hot);
+  border-radius: var(--r-circle);
+  background-repeat: no-repeat;
+  box-shadow: 0 6px 20px rgb(var(--cast-deep-rgb) / 0.55);
+  pointer-events: none;
+}
+
+.tryq__loupe::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 13px;
+  height: 13px;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--gold);
+  border-radius: var(--r-circle);
+}
+
+/* ── controls ──────────────────────────────────────────── */
+
+.try__controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px calc(var(--gutter-phone) + env(safe-area-inset-right))
+    calc(14px + env(safe-area-inset-bottom)) calc(var(--gutter-phone) + env(safe-area-inset-left));
+  border-top: 1px solid var(--frame);
+  background: var(--deep2);
+}
+
+.try__hint {
+  color: var(--lamp2);
+  font: var(--type-note);
+  text-align: center;
+}
+
+.try__tones {
+  display: flex;
+  gap: 10px;
+}
+
+.try__tone {
+  width: 34px;
+  height: 34px;
+  min-height: var(--touch);
+  min-width: var(--touch);
+  padding: 0;
+  border: 1px solid var(--frame);
+  border-radius: var(--r-circle);
+  background-clip: content-box;
+  box-shadow: inset 0 0 0 6px var(--deep2);
+  cursor: pointer;
+}
+
+.try__tone.is-on {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 4px var(--deep2);
+}
+
+.try__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.try__done {
+  min-width: 240px;
+}
+
+.try__done[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.try__controls .btn--ghost {
+  border-color: var(--lamp3);
+  color: var(--cream-on-dark);
+}
+
+/* ── the not-yet-supported note ────────────────────────── */
+
+.try--plain {
+  gap: 18px;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--nav-clear);
+}
+
+.try__oops {
+  font: var(--type-page);
+}
+
+.try__note {
+  max-width: var(--measure);
+  color: var(--lamp2);
+  font: var(--type-lead);
+}
+
+/* Desktop gets the photo and its controls side by side; the stage is the thing
+   that should grow. */
+@media (min-width: 900px) {
+  .try--live {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .try__stage {
+    padding: 24px;
+  }
+
+  .try__controls {
+    flex-direction: row;
+    justify-content: center;
+    gap: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tryd {
+    will-change: auto;
+  }
+}

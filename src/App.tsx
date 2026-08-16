@@ -33,6 +33,7 @@ const OrderConfirmed = lazy(() => import('./pages/OrderConfirmed').then((m) => (
 const Faq = lazy(() => import('./pages/Faq').then((m) => ({ default: m.Faq })))
 const Policies = lazy(() => import('./pages/Policies').then((m) => ({ default: m.Policies })))
 const DevGallery = lazy(() => import('./pages/DevGallery').then((m) => ({ default: m.DevGallery })))
+const TryAtHome = lazy(() => import('./pages/TryAtHome').then((m) => ({ default: m.TryAtHome })))
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -91,6 +92,7 @@ function Storefront() {
               <Route path="/wpc" element={<WorldRoute id="wpc" />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/product/:id" element={<Product />} />
+              <Route path="/try/:id" element={<TryAtHome />} />
               <Route path="/door/:id" element={<LegacyDoorRedirect />} />
               <Route path="/visit" element={<Visit />} />
               <Route path="/checkout" element={<Checkout />} />

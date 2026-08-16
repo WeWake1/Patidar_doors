@@ -18,10 +18,17 @@ const BLACK = { hi: '#3A3A3E', mid: '#232326', lo: '#121214' }
 
 let uidCounter = 0
 
-/** Shared filters/gradients referenced by every door. Mount once, app-wide. */
+/**
+ * Shared filters/gradients referenced by every door. Mount once, app-wide.
+ *
+ * The `id` is a contract, not decoration: an SVG serialised into an <img> is a
+ * separate document, so `url(#dw-grain)` resolves to nothing there and every
+ * wood door would rasterise as flat, un-grained stripes. `src/lib/doorRaster.ts`
+ * finds this node by id and inlines its children into the copy it exports.
+ */
 export function DoorArtDefs() {
   return (
-    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
+    <svg id="dw-defs" width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
       <defs>
         {/* wavy wood-grain warp */}
         <filter id="dw-grain" x="-6%" y="-3%" width="112%" height="106%">

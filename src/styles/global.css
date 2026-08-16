@@ -1236,6 +1236,10 @@ button { font-family: var(--sans); }
 }
 .pdp__scene { width: 46%; min-width: 170px; max-width: 230px; }
 .pdp__stage-note { margin-top: 24px; font: var(--type-fine); color: var(--mut2); letter-spacing: var(--track-hair); }
+/* Lives in the stage, not the info column: the stage is the "this is the door"
+   surface, and it is the one place on this page that all four visual kinds
+   reach — the info column only ever renders for the purchasable doors. */
+.pdp__try { margin-top: 18px; }
 .pdp__cat { font: var(--type-label-sm); letter-spacing: var(--track-open); text-transform: uppercase; color: var(--accent-text); }
 .pdp__name { margin: 8px 0 0; font: var(--type-page); }
 .pdp__story { margin: 18px 0 0; font: var(--type-body); color: var(--mut); max-width: var(--measure); }

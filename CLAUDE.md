@@ -299,6 +299,82 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
 - **Hover-open door**: CSS on `.door-scene--hover` (SVG −26°, photos −18° + edge-shade
   `::after`). Touch devices get `door-scene--ajar` via `src/lib/useAjarInView.ts`
   (shared IntersectionObserver, mid-viewport band, `(hover: none)` only).
+- **Try at home** (`/try/:id`, `src/pages/TryAtHome.tsx` + `src/components/tryathome/`):
+  the customer photographs their doorway and the chosen leaf is warped into it. Phase 1
+  (shipped) is still-photo only and covers the 12 `art` doors; live AR is Phase 2.
+  ⚠️ The instruction is **"drag the corners onto your existing door"**, never "the
+  doorway", and that is architecture, not wording. Outlining the real leaf makes the
+  replacement provably cover the old door (no halo), leaves the architrave/reveal
+  shadow/floor line in the photo *in front of* it — which is what makes a composite read
+  as real — and hands us the door's true proportions for the Phase 1b size estimate.
+  Reword it to "doorway" and all three silently stop working.
+  · **The warp is CSS `matrix3d`, and three.js must stay out of this feature.** Canvas 2D
+  is affine-only and physically cannot map a rectangle to a trapezoid; a CSS 3D transform
+  *is* a projective map, so `matrix3d` is an exact warp for zero bytes and no GL context —
+  and it warps the live `<DoorArt>`, so the leaf stays vector and a finish change is a
+  plain re-render. `src/lib/homography.ts` is the 8×8 solve. Export (not yet built) is a
+  CPU inverse warp, deliberately a second path. Besides the 230 kB gz, `three` currently
+  has **exactly one importer** so it lives wholly inside `Beams-*.js`; a second one makes
+  Rollup hoist a vendor chunk and changes what the hero fetches.
+  ⚠️ CSS `<number>` has **no exponential notation**, and the w-row terms are around 1e-5.
+  `String(1e-7)` is `"1e-7"`, which invalidates the whole `matrix3d()` so the browser drops
+  the transform and the door snaps back to an unwarped rectangle. `toMatrix3d` formats
+  fixed; don't "simplify" it to `join(',')`.
+  ⚠️ `.tryd` is **`pointer-events: none`** and the handles live in a separate untransformed
+  layer. Second occurrence of the DriftWall scar — Chrome resolves `elementFromPoint`
+  wrongly inside a 3D-transformed subtree. Never hit-test the warped surface.
+  ⚠️ A folded quad puts `w <= 0` on a vertex and Chrome makes the element **vanish**, so
+  `isConvex` gates every pointermove and the editor *refuses* the move rather than
+  committing it. That is this feature's "nothing fails to a blank rectangle".
+  · **Detection is a silent guess, not a detector.** `quadGuess.ts` is Sobel column/row
+  energy on a 240px copy, ~15 ms, zero bytes; it runs before first paint so the handles
+  are simply already there, and returns null (→ centred default) when unsure, so the
+  customer can't tell which happened. It returns an *axis-aligned* rect by construction —
+  perspective correction is the user's drag. A detector right 60% of the time is worse
+  than none. OpenCV.js (1.5–8 MB) and ONNX (6–8 MB, plus site-wide COOP/COEP for its
+  threaded runtime) are both disqualified on weight for a mid-range-Android store.
+  · `photoLoad.ts`: decode via `<img>`, **never `createImageBitmap`** (only `<img>` honours
+  EXIF orientation by default — otherwise portrait doorways arrive sideways); cap to 1600px
+  and release at once (a 12MP JPEG is ~48 MB decoded, and holding original + preview +
+  export OOM-kills the tab); a failed load hands `onerror` an **Event**, so `.message` is
+  undefined — hence the typed `PhotoError` codes.
+  ⚠️ `capture="environment"` is a **forcing** attribute, not a hint — where honoured it
+  removes the photo-library option outright. It is on the "Take a photo" control *only*;
+  half of visitors are trying a door they shot yesterday and the counter staff work from
+  photos customers sent on WhatsApp.
+  · `src/styles/tryathome.css` is imported **from the route module**, not `global.css`, so
+  Vite emits it as route-chunk CSS instead of adding ~250 lines to the entry stylesheet.
+  It reads tier-1 primitives, not world roles, on purpose: the stage is a neutral dark room
+  the customer judges their own photo in, and skinning it per world would wrap a hallway
+  photo in terracotta on `/ply`. Its two `#000` mask stops are alpha mattes, not colours.
+  · **Export** (`compose.ts` + `doorRaster.ts`, both lazy; `shareImage.ts` static). CSS
+  transforms can't be screenshotted, so the export inverts the *same* homography and
+  samples per-pixel on the CPU. Preview and export share `solveHomography` **and**
+  `doorGrade.ts` — one source for the arithmetic is what makes the saved picture provably
+  the picture the customer approved, which matters because that image is what reaches our
+  WhatsApp. A footer strip (design, size, domain) is burnt in so a forwarded photo isn't
+  anonymous.
+  ⚠️ `shareImage.ts` is **statically** imported by the route while the compositor is lazy.
+  A dynamic `import()` inside the tap handler is an await, and iOS treats that as having
+  spent the user activation — `navigator.share()` then rejects with NotAllowedError. For
+  the same reason the blob is composed on "Looks right", not inside the share tap.
+  ⚠️ `DoorArtDefs` carries `id="dw-defs"` as a **contract**: an SVG serialised into an
+  `<img>` is a separate document, so `url(#dw-grain)` resolves to nothing and every wood
+  door rasterises as flat un-grained stripes. `doorRaster.ts` inlines those defs into the
+  copy. Explicit `width`/`height` on the clone are mandatory too — Safari won't take an
+  intrinsic size from `viewBox` alone in an `<img>`.
+  ⚠️ Grading is a **nudge, not a re-exposure**, and both constants were wrong first time.
+  `brightness` was `luma / 0.55`, which pins to the clamp ceiling on any ordinary daylit
+  wall (magnolia photographs at ~0.82) and bleached the leaf. And the tint alpha was fixed:
+  a `color` blend carries the source's *saturation* as well as its hue, so a neutral wall
+  at a fixed alpha doesn't warm the door, it **drains** it — Golden Teak came out looking
+  like grey oak. The alpha is now scaled by the surround's own saturation, so a lamplit
+  hallway tints and a white wall leaves the finish alone.
+  · Adding this **did** restructure the chunk graph, benignly: `DoorArt` hoisted out of the
+  entry into its own chunk, so entry went 96.6 → 92.6 kB gz with a 4.2 kB `DoorArt-*.js`
+  beside it. It is in `index.html`'s `modulepreload` list, so it is fetched in parallel and
+  costs no extra round trip — net eager payload +190 bytes. Re-check that preload survives
+  if the chunking is ever touched.
 - **Mobile-first rules** (the site is browsed on phones; keep these true):
   · every colour-changing `:hover` lives inside `@media (hover: hover)` — touch latches
   `:hover` on the last thing tapped. The `.door-scene--hover:hover` swing is the one

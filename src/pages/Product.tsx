@@ -14,6 +14,7 @@ import type { Product as ProductT } from '../data/products'
 import { PRODUCTS, defaultToneId, getProduct, getTone, quoteFor, tonesFor } from '../data/products'
 import { getWorld } from '../data/worlds'
 import { fmtINR } from '../lib/format'
+import { t } from '../lib/i18n'
 import { usePageMeta } from '../lib/usePageMeta'
 import { NotFound } from './NotFound'
 
@@ -151,6 +152,14 @@ function ProductInner({ product }: { product: ProductT }) {
           <div className="pdp__stage">
             <DoorScene art={product.visual.art} tone={tone} hoverOpen className="pdp__scene" />
             <StageNote />
+            {/* The size and finish travel in the URL, so /try/kyoto?h=84&w=33
+                is also a link the store can paste into a WhatsApp reply. */}
+            <Link
+              className="btn btn--ghost pdp__try"
+              to={`/try/${product.id}?h=${cfg.heightIn}&w=${cfg.widthIn}&t=${tone.id}`}
+            >
+              {t('try.open')}
+            </Link>
           </div>
         ) : (
           <ProductStage product={product} />

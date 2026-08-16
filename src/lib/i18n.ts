@@ -157,6 +157,50 @@ const en = {
   'photo.unavailableFor': 'Photo unavailable — {alt}',
   'doorwall.label': 'Doors standing in our Bengaluru store',
 
+  // ── door try-on ───────────────────────────────────────────────────────
+  /* The whole surface asks the customer to outline the door they ALREADY
+     have, never the doorway. That framing is load-bearing — it is what makes
+     the new leaf cover the old one exactly, keeps the architrave and floor
+     line in front of it, and gives us the proportions to size a quote from.
+     Copy that drifts back to "the doorway" quietly breaks all three. */
+  'try.open': 'See it in your doorway',
+  'try.title': '{name} in your doorway',
+  'try.backToDoor': 'Back to the door',
+  'try.unsupported':
+    'This one isn’t ready for the doorway view yet — it needs its leaf photographed square-on first. Ask us for a photo of it in the store.',
+  'try.pick.take': 'Take a photo',
+  'try.pick.choose': 'Choose a photo',
+  /* Said before the picker opens, not after. Customers are being asked to
+     photograph the inside of their home; the answer to "where does this go"
+     has to arrive before they decide, not in a policy page afterwards. */
+  'try.pick.privacy': 'Your photo stays on your phone. Nothing is uploaded.',
+  'try.pick.hint': 'Stand square to your door and get all four corners in the frame.',
+  'try.place.hint': 'Drag the corners onto your existing door.',
+  'try.place.flip': 'Flip the hinge',
+  'try.place.reset': 'Start over',
+  'try.place.done': 'Looks right',
+  'try.retake': 'Use a different photo',
+  'try.a11y.corner': 'Door outline, corner {n} of 4',
+  'try.a11y.edge': 'Door outline, edge {n} of 4',
+  'try.err.type': 'That file isn’t a photo. Pick a JPG or PNG.',
+  'try.err.size': 'That photo is too large. Try one under 20 MB.',
+  'try.err.heic':
+    'iPhone HEIC photos can’t be read here. In Settings → Camera → Formats, choose “Most Compatible”, or send us the photo on WhatsApp.',
+  'try.err.decode': 'That photo couldn’t be opened. Try another one.',
+  'try.err.compose':
+    'The picture couldn’t be saved on this phone. Send us the size on WhatsApp instead and we’ll quote it.',
+  'try.working': 'Fitting the door…',
+  'try.result.share': 'Send it to us on WhatsApp',
+  'try.result.save': 'Save the picture',
+  'try.result.adjust': 'Adjust the corners',
+  /* Shown after a download rather than a share sheet — on desktop and in the
+     in-app browsers that expose navigator.share but refuse files. The picture
+     is already on their device at this point, so the copy's job is only to
+     tell them the next step. */
+  'try.result.saved': 'Saved to your phone. Send it to us and we’ll quote it.',
+  'try.result.note': 'Sizes are worked out on a measuring visit — this is to see how it looks.',
+  'try.share.text': 'Hi {brand}! Here’s {name} in my doorway — {size}. Could you quote it?',
+
   // ── errors ────────────────────────────────────────────────────────────
   'error.title': 'Something came off its hinges.',
   'error.body':
