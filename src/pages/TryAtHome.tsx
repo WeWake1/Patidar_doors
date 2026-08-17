@@ -26,10 +26,12 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { DoorLayer } from '../components/tryathome/DoorLayer'
 import { QuadEditor } from '../components/tryathome/QuadEditor'
 import { config, whatsappLink } from '../config'
-import { getProduct, tonesFor, type Product, type Tone } from '../data/products'
-import { configFromLine, formatSizeLabel, toSizeId } from '../data/pricing'
+import { getProduct, quoteFor, tonesFor, tryState, type Product, type Tone } from '../data/products'
+import { SIZE_LIMITS, configFromLine, formatFtIn, formatSizeLabel, toSizeId } from '../data/pricing'
+import { fmtINR } from '../lib/format'
 import type { Quad } from '../lib/homography'
 import { t } from '../lib/i18n'
+import { rectifyAspect, sizeFromHeight } from '../lib/rectify'
 import { loadPhoto, sampleAmbient, PhotoError, type Ambient, type LoadedPhoto, type PhotoErrorCode } from '../lib/photoLoad'
 import { guessDoorQuad } from '../lib/quadGuess'
 /* Statically imported, and it has to be: a dynamic import() inside the tap
@@ -49,6 +51,14 @@ const DEFAULT_FILL = 0.55
 
 /** Re-reading the surround on every pointermove would be a getImageData a frame. */
 const AMBIENT_SETTLE_MS = 150
+
+/**
+ * The one thing the photograph can't tell us: absolute scale. Proportions come
+ * out of the outline; a tap on one of these turns them into inches. These are
+ * the four heights nearly every Indian home door is built to, so the answer is
+ * usually a single tap rather than a trip for a tape measure.
+ */
+const HEIGHT_CHIPS = [78, 81, 84, 96]
 
 export function TryAtHome() {
   const { id } = useParams()
@@ -84,14 +94,15 @@ function TryInner({ product }: { product: Product }) {
   const [ambient, setAmbient] = useState<Ambient | null>(null)
   const [flipped, setFlipped] = useState(false)
   const [stage, setStage] = useState({ w: 0, h: 0 })
-  const [result, setResult] = useState<{ blob: Blob; url: string } | null>(null)
+  const [result, setResult] = useState<{ blob: Blob; url: string; ratio: number | null } | null>(null)
+  const [estHeight, setEstHeight] = useState<number | null>(null)
   const [composing, setComposing] = useState(false)
   const [composeErr, setComposeErr] = useState(false)
   const [shared, setShared] = useState<ShareOutcome | null>(null)
 
   const stageRef = useRef<HTMLDivElement>(null)
   const photoRef = useRef<LoadedPhoto | null>(null)
-  const resultRef = useRef<{ blob: Blob; url: string } | null>(null)
+  const resultRef = useRef<{ blob: Blob; url: string; ratio: number | null } | null>(null)
 
   usePageMeta(t('try.title', { name: product.name }))
 
@@ -182,7 +193,22 @@ function TryInner({ product }: { product: Product }) {
   }, [photo, cfg.widthIn, cfg.heightIn])
 
   const sizeLabel = formatSizeLabel(cfg.heightIn, cfg.widthIn)
-  const shareText = t('try.share.text', { brand: config.brand, name: product.name, size: sizeLabel })
+
+  /* What the customer's *own* door measures, once they've told us its height.
+     The outline gives the proportions; the chip gives the one scalar that
+     turns proportions into inches. */
+  const estimate =
+    result?.ratio != null && estHeight != null
+      ? sizeFromHeight(result.ratio, estHeight, SIZE_LIMITS)
+      : null
+  const estLabel = estimate ? formatSizeLabel(estimate.heightIn, estimate.widthIn) : null
+  const estQuote = estimate ? quoteFor(product, { ...cfg, ...estimate }, tone.id) : null
+
+  /* ⚠️ The estimate reaches WhatsApp only with its caveat welded on. This
+     number is good to about an inch, and the workshop cuts from that message. */
+  const shareText = estLabel
+    ? t('try.share.withSize', { brand: config.brand, name: product.name, size: estLabel })
+    : t('try.share.text', { brand: config.brand, name: product.name, size: sizeLabel })
 
   /* Compose on "Looks right", not on the share tap — see the shareImage import.
      Everything heavy is behind this one await chain, and both modules stay out
@@ -212,8 +238,13 @@ function TryInner({ product }: { product: Product }) {
         ambient,
         footer: { name: product.name, size: sizeLabel, site: 'patidartimbers.com' },
       })
+      /* The outline is a rectangle of known shape seen at an unknown angle, so
+         it tells us the door's true proportions — see rectify.ts. One tap on a
+         height chip turns that into inches and a price. */
+      const est = rectifyAspect(cq, photo.canvas.width, photo.canvas.height)
       if (resultRef.current) URL.revokeObjectURL(resultRef.current.url)
-      setResult({ blob, url: URL.createObjectURL(blob) })
+      setResult({ blob, url: URL.createObjectURL(blob), ratio: est?.ratio ?? null })
+      setEstHeight(null)
       setShared(null)
     } catch {
       setComposeErr(true)
@@ -238,15 +269,18 @@ function TryInner({ product }: { product: Product }) {
 
   const back = `/product/${product.id}`
 
-  // Phase 1 renders the 12 vector doors. The photographed doors need their
-  // leaf corners marked in /admin before they can be cut out, and the timber,
-  // ply and WPC products want the surface and volume modes instead — so say so
-  // plainly rather than showing a broken stage.
-  if (visual.kind !== 'art') {
+  /* Doors only — every door, nothing but doors, WPC doors included. `tryState`
+     in products.ts owns that rule. The two refusals are worded differently
+     because only one of them is temporary: a photographed door is still a
+     door, it just has no square-on cutout yet. */
+  const state = tryState(product)
+  if (state !== 'ready' || visual.kind !== 'art') {
     return (
       <div className="try try--plain page-pad">
-        <h1 className="try__oops">{t('try.title', { name: product.name })}</h1>
-        <p className="try__note">{t('try.unsupported')}</p>
+        <h1 className="try__oops">{product.name}</h1>
+        <p className="try__note">
+          {state === 'no' ? t('try.notADoor', { name: product.name }) : t('try.soon')}
+        </p>
         <Link className="btn btn--dark btn--big" to={back}>
           {t('try.backToDoor')}
         </Link>
@@ -289,6 +323,33 @@ function TryInner({ product }: { product: Product }) {
             <img className="try__out" src={result.url} alt="" />
           </div>
           <div className="try__controls">
+            {result.ratio != null && (
+              <div className="try__size">
+                <p className="try__hint">{t('try.size.ask')}</p>
+                <div className="try__chips">
+                  {HEIGHT_CHIPS.map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      className={`try__chip${estHeight === h ? ' is-on' : ''}`}
+                      aria-pressed={estHeight === h}
+                      onClick={() => setEstHeight(h)}
+                    >
+                      {formatFtIn(h)}
+                    </button>
+                  ))}
+                </div>
+                {estLabel && (
+                  <p className="try__est">
+                    <strong>{t('try.size.est', { size: estLabel })}</strong>
+                    {estQuote && (
+                      <span> · {t('try.size.price', { price: fmtINR(estQuote.total), name: product.name })}</span>
+                    )}
+                    <span className="try__caveat">{t('try.size.caveat')}</span>
+                  </p>
+                )}
+              </div>
+            )}
             {shared === 'downloaded' && <p className="try__hint">{t('try.result.saved')}</p>}
             <button type="button" className="btn btn--dark btn--big try__done" onClick={send}>
               {canShareFiles() ? t('try.result.share') : t('try.result.save')}

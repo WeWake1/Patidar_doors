@@ -299,9 +299,28 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
 - **Hover-open door**: CSS on `.door-scene--hover` (SVG −26°, photos −18° + edge-shade
   `::after`). Touch devices get `door-scene--ajar` via `src/lib/useAjarInView.ts`
   (shared IntersectionObserver, mid-viewport band, `(hover: none)` only).
+  ⚠️ `.door-scene__frame` sits **behind** the leaf (z 1, leaf z 2, room auto). Its
+  `inset: -14px` + `14px` border occupies exactly the ring *outside* the opening, so
+  closed it abuts the leaf either way — but the leaf swings toward the viewer and
+  perspective makes its near edge overhang the opening top, bottom and right. At z 3
+  (where it shipped until 2026-08-16) the architrave painted over that overhang and an
+  open door read as tucked behind its own frame. A door that swings out comes out in
+  front of the frame. `.photo-showcase__frame` keeps z 3 on purpose — that treatment
+  zooms inside a clip and nothing escapes the opening.
 - **Try at home** (`/try/:id`, `src/pages/TryAtHome.tsx` + `src/components/tryathome/`):
   the customer photographs their doorway and the chosen leaf is warped into it. Phase 1
-  (shipped) is still-photo only and covers the 12 `art` doors; live AR is Phase 2.
+  (shipped) is still-photo only; live AR is Phase 2.
+  ⚠️ **Doors only — every door, nothing but doors.** `tryState()` in `products.ts` is the
+  single owner of that rule and both the PDP button and the route read it. **WPC doors are
+  doors** (WPC is what the leaf is made of, not a different kind of product; it has its own
+  world only because it's sold and finished differently), so `wpc-cnc-door` and
+  `wpc-digital-veneer-door` are in. **Timber and ply are not doors** and are out — as is
+  `wpc-sheets`, which is 6–18mm board. The rule reads `visual.kind` because the catalogue
+  already draws the line: a door is `art` (drawn) or `photo` (photographed), while
+  `material` is a swatch of stock. 29 doors in scope; 12 render today and the other 17 are
+  `'soon'` until their leaf corners are marked in `/admin`. An earlier draft of this plan
+  had "surface" and "volume" modes for ply/timber — dropped 2026-08-16, there is no
+  "see this plywood in your hallway".
   ⚠️ The instruction is **"drag the corners onto your existing door"**, never "the
   doorway", and that is architecture, not wording. Outlining the real leaf makes the
   replacement provably cover the old door (no halo), leaves the architrave/reveal
@@ -370,6 +389,29 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   at a fixed alpha doesn't warm the door, it **drains** it — Golden Teak came out looking
   like grey oak. The alpha is now scaled by the surround's own saturation, so a lamplit
   hallway tints and a white wall leaves the finish alone.
+  · **Measuring** (`rectify.ts`). The outlined leaf is a rectangle of known shape seen at an
+  unknown angle, and that constrains the camera: the two pairs of parallel edges give two
+  vanishing points whose world directions must be perpendicular, which yields the focal
+  length, which yields the rectangle's aspect (Zhang & He). One tap on a height chip
+  (78/81/84/96″ — the heights nearly every Indian home door is built to) turns proportions
+  into inches, then straight through the existing `snapToStock` → `quoteFor`. **This needs
+  no AR and works on iPhone**, and is *more* accurate than ARCore in the width dimension
+  (~1–3% vs ±2–6cm).
+  ⚠️ A near-frontal shot pushes both vanishing points to infinity and `f²` explodes or goes
+  negative; the fallback is the outline's shape in the image, which is both the correct
+  answer for a frontal photo *and* the limit the formula tends to as f→∞, so the branches
+  meet instead of jumping. `fromPerspective` reports which ran.
+  ⚠️ **It is a guide size, never a cutting size.** The caveat is welded to the number
+  everywhere it appears, including inside the WhatsApp text (`try.share.withSize`), because
+  the workshop cuts from that message and an unlabelled photo-derived number is a door cut
+  20mm short. The E2E asserts the caveat survives into the `wa.me` URL.
+  · **Two verifiers, deliberately split.** `npm run verify:e2e` proves the *feature* works
+  in a browser (placement, 44px handles, the folded-quad refusal, the composed strip, the
+  share File, the doors-only scope rule). `npm run verify:geometry` proves the *arithmetic*
+  — it photographs a known 33×84″ door with a synthetic camera at six angles and focal
+  lengths and checks it measures back. A browser test cannot do that: it has no ground
+  truth. Both load TS through Vite's SSR loader / system Chrome the way the other scripts
+  already do.
   · Adding this **did** restructure the chunk graph, benignly: `DoorArt` hoisted out of the
   entry into its own chunk, so entry went 96.6 → 92.6 kB gz with a 4.2 kB `DoorArt-*.js`
   beside it. It is in `index.html`'s `modulepreload` list, so it is fetched in parallel and

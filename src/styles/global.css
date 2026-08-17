@@ -638,13 +638,19 @@ button { font-family: var(--sans); }
   aspect-ratio: 3 / 8;
   perspective: 1400px;
 }
+/* Sits BEHIND the leaf (z 1, above the room at auto). The border occupies
+   exactly the ring outside the opening, so closed it abuts the leaf either
+   way — but the leaf swings toward the viewer, and perspective makes its near
+   edge overhang the opening top, bottom and right. Over the leaf (it was z 3)
+   the architrave clipped that overhang, so an open door read as tucked behind
+   its own frame. A door that swings out comes out in front of the frame. */
 .door-scene__frame {
   position: absolute;
   inset: -14px;
   border: 14px solid var(--frame);
   box-shadow: var(--cast-aperture);
   pointer-events: none;
-  z-index: 3;
+  z-index: 1;
 }
 .door-scene__room {
   position: absolute;

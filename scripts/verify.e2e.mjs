@@ -54,6 +54,19 @@ await page.addInitScript(() => {
   }
 })
 
+/* Record what navigator.share was handed, instead of opening a share sheet.
+   Faithful to the real API in the one way that matters here: canShare() only
+   accepts a descriptor carrying actual files, so the code path under test is
+   the file-share branch and not the download fallback. */
+await page.addInitScript(() => {
+  window.__shared = null
+  navigator.canShare = (d) => Array.isArray(d?.files) && d.files.length > 0
+  navigator.share = async (d) => {
+    const f = d.files[0]
+    window.__shared = { name: f.name, type: f.type, size: f.size, text: d.text }
+  }
+})
+
 async function shot(name, opts = {}) {
   const path = `${OUT}/${name}.png`
   await page.screenshot({ path, ...opts })
@@ -488,6 +501,196 @@ await step('mobile configurator targets are thumb-sized', async () => {
   if ((await page.locator('.pdp__price').innerText()) === before) throw new Error('mobile slider did not reprice')
 })
 await shot('17-mobile-configurator')
+
+/* ── TRY AT HOME (/try/:id) ────────────────────────────── */
+/* Still at 390×844 from the mobile block — this feature is phone-first and the
+   handles have a 44px floor to clear.
+
+   The doorway photo is synthesised rather than committed: sharp is already a
+   devDependency, and a fixture with known geometry lets the guess be asserted
+   numerically instead of eyeballed. */
+const doorwayJpeg = await (async () => {
+  const sharp = (await import('sharp')).default
+  return sharp(
+    Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900">
+      <rect width="1200" height="900" fill="#d8d2c6"/>
+      <rect y="760" width="1200" height="140" fill="#8d7c63"/>
+      <polygon points="470,150 745,168 738,792 478,775" fill="#5a4632"/>
+      <polygon points="486,170 729,186 723,772 493,757" fill="#4a3828"/>
+    </svg>`),
+  )
+    .jpeg({ quality: 88 })
+    .toBuffer()
+})()
+
+const placeDoor = async () => {
+  await page.goto(`${BASE}/try/kyoto?h=84&w=33&t=teak`, { waitUntil: 'networkidle' })
+  await page.setInputFiles('.try__file', {
+    name: 'doorway.jpg',
+    mimeType: 'image/jpeg',
+    buffer: doorwayJpeg,
+  })
+  await page.waitForSelector('.tryd', { timeout: 10000 })
+}
+
+await step('try-at-home is offered on doors and refused on materials', async () => {
+  // The scope rule, asserted rather than trusted: every door, nothing but
+  // doors. WPC doors are doors; timber and ply are not. See tryState().
+  await page.goto(`${BASE}/product/kyoto`, { waitUntil: 'networkidle' })
+  const href = await page.locator('.pdp__try').getAttribute('href')
+  if (!href?.startsWith('/try/kyoto?h=')) throw new Error(`bad try href: ${href}`)
+
+  await page.goto(`${BASE}/product/burmese-teak`, { waitUntil: 'networkidle' })
+  if (await page.locator('.pdp__try').count()) throw new Error('timber must not offer the doorway view')
+
+  await page.goto(`${BASE}/try/burmese-teak`, { waitUntil: 'networkidle' })
+  const note = await page.locator('.try__note').innerText()
+  if (!/is for doors/i.test(note)) throw new Error(`timber got the wrong refusal: ${note}`)
+
+  // A photographed door IS a door — it just has no square-on cutout yet, so it
+  // must get the temporary refusal, never the "not a door" one.
+  await page.goto(`${BASE}/try/wpc-cnc-door`, { waitUntil: 'networkidle' })
+  const wpc = await page.locator('.try__note').innerText()
+  if (/is for doors/i.test(wpc)) throw new Error('a WPC door was refused as "not a door"')
+})
+
+await step('a photo places the door and the warp is a real matrix3d', async () => {
+  await placeDoor()
+  const inline = await page.locator('.tryd').evaluate((el) => el.style.transform)
+  if (!inline.startsWith('matrix3d(')) throw new Error(`not a 3D warp: ${inline}`)
+  // CSS <number> has no exponential notation; an "1e-7" in the w row would
+  // invalidate the whole matrix3d and silently drop the transform.
+  if (/e[+-]/i.test(inline)) throw new Error(`exponential notation in matrix3d: ${inline}`)
+  if (!(await page.locator('.try__privacy, .tryq__handle').first().count()))
+    throw new Error('placement UI missing')
+})
+
+await step('the opening guess lands on the door, not the middle of the frame', async () => {
+  const pts = await page.locator('.tryq__outline polygon').getAttribute('points')
+  const xs = pts.split(' ').map((p) => Number(p.split(',')[0]))
+  const frame = await page.locator('.try__frame').boundingBox()
+  const spread = (Math.max(...xs) - Math.min(...xs)) / frame.width
+  // The fixture's door spans ~23% of the width.
+  if (spread < 0.12 || spread > 0.45) throw new Error(`guess span implausible: ${Math.round(spread * 100)}%`)
+})
+
+await step('every outline handle is thumb-sized', async () => {
+  const handles = page.locator('.tryq__handle')
+  const n = await handles.count()
+  if (n !== 8) throw new Error(`expected 4 corners + 4 edges, got ${n}`)
+  for (let i = 0; i < n; i++) {
+    const b = await handles.nth(i).boundingBox()
+    if (!b || b.height < 44 || b.width < 44) throw new Error(`handle ${i} is ${b?.width}×${b?.height}`)
+  }
+})
+await shot('18-try-placed')
+
+await step('dragging a corner keystones the door', async () => {
+  const before = await page.locator('.tryd').evaluate((el) => getComputedStyle(el).transform)
+  const b = await page.locator('.tryq__handle--corner').first().boundingBox()
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(b.x + b.width / 2 - 40, b.y + b.height / 2 - 30, { steps: 8 })
+  await page.mouse.up()
+  const after = await page.locator('.tryd').evaluate((el) => getComputedStyle(el).transform)
+  if (before === after) throw new Error('the door did not follow the handle')
+  // A dragged corner makes a genuine trapezoid, which no affine map can carry,
+  // so the computed transform must now be a real matrix3d rather than a
+  // normalised matrix().
+  if (!after.startsWith('matrix3d(')) throw new Error(`perspective was lost: ${after}`)
+})
+
+await step('a self-crossing drag is refused, not blanked', async () => {
+  // A folded quad puts w <= 0 on a vertex and Chrome makes the element vanish
+  // outright, so the editor has to reject the move and keep the last good one.
+  const frame = await page.locator('.try__frame').boundingBox()
+  const b = await page.locator('.tryq__handle--corner').first().boundingBox()
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(frame.x + frame.width - 4, frame.y + frame.height - 4, { steps: 12 })
+  await page.mouse.up()
+  const tf = await page.locator('.tryd').evaluate((el) => el.style.transform)
+  if (!tf.startsWith('matrix3d(')) throw new Error(`transform went invalid: ${tf}`)
+  const box = await page.locator('.tryd').boundingBox()
+  if (!box || box.width < 10) throw new Error('the door blanked on a folded quad')
+})
+
+await step('the composed picture carries the brand strip', async () => {
+  await placeDoor()
+  await page.locator('.try__done').click()
+  await page.waitForSelector('.try__out', { timeout: 25000 })
+  const dims = await page.locator('.try__out').evaluate((el) => ({
+    w: el.naturalWidth,
+    h: el.naturalHeight,
+  }))
+  if (dims.w !== 1200) throw new Error(`unexpected width ${dims.w}`)
+  if (dims.h <= 900) throw new Error(`the footer strip is missing (height ${dims.h})`)
+})
+await shot('19-try-result')
+
+await step('the photo yields a size estimate and a price', async () => {
+  // The fixture door is 275×640px in a head-on-ish shot, so its true ratio is
+  // ~0.43; told it is 84" tall, the width should land near 36".
+  const chips = page.locator('.try__chip')
+  if ((await chips.count()) !== 4) throw new Error('expected four height chips')
+  for (let i = 0; i < 4; i++) {
+    const b = await chips.nth(i).boundingBox()
+    if (!b || b.height < 44) throw new Error(`height chip ${i} is only ${b?.height}px tall`)
+  }
+  await chips.nth(2).click() // 7′0″ = 84"
+  await page.waitForSelector('.try__est', { timeout: 3000 })
+  const est = await page.locator('.try__est').innerText()
+
+  /* Sizes print as feet-inches with vulgar fractions — 2′7½″. This is a
+     plausibility band, not an accuracy check: the outline here is the opening
+     *guess*, which carries a standard leaf's proportions rather than the
+     fixture's. The geometry itself is verified against a synthetic camera in
+     `npm run verify:geometry`. */
+  const inches = (ft, whole, frac) =>
+    Number(ft) * 12 + Number(whole ?? 0) + { '¼': 0.25, '½': 0.5, '¾': 0.75 }[frac ?? ''] || Number(ft) * 12
+  const m = est.match(/(\d+)′(?:(\d+)([¼½¾])?″)?\s*×\s*(\d+)′(?:(\d+)([¼½¾])?″)?/)
+  if (!m) throw new Error(`unparseable estimate: ${est}`)
+  const widthIn = inches(m[4], m[5], m[6])
+  if (widthIn < 24 || widthIn > 46) throw new Error(`implausible width ${widthIn}″ from ${est}`)
+  if (!/₹/.test(est)) throw new Error(`no price beside the estimate: ${est}`)
+  // The number is good to about an inch and the workshop cuts from WhatsApp,
+  // so it must never appear without saying it is an estimate.
+  if (!/estimated|measure/i.test(est)) throw new Error(`the estimate carries no caveat: ${est}`)
+})
+
+await step('the estimate reaches WhatsApp with its caveat attached', async () => {
+  const href = await page.locator('.try__actions a[href*="wa.me"]').getAttribute('href')
+  const text = decodeURIComponent(href.split('text=')[1] ?? '')
+  if (!/measures about/i.test(text)) throw new Error(`the size never made it: ${text}`)
+  if (!/confirm/i.test(text)) throw new Error(`an unlabelled size reached the workshop message: ${text}`)
+})
+
+await step('sharing hands WhatsApp a real image file', async () => {
+  await page.locator('.try__done').click()
+  await page.waitForTimeout(500)
+  const shared = await page.evaluate(() => window.__shared)
+  if (!shared) throw new Error('navigator.share was never called')
+  if (shared.type !== 'image/jpeg') throw new Error(`wrong type: ${shared.type}`)
+  if (shared.size < 15000) throw new Error(`the file is too small to be a photo: ${shared.size}`)
+  if (!shared.name.endsWith('-in-my-doorway.jpg')) throw new Error(`bad filename: ${shared.name}`)
+  if (!/Kyoto/.test(shared.text)) throw new Error(`share text lost the design: ${shared.text}`)
+})
+
+await step('the wa.me fallback carries the design and the size', async () => {
+  const href = await page.locator('.try__actions a[href*="wa.me"]').getAttribute('href')
+  if (!href.includes(WA_NUMBER)) throw new Error('wrong WhatsApp number')
+  const text = decodeURIComponent(href.split('text=')[1] ?? '')
+  if (!/Kyoto/.test(text)) throw new Error(`thin message: ${text}`)
+  // In-app browsers truncate long URLs silently — same ceiling checkout keeps.
+  if (href.length > 1900) throw new Error(`over the wa.me ceiling: ${href.length}`)
+})
+
+await step('leaving the try screen restores the site chrome', async () => {
+  await page.locator('.try__back').click()
+  await page.waitForSelector('.pdp', { timeout: 5000 })
+  const stuck = await page.evaluate(() => document.body.classList.contains('has-fullscreen'))
+  if (stuck) throw new Error('has-fullscreen survived the route change — nav stays hidden')
+})
 
 /* ── report ────────────────────────────────────────────── */
 console.log('\n──── console noise ────')

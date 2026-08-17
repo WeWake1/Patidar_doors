@@ -387,6 +387,59 @@ body.has-fullscreen .wa-float {
   min-width: 240px;
 }
 
+/* ── the size estimate ─────────────────────────────────── */
+
+.try__size {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 34rem;
+  text-align: center;
+}
+
+.try__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.try__chip {
+  min-height: var(--touch);
+  padding: 8px 18px;
+  border: 1px solid var(--lamp3);
+  background: none;
+  color: var(--cream-on-dark);
+  font: var(--type-label-lg);
+  letter-spacing: var(--track-tight);
+  cursor: pointer;
+}
+
+.try__chip.is-on {
+  border-color: var(--gold);
+  background: var(--frame);
+  color: var(--lamp-hot);
+}
+
+.try__est {
+  color: var(--cream-on-dark);
+  font: var(--type-body-sm);
+}
+
+.try__est strong {
+  font: var(--type-title-sm);
+}
+
+/* The caveat is not fine print — it is the difference between a guide size and
+   a cutting size, and it travels with the number into WhatsApp too. */
+.try__caveat {
+  display: block;
+  margin-top: 4px;
+  color: var(--lamp3);
+  font: var(--type-note);
+}
+
 .try__done[disabled] {
   opacity: 0.6;
   cursor: progress;

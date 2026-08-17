@@ -9,9 +9,9 @@ import { ProductCard } from '../components/ProductCard'
 import { ProductPhoto } from '../components/ProductPhoto'
 import { useToast } from '../components/Toast'
 import { config, whatsappLink } from '../config'
-import { DEFAULT_CONFIG, formatSizeLabel, toSizeId } from '../data/pricing'
+import { DEFAULT_CONFIG, formatSizeLabel, toSizeId, type DoorConfig } from '../data/pricing'
 import type { Product as ProductT } from '../data/products'
-import { PRODUCTS, defaultToneId, getProduct, getTone, quoteFor, tonesFor } from '../data/products'
+import { PRODUCTS, defaultToneId, getProduct, getTone, quoteFor, tonesFor, tryState } from '../data/products'
 import { getWorld } from '../data/worlds'
 import { fmtINR } from '../lib/format'
 import { t } from '../lib/i18n'
@@ -37,6 +37,26 @@ function StageNote() {
       <span className="pdp__stage-note--hover">Hover the door — it opens.</span>
       <span className="pdp__stage-note--touch">Scroll — the door opens itself.</span>
     </div>
+  )
+}
+
+/**
+ * Doors only — every door, nothing but doors. `tryState` owns that rule (see
+ * products.ts); this just renders it, so the day the photographed doors get
+ * their leaf corners marked in /admin they light up here with no edit.
+ */
+function TryLink({ product, cfg, toneId }: { product: ProductT; cfg?: DoorConfig; toneId?: string }) {
+  if (tryState(product) !== 'ready') return null
+  const c = cfg ?? DEFAULT_CONFIG
+  return (
+    // The size and finish travel in the URL, so /try/kyoto?h=84&w=33 is also a
+    // link the store can paste into a WhatsApp reply.
+    <Link
+      className="btn btn--ghost pdp__try"
+      to={`/try/${product.id}?h=${c.heightIn}&w=${c.widthIn}${toneId ? `&t=${toneId}` : ''}`}
+    >
+      {t('try.open')}
+    </Link>
   )
 }
 
@@ -76,6 +96,7 @@ function ProductStage({ product }: { product: ProductT }) {
             ))}
           </div>
         )}
+        <TryLink product={product} />
       </div>
     )
   }
@@ -152,14 +173,7 @@ function ProductInner({ product }: { product: ProductT }) {
           <div className="pdp__stage">
             <DoorScene art={product.visual.art} tone={tone} hoverOpen className="pdp__scene" />
             <StageNote />
-            {/* The size and finish travel in the URL, so /try/kyoto?h=84&w=33
-                is also a link the store can paste into a WhatsApp reply. */}
-            <Link
-              className="btn btn--ghost pdp__try"
-              to={`/try/${product.id}?h=${cfg.heightIn}&w=${cfg.widthIn}&t=${tone.id}`}
-            >
-              {t('try.open')}
-            </Link>
+            <TryLink product={product} cfg={cfg} toneId={tone.id} />
           </div>
         ) : (
           <ProductStage product={product} />

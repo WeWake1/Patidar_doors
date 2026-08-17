@@ -764,6 +764,35 @@ export function getTone(product: Product, toneId: string): Tone {
 }
 
 /**
+ * Whether a product can be stood in a customer's doorway (`/try/:id`).
+ *
+ * ⚠️ **The try-at-home feature is for doors only — every door, and nothing but
+ * doors.** That includes WPC, which is a door made of wood-plastic composite
+ * rather than a separate kind of thing; it has its own world only because it
+ * is sold and finished differently. It excludes timber and ply, which are not
+ * doors at all.
+ *
+ * The rule reads `visual.kind`, and that is not a coincidence — the catalogue
+ * already encodes the distinction. A door is either drawn (`art`) or
+ * photographed (`photo`); `material` is a generated swatch of board stock:
+ * teak billets, ply sheets, and `wpc-sheets` (6–18 mm board). You cannot stand
+ * a cubic foot of teak in a doorway. So `wpc-cnc-door` and
+ * `wpc-digital-veneer-door` are in, and `wpc-sheets` is out, which is the
+ * distinction the `sub` labels ("WPC Doors" vs "WPC Sheets") already draw.
+ *
+ * - `ready` — renders today.
+ * - `soon`  — a real door, but its leaf corners have not been marked in /admin
+ *             yet, so there is no square-on cutout to warp.
+ * - `no`    — not a door.
+ */
+export type TryState = 'ready' | 'soon' | 'no'
+
+export function tryState(product: Product): TryState {
+  if (product.visual.kind === 'material') return 'no'
+  return product.visual.kind === 'art' ? 'ready' : 'soon'
+}
+
+/**
  * Any `height x width` in inches resolves — `'84x33'` from a preset, `'79.25x32'`
  * straight off the sliders, or an id saved in a cart before the configurator
  * existed (they share the same shape, which is why old carts still price).

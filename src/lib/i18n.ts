@@ -166,8 +166,13 @@ const en = {
   'try.open': 'See it in your doorway',
   'try.title': '{name} in your doorway',
   'try.backToDoor': 'Back to the door',
-  'try.unsupported':
-    'This one isn’t ready for the doorway view yet — it needs its leaf photographed square-on first. Ask us for a photo of it in the store.',
+  /* Two different refusals, because they are two different situations and one
+     of them is temporary. A photographed door is a door — it just has no
+     square-on cutout yet. Timber and ply are not doors and never will be. */
+  'try.soon':
+    'This door isn’t ready for the doorway view yet — we need a square-on photo of its leaf first. Ask us and we’ll send you one from the store.',
+  'try.notADoor':
+    'The doorway view is for doors. {name} is a material we cut and finish doors from — come and see it on the shop floor.',
   'try.pick.take': 'Take a photo',
   'try.pick.choose': 'Choose a photo',
   /* Said before the picker opens, not after. Customers are being asked to
@@ -200,6 +205,17 @@ const en = {
   'try.result.saved': 'Saved to your phone. Send it to us and we’ll quote it.',
   'try.result.note': 'Sizes are worked out on a measuring visit — this is to see how it looks.',
   'try.share.text': 'Hi {brand}! Here’s {name} in my doorway — {size}. Could you quote it?',
+  /* ⚠️ The estimate line must carry its own caveat wherever it goes, including
+     into WhatsApp. A photo-derived size is good to about an inch; the workshop
+     cuts from the order message, and an unlabelled number there is a door cut
+     20mm short. */
+  'try.share.withSize':
+    'Hi {brand}! Here’s {name} in my doorway. My door measures about {size} — estimated from the photo, please confirm on the visit. Could you quote it?',
+  'try.size.ask': 'How tall is your door?',
+  'try.size.other': 'Not sure',
+  'try.size.est': 'About {size}',
+  'try.size.caveat': 'Estimated from your photo — we measure properly on the visit.',
+  'try.size.price': 'Around {price} for {name}, fitted.',
 
   // ── errors ────────────────────────────────────────────────────────────
   'error.title': 'Something came off its hinges.',
