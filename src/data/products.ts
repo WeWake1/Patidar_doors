@@ -114,6 +114,17 @@ export interface ProductImage {
   alt: string
   w: number
   h: number
+  /**
+   * True when this image was cropped with the admin's corner tool, so the
+   * picture *is* the door leaf: background removed, camera tilt straightened,
+   * edge to edge. The doorway try-on can then warp the whole image onto a
+   * customer's doorway with nothing to cut away first.
+   *
+   * Set automatically by the cropper — never by hand. Absent on the older
+   * photos, which are still whole-showroom shots and would put our shop floor
+   * in someone's hallway.
+   */
+  isLeafCrop?: boolean
 }
 
 /**
@@ -766,30 +777,30 @@ export function getTone(product: Product, toneId: string): Tone {
 /**
  * Whether a product can be stood in a customer's doorway (`/try/:id`).
  *
- * ⚠️ **The try-at-home feature is for doors only — every door, and nothing but
- * doors.** That includes WPC, which is a door made of wood-plastic composite
- * rather than a separate kind of thing; it has its own world only because it
- * is sold and finished differently. It excludes timber and ply, which are not
- * doors at all.
+ * ⚠️ **Doors only — every door, and nothing but doors.** That includes WPC,
+ * which is a door made of wood-plastic composite rather than a separate kind of
+ * thing; it has its own world only because it is sold and finished differently.
+ * It excludes timber and ply, which are not doors at all.
  *
  * The rule reads `visual.kind`, and that is not a coincidence — the catalogue
  * already encodes the distinction. A door is either drawn (`art`) or
  * photographed (`photo`); `material` is a generated swatch of board stock:
  * teak billets, ply sheets, and `wpc-sheets` (6–18 mm board). You cannot stand
- * a cubic foot of teak in a doorway. So `wpc-cnc-door` and
- * `wpc-digital-veneer-door` are in, and `wpc-sheets` is out, which is the
- * distinction the `sub` labels ("WPC Doors" vs "WPC Sheets") already draw.
+ * a cubic foot of teak in a doorway.
  *
  * - `ready` — renders today.
- * - `soon`  — a real door, but its leaf corners have not been marked in /admin
- *             yet, so there is no square-on cutout to warp.
+ * - `soon`  — a real door whose photo is still a whole-showroom shot rather
+ *             than a leaf crop, so warping it would put our shop floor in
+ *             someone's hallway.
  * - `no`    — not a door.
  */
 export type TryState = 'ready' | 'soon' | 'no'
 
 export function tryState(product: Product): TryState {
-  if (product.visual.kind === 'material') return 'no'
-  return product.visual.kind === 'art' ? 'ready' : 'soon'
+  const v = product.visual
+  if (v.kind === 'material') return 'no'
+  if (v.kind === 'art') return 'ready'
+  return v.cover.isLeafCrop ? 'ready' : 'soon'
 }
 
 /**

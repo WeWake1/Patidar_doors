@@ -9,11 +9,13 @@ import {
   createSubcategory,
   getProduct,
   humanError,
+  isLeafCrop,
   listSubcategories,
   saveProduct,
   toPreviewProduct,
 } from './api'
 import { ImageDropCrop } from './ImageDropCrop'
+
 
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
@@ -43,6 +45,9 @@ export function ProductEditor() {
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [adding, setAdding] = useState<false | 'cover' | 'gallery'>(false)
+  /** The image being re-cropped, if any — reopens the cropper on the original. */
+  const [recrop, setRecrop] = useState<DbImage | null>(null)
+
   const [err, setErr] = useState<string | null>(null)
   /** A failure to *load* — recoverable by retrying, unlike a save error. */
   const [loadErr, setLoadErr] = useState<string | null>(null)
@@ -133,6 +138,14 @@ export function ProductEditor() {
 
   function removeImage(target: DbImage) {
     set({ images: (p.images ?? []).filter((i) => i !== target) })
+  }
+
+  /** Swap a re-cropped image in where the old one sat, keeping its place. */
+  function replaceImage(target: DbImage, next: DbImage) {
+    set({
+      images: (p.images ?? []).map((i) => (i === target ? { ...next, role: target.role } : i)),
+    })
+    setRecrop(null)
   }
 
   async function onSave() {
@@ -300,11 +313,35 @@ export function ProductEditor() {
         {/* images */}
         <div className="ax-field">
           <span>Main photo</span>
-          {cover ? (
-            <div className="ax-thumb">
-              <img src={cover.src_480} alt="" />
-              <button type="button" className="ax-btn" onClick={() => removeImage(cover)}>Remove</button>
-            </div>
+          {recrop && recrop.role === 'cover' ? (
+            <ImageDropCrop
+              slug={p.slug || slugify(p.name)}
+              role="cover"
+              existing={recrop}
+              onDone={(img) => replaceImage(recrop, img)}
+              onCancel={() => setRecrop(null)}
+            />
+          ) : cover ? (
+            <>
+              <div className="ax-thumb">
+                <img src={cover.src_480} alt="" />
+                <div className="ax-row">
+                  <button type="button" className="ax-btn" onClick={() => setRecrop(cover)}>Re-crop</button>
+                  <button type="button" className="ax-btn" onClick={() => removeImage(cover)}>Remove</button>
+                </div>
+              </div>
+              {/* Status, not a task. Cropping with the corner tool is what makes
+                  a door usable in the doorway view, so this only reports what
+                  the crop already decided. Doors only — a timber or ply swatch
+                  has no leaf. */}
+              {p.world !== 'timbers' && p.world !== 'ply' && (
+                <p className="ax-hint">
+                  {isLeafCrop(cover)
+                    ? 'Doorway view ✓ — customers can see this door in their own home.'
+                    : 'Doorway view — not yet. Re-crop this photo with the four corners on the door itself.'}
+                </p>
+              )}
+            </>
           ) : adding === 'cover' ? (
             <ImageDropCrop slug={p.slug || slugify(p.name)} role="cover" onDone={onImage} onCancel={() => setAdding(false)} />
           ) : (
@@ -318,10 +355,22 @@ export function ProductEditor() {
             {gallery.map((g, i) => (
               <div key={i} className="ax-thumb ax-thumb--sm">
                 <img src={g.src_480} alt="" />
-                <button type="button" className="ax-btn" onClick={() => removeImage(g)}>✕</button>
+                <div className="ax-row">
+                  <button type="button" className="ax-btn" onClick={() => setRecrop(g)} title="Re-crop">✎</button>
+                  <button type="button" className="ax-btn" onClick={() => removeImage(g)} title="Remove">✕</button>
+                </div>
               </div>
             ))}
           </div>
+          {recrop && recrop.role === 'gallery' && (
+            <ImageDropCrop
+              slug={p.slug || slugify(p.name)}
+              role="gallery"
+              existing={recrop}
+              onDone={(img) => replaceImage(recrop, img)}
+              onCancel={() => setRecrop(null)}
+            />
+          )}
           {adding === 'gallery' ? (
             <ImageDropCrop slug={p.slug || slugify(p.name)} role="gallery" onDone={onImage} onCancel={() => setAdding(false)} />
           ) : (

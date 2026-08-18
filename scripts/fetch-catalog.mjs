@@ -48,12 +48,18 @@ export const CMS_PRODUCTS: Product[] = []
 
 function toImage(img, alt) {
   if (!img?.src_480) return undefined
+  /* `crop.mode === 'leaf'` means the admin's corner tool produced this image,
+     so it *is* the door leaf — background gone, tilt straightened. Only those
+     are safe to warp into a customer's doorway; an older whole-showroom shot
+     would put our shop floor in their hallway. */
+  const isLeafCrop = img.crop && typeof img.crop === 'object' && img.crop.mode === 'leaf'
   return {
     src: img.src_480,
     srcSet: `${img.src_480} 480w, ${img.src_960 ?? img.src_480} 960w`,
     alt,
     w: img.width ?? 0,
     h: img.height ?? 0,
+    ...(isLeafCrop ? { isLeafCrop: true } : {}),
   }
 }
 
@@ -84,7 +90,7 @@ if (!url || !key) {
 const select =
   'slug,name,world,tag,story,specs,purchasable,price,price_unit,presentation,sort_order,' +
   'subcategory:subcategories(name,slug,sort_order),' +
-  'images:product_images(role,src_480,src_960,width,height,sort_order)'
+  'images:product_images(role,src_480,src_960,width,height,crop,sort_order)'
 const query = `${url}/rest/v1/products?select=${encodeURIComponent(select)}&published=eq.true&order=world.asc,sort_order.asc,name.asc`
 const res = await fetch(query, { headers: { apikey: key, Authorization: `Bearer ${key}` } })
 if (!res.ok) {

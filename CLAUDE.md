@@ -272,12 +272,24 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   fault); its two constants are measured off the rendered band, not derived — re-measure
   them if the head's copy changes. Entry bundle unmoved at 96 kB gz; the wall is its own
   4.2 kB chunk.
-  ⚠️ two fixes on top of the registry `DriftWall`: (1) the tile is `transform-style: flat`,
+  ⚠️ three fixes on top of the registry `DriftWall`: (1) the tile is `transform-style: flat`,
   not `preserve-3d` — inside a preserve-3d subtree Chrome resolves `elementFromPoint` (so
   also mouse events) to the track for ~half the wall and the clicks vanish; the hover
   `translateZ(lift)` is recreated as `scale(--dw-pop)`, computed from lift/perspective.
   (2) the click is delegated to the wall and falls back to the tiles' projected rects when
-  `elementFromPoint` still misses near the plane's edges. Also `dim`/`.drift-wall__overlay`
+  `elementFromPoint` still misses near the plane's edges. (3) **the mask fades all four
+  edges** (2026-08-17). Upstream masks the top only — a radial vignette that bottoms out
+  around 0.6 alpha at the sides, intersected with a `to top` linear — so the plane (1216px
+  wide × 8299 tall inside a 600×620 pane) was chopped by `overflow: hidden` at 60% opacity
+  on the other three, three hard seams with empty band beyond them. `--dw-edge-b` (bottom)
+  and `--dw-edge-x` (sides) add the missing stops. Neither mirrors the top: the head's copy
+  sits above the pane so the top can afford a long dissolve, whereas the same depth at the
+  bottom eats the wall's mass and at the sides eats a whole column. `--dw-edge-b` is
+  **derived from `--dw-edge`** (which `DriftWall.tsx` writes from the `fade` prop) so it can
+  never order ahead of the top stop whatever `fade` becomes. `--dw-edge-x` goes to `0%`
+  under 900px — there the wall is full-bleed and its side edges *are* the screen's, which
+  reads as "continues"; fading it invents two dark gutters instead.
+  Also `dim`/`.drift-wall__overlay`
   go near-opaque under `(hover: none)`: the scrim only pays for itself if hover can lift it.
 - **No FAQ accordion on `/`.** A `.faqteaser` (three `<details>` off `FAQS` + "read the
   full FAQ") sat between `.terms` and `.cta` until 2026-08-13. Removed, not moved: a
@@ -308,8 +320,9 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   front of the frame. `.photo-showcase__frame` keeps z 3 on purpose — that treatment
   zooms inside a clip and nothing escapes the opening.
 - **Try at home** (`/try/:id`, `src/pages/TryAtHome.tsx` + `src/components/tryathome/`):
-  the customer photographs their doorway and the chosen leaf is warped into it. Phase 1
-  (shipped) is still-photo only; live AR is Phase 2.
+  the customer photographs their doorway and the chosen leaf is warped into it. The photo
+  flow is the feature; **handheld AR** (2026-08-17) is an addition on top of it, not a
+  replacement — see the "handheld AR" bullet below and `docs/live-ar-plan.md`.
   ⚠️ **Doors only — every door, nothing but doors.** `tryState()` in `products.ts` is the
   single owner of that rule and both the PDP button and the route read it. **WPC doors are
   doors** (WPC is what the leaf is made of, not a different kind of product; it has its own
@@ -389,6 +402,71 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   at a fixed alpha doesn't warm the door, it **drains** it — Golden Teak came out looking
   like grey oak. The alpha is now scaled by the surround's own saturation, so a lamplit
   hallway tints and a white wall leaves the finish alone.
+  · **Photographed doors: the cropper does the cutting, the storefront does none.**
+  `ImageDropCrop` puts four draggable handles on the uploaded photo; dragging them onto the
+  leaf crops the door out of the showroom, removes the camera tilt and yields its true
+  proportions in one action (`rectifyToCanvas` — the same projective map the storefront uses
+  to put a door *into* a doorway, run backwards). What lands in the catalogue **is the leaf**,
+  head-on and edge to edge, so `/try` warps the whole image with nothing to cut away.
+  ⚠️ It **replaced a fixed 3:8 react-easy-crop** (2026-08-17), which forced every door into
+  a 3ft × 8ft frame — a 4ft grand entrance lost its sides, a 6′6″ utility door was stretched.
+  Doors are not one shape. The dep is gone with it (admin 66.6 → 60.5 kB gz); `QuadEditor`
+  serves both the cropper and the storefront, so there is one corner-dragger, not two.
+  ⚠️ `crop.mode === 'leaf'` is the contract: set by the cropper, read by `fetch-catalog.mjs`
+  into `ProductImage.isLeafCrop`, and gated on by `tryState`. Older whole-showroom photos
+  lack it and report `soon` — warping one would put our shop floor in a customer's hallway.
+  It lives in the existing `crop` jsonb; **no migration needed**. (A `leaf_quad` column was
+  added and then dropped the same day — the cropper made it redundant.)
+  · **Flip left-to-right** (`crop.flip`, added 2026-08-17). `.door-scene__leaf` hinges on
+  `transform-origin: left center`, so every door on the site swings open from its left edge
+  and the handle has to be on the right — a photo of a right-hung door gave a card that
+  swings open *from* its handle. A mirrored leaf is still a truthful picture of the design,
+  so this is a photo fix, not a second right-hinged swing to maintain.
+  ⚠️ The mirror is **two quad rearrangements, never a second pass over the pixels**.
+  `flipWinding` (`rectifyImage.ts`) reverses the corner order, and since `rectifyToCanvas`
+  maps output (0,0) onto `quad[0]`, that alone walks the leaf out backwards — the mirrored
+  door falls out of the warp already running. `mirrorQuad` pairs that reversal with an x
+  reflection to draw the handles over the CSS-mirrored stage, and is an involution, so one
+  call converts in both directions. Reflection *without* the winding flip is the trap: it
+  leaves index 0 at the top-**right**, so the editor and `squareUp` index the corner roles
+  back-to-front. `verify:geometry` asserts all of it.
+  ⚠️ `crop.quad` always describes the **original, unmirrored** photo and `flip` is recorded
+  beside it, so a re-crop restores both. Nothing downstream reads `flip` — the stored image
+  is already the right way round — so `fetch-catalog.mjs` needed no change. A re-crop that
+  falls back to the saved copy (no original kept) starts `flip` **off**: that copy is the
+  previous crop's output and is already mirrored.
+  · **Re-crop** reopens the cropper on an existing image (`existing` prop) instead of
+  forcing Remove-then-Add. It resolves the untouched original through
+  `originalUrl()` — the `originals` bucket is **private**, so that URL must be *signed*;
+  the public-URL form that works for `catalog` returns 400 — and restores the handles from
+  `crop.quad`. Images seeded before this admin existed have no original (all 42 of them at
+  the time of writing), so it falls back to the saved copy and **says so**: that path can
+  only trim further in, never recover what an earlier crop removed.
+  ⚠️ **`QuadEditor` carries its own `QuadEditor.css`**, and must keep doing so: it is used
+  by two separate bundles (the storefront route and the admin cropper). Its rules lived in
+  the route-scoped `tryathome.css`, so in `/admin` the handles had no positioning and the
+  outline `<polygon>` fell back to SVG's default `fill: black` — a large black rectangle
+  over the photo, hiding every control. A component shared across chunks owns its styles;
+  only page-level CSS belongs in a page stylesheet. (Rollup emits it inside the shared
+  chunk's stylesheet, currently `rectify-*.css`, and injects it for whichever bundle loads
+  first.) Verify with `grep -o 'tryq' dist/assets/*.css` after any chunking change.
+  ⚠️ `loadImage` sets `crossOrigin='anonymous'` for anything that isn't a `blob:`/`data:`
+  URL, and *before* assigning `src` or it has no effect. A re-crop reads its source from
+  Supabase storage — a different origin — and `rectifyToCanvas` calls `getImageData`, which
+  throws on a tainted canvas. Verified 2026-08-17 that the buckets answer
+  `access-control-allow-origin: *`; if that ever changes, re-crop and the try-on export
+  both break at their last step, silently until you try to save.
+  ⚠️ Photo leaves warp from the 960px stored copy, so they are softer than the vector doors
+  at full size. Raise `OUT_WIDTH` if that ever shows.
+  ⚠️ Export reads catalogue photos with `crossOrigin='anonymous'` (`loadLeafPhoto`) —
+  Supabase storage is a different origin, and a tainted canvas makes `toBlob()` throw, so
+  the customer's picture would never appear. The CSS preview needs no CORS; only reading
+  pixels back does.
+  ⚠️ `Number(null)` is `0` and `Number.isFinite(0)` is true, so reading `?h=&w=` straight
+  through turned a bare `/try/:id` — i.e. any pasted or shared link — into a 0×0 door that
+  `configFromLine` clamped to the smallest size sold, and the shared picture went out
+  stamped "5′ × 1′8″". Absent and zero are different answers. The E2E asserts the 8′ × 3′
+  default on a bare link.
   · **Measuring** (`rectify.ts`). The outlined leaf is a rectangle of known shape seen at an
   unknown angle, and that constrains the camera: the two pairs of parallel edges give two
   vanishing points whose world directions must be perpendicular, which yields the focal
@@ -417,6 +495,48 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   beside it. It is in `index.html`'s `modulepreload` list, so it is fetched in parallel and
   costs no extra round trip — net eager payload +190 bytes. Re-check that preload survives
   if the chunking is ever touched.
+- **Handheld AR** (`src/lib/arScene.ts` + `arSupport.ts` + `components/tryathome/
+  ArPlacement.tsx`, 2026-08-17): a WebXR `immersive-ar` session that stands the leaf in the
+  customer's room at true size, offered as a third button on `/try/:id`'s pick step.
+  ⚠️ **It appears where it works and is invisible everywhere else.** Safari on iOS does not
+  implement WebXR on any device, and Android's `immersive-ar` is ARCore-gated, so most
+  visitors will never see this. `arSupport.ts` owns that gate. There is deliberately **no**
+  disabled button, no "unsupported on your phone" notice and no nudge to switch devices — a
+  visitor who cannot have it should not learn it exists. The photo flow is **not a fallback**
+  for AR; it is the feature, and it is complete alone. `verify:e2e` asserts the absence (of
+  the button, the overlay root *and* the chunk fetch) on a browser without `navigator.xr`,
+  which is what stops a regression in the gate shipping a WebGL renderer to every iPhone.
+  ⚠️ **Hand-written WebGL, and it must stay that way.** The scene is one textured quad and a
+  reticle. Importing `three` would give it a scene graph it does not need and, worse, make a
+  *second* importer — which is what currently keeps three wholly inside `Beams-*.js` (see the
+  matrix3d bullet above). The AR chunk is 3.3 kB gz and imports only react/i18n/DoorArt;
+  entry is unmoved at 92.3 kB gz. Verify with `grep -l THREE dist/assets/*.js` — exactly one
+  file, `Beams-*.js`.
+  ⚠️ `ArPlacement` is lazy but **mounts as soon as support resolves, not on the tap**.
+  `requestSession` consumes transient user activation, so a dynamic `import()` inside the tap
+  handler spends the activation on the download and Chrome rejects the session — the same
+  class of bug as the `navigator.share()` one in `shareImage.ts`. `startArSession` therefore
+  reaches `requestSession` with no `await` before it; the texture is prepared *after*, during
+  the reticle phase. Don't "tidy" either into an await-first shape.
+  ⚠️ The overlay root must be in the document *before* `requestSession`, so it is always
+  mounted and merely parked (`:not([data-live])`, fixed at 0×0). It also sets an explicit
+  `background: transparent` — the UA paints a fullscreen element opaque black, which would
+  put a black sheet over the camera feed.
+  ⚠️ `beforexrselect` is cancelled **only for real controls**, never for the overlay as a
+  whole: a tap on empty space is how the door gets placed, and swallowing everything makes
+  the feature inert. Without any cancelling, "Done" stands a door up *and* closes.
+  · The leaf is upright at every yaw and only ever turns about the vertical axis — a floor
+  hit's pose points its normal up, and taking that orientation lays the door flat on the
+  carpet. It faces whoever placed it (`yawToward`). `verify:geometry` pins all of it: true
+  size in metres, base on the surface, vertical at six yaws, facing at four camera positions.
+  Those matrices are `Float32Array`, so that block uses `close32` (1e-5) — the file's 1e-9
+  `close` is a float64 tolerance and every AR check fails against it for precision alone.
+  · `@types/webxr` is an explicit devDependency (types-only, emits nothing). It was already
+  arriving transitively through the three.js ecosystem, but the AR path deliberately does not
+  use three, so leaving it implicit would break the build the day the hero's deps are touched.
+  · Not verified on hardware — there is no ARCore device in CI, and the render path (session
+  handshake, camera passthrough, hit-test quality) can only be confirmed on a real Android.
+  The arithmetic and the support gate are covered; the session is not.
 - **Mobile-first rules** (the site is browsed on phones; keep these true):
   · every colour-changing `:hover` lives inside `@media (hover: hover)` — touch latches
   `:hover` on the last thing tapped. The `.door-scene--hover:hover` swing is the one
@@ -539,6 +659,15 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   `img::before` (generated content renders on an `<img>` **only** while it is falling
   back to a non-replaced box, i.e. only when broken — a loaded photo never shows it);
   the two big `width:auto` images get a real React fallback, `WallPhoto`.
+  ⚠️ `ProductPhoto` renders the CMS's real `width`/`height` **attributes** (that is what
+  reserves the box against CLS), and those are *presentational hints on both the `width`
+  and the `height` property*. An author `width: 100%` outranks the width hint; nothing
+  outranked the height one on `.pdp__gallery img`, so from 2026-08-15 until 2026-08-17
+  each PDP thumbnail took its pixel height straight off the attribute — 154px wide and
+  1280–1920px tall, `aspect-ratio` ignored (an explicit height beats it) — and the three
+  alternate photos ran ~1700px down the page under every photographed door. Every other
+  `<img>` rule in the sheet already pairs a CSS width with a height (`100%`/`auto`);
+  keep it that way, the pair is the rule.
   · **Admin**: `humanError()` in `api.ts` maps 23505/23503/42501/401/offline to what the
   owner should do next, and keeps anything unrecognised verbatim. Every mutation was a
   bare `await` with no catch — a blocked write rejected into nothing and the reload put

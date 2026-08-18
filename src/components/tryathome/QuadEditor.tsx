@@ -10,7 +10,9 @@
  *
  * · **The loupe.** A thumb covers the exact corner it is placing. Without a
  *   magnifier offset above the finger, nobody can be accurate, and the whole
- *   feature rests on this placement being right.
+ *   feature rests on this placement being right. It magnifies the *corner*,
+ *   which is not the same point as the pointer — that confusion is the bug it
+ *   shipped with; see `active`.
  * · **Edge handles.** Most corrections are "the whole left edge is off by a
  *   bit", not "one corner is wrong", so the four edge midpoints move their two
  *   corners together.
@@ -20,6 +22,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react'
+import './QuadEditor.css'
 import { isConvex, shortestEdge, type Point, type Quad } from '../../lib/homography'
 import { t } from '../../lib/i18n'
 
@@ -37,6 +40,13 @@ export interface QuadEditorProps {
   height: number
   /** Photo URL, for the magnifier. */
   photoUrl: string
+  /**
+   * The stage is showing the photo mirrored left-to-right (the admin cropper's
+   * flip). Only the loupe cares: it paints the unmirrored file, so without this
+   * the magnifier under the finger reads back-to-front against the very photo
+   * it is magnifying. The storefront never sets it.
+   */
+  mirrored?: boolean
 }
 
 interface DragState {
@@ -44,13 +54,25 @@ interface DragState {
   startQuad: Quad
   originX: number
   originY: number
-  boxX: number
-  boxY: number
 }
 
-export function QuadEditor({ quad, onChange, width, height, photoUrl }: QuadEditorProps) {
+export function QuadEditor({ quad, onChange, width, height, photoUrl, mirrored }: QuadEditorProps) {
   const drag = useRef<DragState | null>(null)
-  const [loupe, setLoupe] = useState<Point | null>(null)
+  /**
+   * Which handle is being dragged — *not* where the pointer is.
+   *
+   * ⚠️ The loupe used to magnify the pointer position, and the two are not the
+   * same place. The grab lands anywhere inside a 44px target centred on the
+   * corner, so the magnifier opened up to ~22px off the corner it claims to be
+   * showing — enough to show wall where the corner is on the door. Worse, the
+   * gap grows without limit during a drag: `clampX/clampY` stop the corner at
+   * the photo's edge and `commit` refuses a move that would fold the quad, but
+   * nothing stops the pointer, so it walks away while the corner stays put.
+   *
+   * Deriving the point from `quad` instead means the loupe shows exactly what
+   * the corner is on, including when the editor has just refused to move it.
+   */
+  const [active, setActive] = useState<number | null>(null)
 
   const commit = useCallback(
     (next: Quad) => {
@@ -87,33 +109,24 @@ export function QuadEditor({ quad, onChange, width, height, photoUrl }: QuadEdit
   )
 
   const onPointerDown = (handle: number) => (e: React.PointerEvent<HTMLButtonElement>) => {
-    const host = e.currentTarget.parentElement
-    if (!host) return
-    const r = host.getBoundingClientRect()
     e.currentTarget.setPointerCapture(e.pointerId)
-    drag.current = {
-      handle,
-      startQuad: quad,
-      originX: e.clientX,
-      originY: e.clientY,
-      boxX: r.left,
-      boxY: r.top,
-    }
-    setLoupe({ x: e.clientX - r.left, y: e.clientY - r.top })
+    drag.current = { handle, startQuad: quad, originX: e.clientX, originY: e.clientY }
+    setActive(handle)
   }
 
   const onPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
     const state = drag.current
     if (!state) return
+    // No loupe bookkeeping here: it reads the live quad, so it follows the
+    // corner as `moveHandle` commits it — and holds still when it doesn't.
     moveHandle(state, e.clientX - state.originX, e.clientY - state.originY)
-    setLoupe({ x: e.clientX - state.boxX, y: e.clientY - state.boxY })
   }
 
   const endDrag = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (!drag.current) return
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
     drag.current = null
-    setLoupe(null)
+    setActive(null)
   }
 
   const onKeyDown = (handle: number) => (e: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -127,11 +140,14 @@ export function QuadEditor({ quad, onChange, width, height, photoUrl }: QuadEdit
     const move = d[e.key]
     if (!move) return
     e.preventDefault()
-    moveHandle({ handle, startQuad: quad, originX: 0, originY: 0, boxX: 0, boxY: 0 }, move[0], move[1])
+    moveHandle({ handle, startQuad: quad, originX: 0, originY: 0 }, move[0], move[1])
   }
 
   const mid = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
   const points = quad.map((p) => `${p.x},${p.y}`).join(' ')
+  /* Where a handle sits: the corner itself, or the midpoint an edge handle
+     rides on. Read off the live quad, which is what keeps the loupe honest. */
+  const handleAt = (i: number): Point => (i < 4 ? quad[i] : mid(quad[i - 4], quad[(i - 3) % 4]))
 
   return (
     <div className="tryq" style={{ width, height }}>
@@ -172,29 +188,49 @@ export function QuadEditor({ quad, onChange, width, height, photoUrl }: QuadEdit
         )
       })}
 
-      {loupe && <Loupe at={loupe} photoUrl={photoUrl} width={width} height={height} />}
+      {active !== null && (
+        <Loupe
+          at={handleAt(active)}
+          photoUrl={photoUrl}
+          width={width}
+          height={height}
+          mirrored={mirrored}
+        />
+      )}
     </div>
   )
 }
 
 /**
- * A magnified crop under the finger, parked on whichever side of it has room.
- * Purely decorative, so it never takes pointer events.
+ * A magnified crop of the corner being placed, parked above it where there is
+ * room and below it near the top edge. Purely decorative, so it never takes
+ * pointer events.
+ *
+ * `at` is the handle's own position, never the pointer's — see `active`.
  */
 function Loupe({
   at,
   photoUrl,
   width,
   height,
+  mirrored,
 }: {
   at: Point
   photoUrl: string
   width: number
   height: number
+  mirrored?: boolean
 }) {
   const above = at.y > LOUPE + 24
   const top = above ? at.y - LOUPE - 20 : at.y + 20
   const left = Math.max(0, Math.min(width - LOUPE, at.x - LOUPE / 2))
+  /* The background is the file itself, which is never mirrored — so on a
+     mirrored stage the point under the finger is at `width - at.x` in it.
+     Centre that, then flip the whole loupe: the centre is a fixed point of
+     `scaleX(-1)`, so the corner stays under the crosshair and the surrounding
+     detail now reads the same way round as the photo it sits on. Everything
+     else about the loupe is symmetric, so nothing else notices. */
+  const sourceX = mirrored ? width - at.x : at.x
   return (
     <div
       className="tryq__loupe"
@@ -206,7 +242,8 @@ function Loupe({
         height: LOUPE,
         backgroundImage: `url(${photoUrl})`,
         backgroundSize: `${width * LOUPE_ZOOM}px ${height * LOUPE_ZOOM}px`,
-        backgroundPosition: `${LOUPE / 2 - at.x * LOUPE_ZOOM}px ${LOUPE / 2 - at.y * LOUPE_ZOOM}px`,
+        backgroundPosition: `${LOUPE / 2 - sourceX * LOUPE_ZOOM}px ${LOUPE / 2 - at.y * LOUPE_ZOOM}px`,
+        ...(mirrored ? { transform: 'scaleX(-1)' } : {}),
       }}
     />
   )

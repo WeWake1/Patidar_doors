@@ -220,6 +220,20 @@ body.has-fullscreen .wa-float {
   height: 100%;
 }
 
+/* A photographed leaf is clipped to the quad the owner marked, so the reveal
+   shadow and feather that suit a drawn leaf would be clipped away with it —
+   and are not wanted anyway: the shop photograph already carries the door's
+   own edges and shading. */
+.tryd__grade--photo {
+  box-shadow: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.tryd__grade--photo .tryd__art {
+  object-fit: fill;
+}
+
 .tryd__tint,
 .tryd__fall {
   position: absolute;
@@ -232,106 +246,6 @@ body.has-fullscreen .wa-float {
    finish. */
 .tryd__tint {
   mix-blend-mode: color;
-}
-
-/* ── corner handles ────────────────────────────────────── */
-
-.tryq {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  touch-action: none; /* or the browser scrolls the page instead of dragging */
-}
-
-.tryq__outline {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.tryq__outline polygon {
-  fill: none;
-  stroke: var(--gold);
-  stroke-width: 2;
-  stroke-dasharray: 7 5;
-  vector-effect: non-scaling-stroke;
-}
-
-.tryq__handle {
-  position: absolute;
-  /* --touch is a floor, and a thumb needs all of it — but the *visible* dot is
-     the ::before, so the target can be generous without looking clumsy. */
-  width: var(--touch);
-  height: var(--touch);
-  margin: 0;
-  padding: 0;
-  transform: translate(-50%, -50%);
-  border: 0;
-  background: none;
-  cursor: grab;
-  pointer-events: auto;
-  touch-action: none;
-}
-
-.tryq__handle::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: var(--r-circle);
-  background: var(--lamp-hot);
-  box-shadow: 0 0 0 2px var(--frame), 0 2px 6px rgb(var(--cast-deep-rgb) / 0.5);
-}
-
-.tryq__handle--corner::before {
-  width: 15px;
-  height: 15px;
-}
-
-.tryq__handle--edge::before {
-  width: 10px;
-  height: 10px;
-  background: var(--gold);
-  opacity: 0.85;
-}
-
-.tryq__handle:focus-visible {
-  outline: none;
-}
-
-.tryq__handle:focus-visible::before {
-  box-shadow: var(--ring-focus), 0 0 0 2px var(--frame);
-}
-
-.tryq__handle:active {
-  cursor: grabbing;
-}
-
-/* A thumb covers the corner it is placing; without this nobody can be accurate. */
-.tryq__loupe {
-  position: absolute;
-  z-index: 2;
-  border: 2px solid var(--lamp-hot);
-  border-radius: var(--r-circle);
-  background-repeat: no-repeat;
-  box-shadow: 0 6px 20px rgb(var(--cast-deep-rgb) / 0.55);
-  pointer-events: none;
-}
-
-.tryq__loupe::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 13px;
-  height: 13px;
-  transform: translate(-50%, -50%);
-  border: 1px solid var(--gold);
-  border-radius: var(--r-circle);
 }
 
 /* ── controls ──────────────────────────────────────────── */
@@ -492,4 +406,109 @@ body.has-fullscreen .wa-float {
   .tryd {
     will-change: auto;
   }
+}
+
+/* ── handheld AR (/try/:id, ARCore-backed Android only) ──────────────────────
+
+   Everything here is inert on the devices without WebXR, because ArPlacement
+   renders nothing there at all — see src/lib/arSupport.ts. These rules only
+   ever apply on a phone that is already inside an immersive session.
+
+   ⚠️ The overlay root has to be in the document *before* requestSession runs,
+   and the tap that calls it is the same tap that must still carry activation.
+   So it is always mounted and merely parked, rather than mounted on demand. */
+.arx__overlay:not([data-live]) {
+  /* Fixed rather than absolute: it needs to leave the pick step's flex column
+     without depending on a positioned ancestor existing. */
+  position: fixed;
+  block-size: 0;
+  inline-size: 0;
+  overflow: hidden;
+}
+
+.arx__overlay[data-live] {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /* ⚠️ The UA stylesheet paints a fullscreen element opaque black, and this
+     element is fullscreened for the life of the session — leave it and the
+     camera feed is behind a black sheet with the controls floating on it. */
+  background: transparent;
+  block-size: 100%;
+  inline-size: 100%;
+  /* Taps land on the world, not on the sheet; only the controls take input, so
+     tapping anywhere else stands the door up. */
+  pointer-events: none;
+}
+
+.arx__overlay[data-live] > * {
+  pointer-events: auto;
+}
+
+/* Legible against a camera feed of an unknown room, which is the whole
+   difficulty — hence a pill of its own ground rather than bare text. */
+.arx__hint {
+  margin: calc(12px + env(safe-area-inset-top)) auto 0;
+  max-width: 30ch;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: rgb(var(--cast-deep-rgb) / 0.62);
+  color: var(--cream-on-dark);
+  font: var(--type-body-sm);
+  text-align: center;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.arx__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px calc(var(--gutter-phone) + env(safe-area-inset-right))
+    calc(14px + env(safe-area-inset-bottom)) calc(var(--gutter-phone) + env(safe-area-inset-left));
+  background: linear-gradient(to top, rgb(var(--cast-deep-rgb) / 0.78), transparent);
+}
+
+/* The design and size, burnt into the view — a screenshot of an AR session is
+   the thing that gets forwarded, and an anonymous one is no use to the shop. */
+.arx__label {
+  color: var(--cream-on-dark);
+  font: var(--type-label);
+  letter-spacing: var(--track-mid);
+  text-transform: uppercase;
+}
+
+.arx__acts {
+  display: flex;
+  gap: 10px;
+}
+
+.arx__btn {
+  min-height: var(--touch);
+  padding: 0 18px;
+  border: 1px solid var(--frame);
+  border-radius: var(--r-pill);
+  background: rgb(var(--cast-deep-rgb) / 0.62);
+  color: var(--cream-on-dark);
+  font: var(--type-label);
+  letter-spacing: var(--track-tight);
+  text-transform: uppercase;
+}
+
+.arx__btn--end {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* The rasterisation source for a drawn leaf. Off-screen rather than
+   display:none or visibility:hidden — an unrendered SVG has no layout, and
+   Safari has historically serialised such a node at a default 300×150. */
+.arx__art {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 400px;
+  height: 1024px;
+  pointer-events: none;
 }

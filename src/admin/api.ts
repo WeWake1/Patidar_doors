@@ -52,8 +52,24 @@ export interface DbImage {
   width: number
   height: number
   original_path?: string | null
+  /**
+   * How this image was cropped, so the crop can be re-opened later:
+   * `{ mode: 'leaf' | 'rect', quad: number[8], ratio, flip?: true }`.
+   * `mode: 'leaf'` means the four-corner tool produced it, so the picture *is*
+   * the door — that flag is what lets the storefront's doorway view warp it
+   * whole. `quad` always describes the *original*, unmirrored photo; `flip`
+   * records that the saved copy was mirrored on the way out, so re-opening the
+   * crop can put both back. Nothing downstream of the admin reads `flip` — the
+   * stored image is already the right way round.
+   */
   crop?: unknown
   sort_order: number
+}
+
+/** True when this image is a straightened, background-free door leaf. */
+export function isLeafCrop(im: DbImage): boolean {
+  const c = im.crop as { mode?: unknown } | null | undefined
+  return !!c && typeof c === 'object' && c.mode === 'leaf'
 }
 
 export interface DbProduct {
@@ -183,6 +199,33 @@ export async function uploadOriginal(path: string, file: File): Promise<string> 
   return path
 }
 
+/**
+ * A temporary read URL for an untouched original, so a photo can be re-cropped
+ * from the full frame rather than from what was kept last time.
+ *
+ * The `originals` bucket is private, so this has to be signed — the public URL
+ * that works for `catalog` returns 400 here. Ten minutes is far longer than a
+ * crop takes and short enough that a copied link is useless later.
+ */
+export async function originalUrl(path: string): Promise<string> {
+  const { data, error } = await db().storage.from('originals').createSignedUrl(path, 600)
+  if (error) throw error
+  return data.signedUrl
+}
+
+/** The four corners a previous crop used, if it recorded any. */
+export function cropQuad(im: DbImage): number[] | null {
+  const c = im.crop as { quad?: unknown } | null | undefined
+  if (!c || typeof c !== 'object' || !Array.isArray(c.quad) || c.quad.length !== 8) return null
+  return c.quad.every((n) => typeof n === 'number' && Number.isFinite(n)) ? (c.quad as number[]) : null
+}
+
+/** Whether a previous crop mirrored the door left-to-right on the way out. */
+export function cropFlip(im: DbImage): boolean {
+  const c = im.crop as { flip?: unknown } | null | undefined
+  return !!c && typeof c === 'object' && c.flip === true
+}
+
 /** Convert a DbProduct to the public Product shape (for the live preview). */
 export function toPreviewProduct(p: DbProduct, subName: string): Product {
   const cover = p.images?.find((i) => i.role === 'cover') ?? p.images?.[0]
@@ -192,6 +235,7 @@ export function toPreviewProduct(p: DbProduct, subName: string): Product {
     alt: p.name,
     w: im.width,
     h: im.height,
+    ...(isLeafCrop(im) ? { isLeafCrop: true } : {}),
   })
   const visual = cover
     ? {

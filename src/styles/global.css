@@ -1138,6 +1138,10 @@ button { font-family: var(--sans); }
   .doorwall__head { padding: 0 var(--gutter); }
   .doorwall__split { margin-top: 30px; }
   .doorwall__wall { height: min(64vh, 460px); }
+  /* the wall's side edges ARE the screen's here, so the side dissolve is off:
+     content cut by the viewport reads as continuing, and fading it instead
+     invents two dark gutters and undoes the edge-to-edge above */
+  .doorwall .drift-wall { --dw-edge-x: 0%; }
 }
 /* same reason as `dim` in DoorWall.tsx: no hover means no reveal, so the
    scrim that makes the desktop hover pop just leaves the photos muddy */
@@ -1904,14 +1908,27 @@ button { font-family: var(--sans); }
   border: 1px solid var(--line);
   display: block;
 }
+/* The stage has no side padding (the door scene centres itself inside it), so
+   an auto-width flex child fills it edge to edge and the outer thumbnails lay
+   their hairline straight on top of the stage's own border. Inset it instead. */
 .pdp__gallery {
+  align-self: stretch;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin-top: 14px;
+  margin: 14px 22px 0;
 }
+/* ⚠️ `height: auto` is load-bearing, not tidiness. Every catalogue <img> carries
+   the CMS's real `width`/`height` attributes (ProductPhoto, for CLS), and those
+   map to presentational hints on the *width* and *height* properties. An author
+   `width: 100%` outranks the width hint, but nothing here outranked the height
+   one — so each thumbnail took its pixel height straight off the attribute
+   (1280px, 1920px…) while its column was 154px wide, `aspect-ratio` was ignored
+   (an explicit height wins over it) and the three photos ran a couple of
+   thousand pixels down the page. Pair the two whenever an <img> is sized by CSS. */
 .pdp__gallery img {
   width: 100%;
+  height: auto;
   aspect-ratio: 3 / 4;
   object-fit: cover;
   border: 1px solid var(--line);
@@ -2604,7 +2621,7 @@ button { font-family: var(--sans); }
 
   /* — PDP: keep the door the hero of the first screen, just a little tighter — */
   .pdp__stage { padding: 34px 0 22px; }
-  .pdp__gallery { gap: 8px; }
+  .pdp__gallery { gap: 8px; margin: 12px 14px 0; }
 }
 
 /* the bag glyph only earns its place next to the word on wider bars */

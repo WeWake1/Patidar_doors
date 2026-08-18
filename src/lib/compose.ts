@@ -41,8 +41,12 @@ export interface ComposeInput {
   photo: HTMLCanvasElement
   /** Where the leaf goes, normalised 0–1 against the photo. */
   quadN: Quad
-  /** The rasterised leaf, from `rasterizeDoor`. */
-  door: HTMLImageElement
+  /**
+   * The leaf, and where it sits inside `image`'s own pixels. For a drawn door
+   * that is the whole raster; for a photographed one it is the quad the owner
+   * marked in /admin, which crops the shop background as it warps.
+   */
+  leaf: { image: HTMLImageElement; quad: Quad }
   flipped: boolean
   ambient: Ambient | null
   /** The strip burnt along the bottom. Null leaves the photo alone. */
@@ -50,7 +54,7 @@ export interface ComposeInput {
 }
 
 export async function composeTryOn(input: ComposeInput): Promise<Blob> {
-  const { photo, quadN, door, flipped, ambient, footer } = input
+  const { photo, quadN, leaf, flipped, ambient, footer } = input
   const pw = photo.width
   const ph = photo.height
   const bandH = footer ? Math.round(Math.min(120, Math.max(56, ph * 0.075))) : 0
@@ -62,8 +66,8 @@ export async function composeTryOn(input: ComposeInput): Promise<Blob> {
   if (!ctx) throw new Error('compose: no 2d context')
   ctx.drawImage(photo, 0, 0)
 
-  const dw = door.naturalWidth
-  const dh = door.naturalHeight
+  const dw = leaf.image.naturalWidth
+  const dh = leaf.image.naturalHeight
   if (!dw || !dh) throw new Error('compose: the door artwork has no size')
 
   const dest: Quad = [
@@ -72,24 +76,29 @@ export async function composeTryOn(input: ComposeInput): Promise<Blob> {
     { x: quadN[2].x * pw, y: quadN[2].y * ph },
     { x: quadN[3].x * pw, y: quadN[3].y * ph },
   ]
-  // The flip is a sign change on the source rect, exactly as in DoorLayer —
-  // not a second transform stacked on top.
-  const from: Quad = flipped
-    ? [{ x: dw, y: 0 }, { x: 0, y: 0 }, { x: 0, y: dh }, { x: dw, y: dh }]
-    : rectQuad(dw, dh)
+  /* Mirroring permutes which source corner meets which destination corner —
+     the same expression DoorLayer uses, so a flipped preview and a flipped
+     export cannot disagree. */
+  const src4 = leaf.quad
+  const from: Quad = flipped ? [src4[1], src4[0], src4[3], src4[2]] : src4
 
   const h = solveHomography(from, dest)
   const hi = h && invert(h)
   if (!h || !hi) throw new Error('compose: the outline is degenerate')
 
-  /* The bounding box of the *extended* source rect, so the contact shadow's
-     reach below the leaf is inside the region we touch. */
-  const ext = dh * SHADOW_EXT
+  /* The contact shadow depends only on where the door landed, not on what the
+     door is, so it gets its own map from a unit rect. That keeps it identical
+     for a drawn leaf and a photographed one. */
+  const hs = solveHomography(rectQuad(1, 1), dest)
+  const hsi = hs && invert(hs)
+  if (!hs || !hsi) throw new Error('compose: the outline is degenerate')
+
+  /* The region to touch: the placed door plus the shadow's reach below it. */
   const corners = [
-    mapPoint(h, 0, 0),
-    mapPoint(h, dw, 0),
-    mapPoint(h, dw, ext),
-    mapPoint(h, 0, ext),
+    mapPoint(hs, 0, 0),
+    mapPoint(hs, 1, 0),
+    mapPoint(hs, 1, SHADOW_EXT),
+    mapPoint(hs, 0, SHADOW_EXT),
   ]
   const x0 = Math.max(0, Math.floor(Math.min(...corners.map((p) => p.x))))
   const y0 = Math.max(0, Math.floor(Math.min(...corners.map((p) => p.y))))
@@ -97,7 +106,7 @@ export async function composeTryOn(input: ComposeInput): Promise<Blob> {
   const y1 = Math.min(ph, Math.ceil(Math.max(...corners.map((p) => p.y))))
   if (x1 <= x0 || y1 <= y0) throw new Error('compose: the door falls outside the photo')
 
-  const src = imageData(door, dw, dh)
+  const src = imageData(leaf.image, dw, dh)
   const band = ctx.getImageData(x0, y0, x1 - x0, y1 - y0)
   const px = band.data
   const bw = x1 - x0
@@ -113,27 +122,41 @@ export async function composeTryOn(input: ComposeInput): Promise<Blob> {
     for (let x = x0; x < x1; x++) {
       // Sample at the pixel centre; sampling the corner shifts the whole leaf
       // half a pixel up-left and shows as a seam against the frame.
-      const w = hi[6] * (x + 0.5) + hi[7] * (y + 0.5) + hi[8]
-      if (w === 0) continue
-      const u = (hi[0] * (x + 0.5) + hi[1] * (y + 0.5) + hi[2]) / w
-      const v = (hi[3] * (x + 0.5) + hi[4] * (y + 0.5) + hi[5]) / w
-      if (u < 0 || u >= dw || v < 0 || v >= ext) continue
-
+      const cxp = x + 0.5
+      const cyp = y + 0.5
       const o = ((y - y0) * bw + (x - x0)) * 4
 
-      /* Contact shadow first — it lies on the floor, under the leaf. */
-      const sa = shadowAt(v / ext)
-      if (sa > 0) {
-        px[o] = px[o] * (1 - sa + sa * SHADOW_RGB[0])
-        px[o + 1] = px[o + 1] * (1 - sa + sa * SHADOW_RGB[1])
-        px[o + 2] = px[o + 2] * (1 - sa + sa * SHADOW_RGB[2])
+      /* Contact shadow first — it lies on the floor, under the leaf. Its own
+         map, in unit-rect space, so `sv` runs 0…SHADOW_EXT down the door. */
+      const sw = hsi[6] * cxp + hsi[7] * cyp + hsi[8]
+      if (sw !== 0) {
+        const su = (hsi[0] * cxp + hsi[1] * cyp + hsi[2]) / sw
+        const sv = (hsi[3] * cxp + hsi[4] * cyp + hsi[5]) / sw
+        if (su >= 0 && su <= 1 && sv >= 0 && sv <= SHADOW_EXT) {
+          const sa = shadowAt(sv / SHADOW_EXT)
+          if (sa > 0) {
+            px[o] = px[o] * (1 - sa + sa * SHADOW_RGB[0])
+            px[o + 1] = px[o + 1] * (1 - sa + sa * SHADOW_RGB[1])
+            px[o + 2] = px[o + 2] * (1 - sa + sa * SHADOW_RGB[2])
+          }
+        }
       }
-      if (v >= dh) continue
+
+      const w = hi[6] * cxp + hi[7] * cyp + hi[8]
+      if (w === 0) continue
+      const u = (hi[0] * cxp + hi[1] * cyp + hi[2]) / w
+      const v = (hi[3] * cxp + hi[4] * cyp + hi[5]) / w
+      if (u < 0 || u >= dw || v < 0 || v >= dh) continue
+
+      /* Inside the *marked leaf*, not merely inside the image — for a
+         photographed door the quad is what crops the shop background away. */
+      const edgeDist = insideDistance(from, u, v)
+      if (edgeDist < 0) continue
 
       const s = sample(src, dw, dh, u, v)
       let a = s[3] / 255
       if (a <= 0) continue
-      a *= feather(u, v, dw, dh)
+      a *= edgeDist >= FEATHER ? 1 : Math.max(0, edgeDist / FEATHER)
       if (a <= 0) continue
 
       let r = (s[0] / 255) * grade.brightness
@@ -145,7 +168,7 @@ export async function composeTryOn(input: ComposeInput): Promise<Blob> {
         g += (cg - g) * ta
         b += (cb - b) * ta
       }
-      const fa = falloffAt(grade.falloff, v / dh)
+      const fa = falloffAt(grade.falloff, verticalOf(from, u, v))
       if (fa > 0) {
         const k = 1 - fa
         r *= k
@@ -172,9 +195,41 @@ function shadowAt(s: number): number {
   return (1 - (s - 0.94) / 0.06) * 0.45
 }
 
-function feather(u: number, v: number, dw: number, dh: number): number {
-  const d = Math.min(u, dw - u, v, dh - v)
-  return d >= FEATHER ? 1 : Math.max(0, d / FEATHER)
+/**
+ * Distance from (u,v) to the nearest edge of the convex quad `q`, or −1 when
+ * the point is outside it. One test that serves both jobs: cropping to the
+ * marked leaf, and feathering its cut edge.
+ */
+function insideDistance(q: Quad, u: number, v: number): number {
+  let min = Infinity
+  let sign = 0
+  for (let i = 0; i < 4; i++) {
+    const a = q[i]
+    const b = q[(i + 1) % 4]
+    const ex = b.x - a.x
+    const ey = b.y - a.y
+    const cross = ex * (v - a.y) - ey * (u - a.x)
+    const s = cross > 0 ? 1 : -1
+    if (sign === 0) sign = s
+    else if (s !== sign) return -1
+    const len = Math.hypot(ex, ey)
+    if (len > 0) min = Math.min(min, Math.abs(cross) / len)
+  }
+  return min
+}
+
+/** How far down the leaf (0 = head, 1 = foot), for the fall-off wash. */
+function verticalOf(q: Quad, u: number, v: number): number {
+  const topY = (q[0].y + q[1].y) / 2
+  const botY = (q[2].y + q[3].y) / 2
+  const topX = (q[0].x + q[1].x) / 2
+  const botX = (q[2].x + q[3].x) / 2
+  const dx = botX - topX
+  const dy = botY - topY
+  const len2 = dx * dx + dy * dy
+  if (len2 === 0) return 0
+  const t = ((u - topX) * dx + (v - topY) * dy) / len2
+  return t < 0 ? 0 : t > 1 ? 1 : t
 }
 
 function imageData(img: HTMLImageElement, w: number, h: number): Uint8ClampedArray {

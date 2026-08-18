@@ -187,6 +187,24 @@ const en = {
   'try.retake': 'Use a different photo',
   'try.a11y.corner': 'Door outline, corner {n} of 4',
   'try.a11y.edge': 'Door outline, edge {n} of 4',
+  /* Handheld AR — shown only where WebXR is actually backed by ARCore, which
+     is no iPhone and not every Android. The copy never mentions the devices it
+     is missing from: a visitor who cannot have it should not learn that it
+     exists. See src/lib/arSupport.ts. */
+  'try.ar.open': 'Stand it in the room',
+  'try.ar.hunting': 'Move your phone slowly across the floor.',
+  'try.ar.tap': 'Tap to stand the door here.',
+  'try.ar.placedHint': 'Walk around it. It’s shown at its real size.',
+  'try.ar.move': 'Move it',
+  'try.ar.exit': 'Done',
+  /* A refusal and a stale ARCore need different answers — one is a choice the
+     visitor made and can remake, the other is a thing they can fix. Neither
+     dead-ends: the photo flow is still sitting on the same screen. */
+  'try.ar.err.denied': 'The camera wasn’t allowed, so the room view can’t open. You can still use a photo.',
+  'try.ar.err.unavailable':
+    'The room view couldn’t start on this phone. Updating Google Play Services for AR usually fixes it — or use a photo instead.',
+  'try.ar.err.gl': 'The room view couldn’t draw the door on this phone. Use a photo instead.',
+  'try.ar.err.nohittest': 'This phone can’t find surfaces to stand the door on. Use a photo instead.',
   'try.err.type': 'That file isn’t a photo. Pick a JPG or PNG.',
   'try.err.size': 'That photo is too large. Try one under 20 MB.',
   'try.err.heic':

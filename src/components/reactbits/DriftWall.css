@@ -14,14 +14,34 @@
   --dw-gray: 0;
   --dw-overlay: #060010;
   --dw-edge: 40%;
+  /* The tiles drift vertically, so both ends of the column have to read as
+     continuing — upstream left the bottom of the linear mask opaque, which
+     hard-cut the tiles at the pane's edge and made the wall look like it
+     stopped there. The bottom dissolve is a fraction of the top's rather than
+     a mirror of it: the head's copy sits above the pane so the top can afford
+     a long dissolve, while a bottom fade this deep would eat the wall's mass.
+     Derived from --dw-edge (i.e. from the `fade` prop) so it can never order
+     ahead of the top stop, whatever `fade` is set to. */
+  --dw-edge-b: calc(var(--dw-edge) * 0.42);
+  /* Sides, same argument as the bottom and the same original fault: the plane
+     is far wider than the pane it is clipped by (1216px inside 600px on the
+     desktop split), and the radial only reaches ~0.6 alpha at the left and
+     right edges, so `overflow: hidden` chopped the tiles at 60% opacity — a
+     hard vertical seam with empty band beyond it. Shorter than the vertical
+     fades because the pane is the narrow axis; much more and the dissolve eats
+     a whole column. Set to 0% where the wall is full-bleed and its edges are
+     the screen's, which is a cut the eye reads as "continues", not "broken". */
+  --dw-edge-x: 11%;
   --dw-ring: rgba(255, 255, 255, 0.9);
   -webkit-mask-image:
     radial-gradient(ellipse 78% 82% at 50% 46%, #000 var(--dw-edge), transparent 100%),
-    linear-gradient(to top, #000 var(--dw-edge), transparent 100%);
+    linear-gradient(to top, transparent 0, #000 var(--dw-edge-b), #000 var(--dw-edge), transparent 100%),
+    linear-gradient(to right, transparent 0, #000 var(--dw-edge-x), #000 calc(100% - var(--dw-edge-x)), transparent 100%);
   -webkit-mask-composite: source-in;
   mask-image:
     radial-gradient(ellipse 78% 82% at 50% 46%, #000 var(--dw-edge), transparent 100%),
-    linear-gradient(to top, #000 var(--dw-edge), transparent 100%);
+    linear-gradient(to top, transparent 0, #000 var(--dw-edge-b), #000 var(--dw-edge), transparent 100%),
+    linear-gradient(to right, transparent 0, #000 var(--dw-edge-x), #000 calc(100% - var(--dw-edge-x)), transparent 100%);
   mask-composite: intersect;
 }
 

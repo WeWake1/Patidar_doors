@@ -554,6 +554,40 @@ await step('try-at-home is offered on doors and refused on materials', async () 
   if (/is for doors/i.test(wpc)) throw new Error('a WPC door was refused as "not a door"')
 })
 
+await step('handheld AR stays invisible where WebXR is not backed by ARCore', async () => {
+  /* Headless Chrome exposes no navigator.xr, which is the same answer every
+     iPhone gives — so this is the majority case, not an edge one. The rule it
+     protects: AR appears where it works and is *absent* everywhere else, with
+     the photo flow left whole rather than turned into its fallback. A disabled
+     button or an "unsupported" notice would both fail this.
+
+     ⚠️ Asserting the chunk too, not just the button. ArPlacement mounts as soon
+     as support resolves — that is what preserves the tap's activation for
+     requestSession — so a regression in the gate would be invisible in the UI
+     while still shipping a WebGL renderer to every iPhone on the route. */
+  await page.goto(`${BASE}/try/kyoto`, { waitUntil: 'networkidle' })
+  if (await page.locator('.arx__open').count()) throw new Error('AR was offered on a device without WebXR')
+  if (await page.locator('.arx__overlay').count()) throw new Error('the AR overlay root mounted without WebXR')
+  const fetched = await page.evaluate(() =>
+    performance.getEntriesByType('resource').some((r) => /ArPlacement-.*\.js$/.test(r.name)),
+  )
+  if (fetched) throw new Error('the AR chunk was fetched on a device that cannot use it')
+
+  // The photo flow is the feature, not a fallback — it must be untouched.
+  const buttons = await page.locator('.try__pickrow button').count()
+  if (buttons !== 2) throw new Error(`expected both photo buttons, found ${buttons}`)
+})
+
+await step('a bare /try link falls back to the standard door size', async () => {
+  /* No query at all is what a pasted or shared link looks like. `Number(null)`
+     is 0 and `Number.isFinite(0)` is true, so this once produced a 0×0 door
+     clamped to the smallest size we sell, and the shared picture went out
+     stamped 5′ × 1′8″. */
+  await page.goto(`${BASE}/try/kyoto`, { waitUntil: 'networkidle' })
+  const name = await page.locator('.try__name').innerText()
+  if (!/8′\s*×\s*3′/.test(name)) throw new Error(`expected the 8′ × 3′ default, got: ${name}`)
+})
+
 await step('a photo places the door and the warp is a real matrix3d', async () => {
   await placeDoor()
   const inline = await page.locator('.tryd').evaluate((el) => el.style.transform)

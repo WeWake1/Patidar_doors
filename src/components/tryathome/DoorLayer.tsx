@@ -21,7 +21,7 @@
  */
 
 import { memo, useMemo } from 'react'
-import type { ArtId, Tone } from '../../data/products'
+import type { ArtId, ProductImage, Tone } from '../../data/products'
 import { gradeFor } from '../../lib/doorGrade'
 import { rectQuad, solveHomography, toMatrix3d, type Mat3, type Quad } from '../../lib/homography'
 import type { Ambient } from '../../lib/photoLoad'
@@ -39,34 +39,67 @@ function sourceHeight(quadHeightPx: number): number {
   return quadHeightPx < 700 ? 600 : quadHeightPx < 1100 ? 900 : 1400
 }
 
+/**
+ * What is being stood in the doorway.
+ *
+ * The two cases differ only in where the source quad comes from. A drawn leaf
+ * is a rectangle laid out at the door's real proportions; a photographed leaf
+ * is an arbitrary quad *inside* a shop photograph, so warping it onto the
+ * customer's doorway rectifies the shop-floor angle and crops the background
+ * in the same operation. That is why photographed doors need no background
+ * removal — outlining the leaf is the cutout.
+ */
+export type LeafSource =
+  | { kind: 'art'; art: ArtId; tone: Tone }
+  | { kind: 'photo'; photo: ProductImage }
+
 export interface DoorLayerProps {
-  art: ArtId
-  tone: Tone
+  source: LeafSource
   /** Where the door goes, in the preview box's own pixels. */
   quad: Quad
   heightIn: number
   widthIn: number
-  /** Hinge on the other side — negated into the source rect, not a 2nd transform. */
+  /** Hinge on the other side. */
   flipped?: boolean
   /** Room light sampled from around the quad; null just means no grading. */
   ambient?: Ambient | null
 }
 
-export function DoorLayer({ art, tone, quad, heightIn, widthIn, flipped, ambient }: DoorLayerProps) {
+/**
+ * Mirror by permuting which source corner meets which destination corner,
+ * rather than negating coordinates — one expression that works for a rectangle
+ * and for an arbitrary photographed quad alike.
+ */
+function mirror(q: Quad): Quad {
+  return [q[1], q[0], q[3], q[2]]
+}
+
+export function DoorLayer({ source, quad, heightIn, widthIn, flipped, ambient }: DoorLayerProps) {
   const geom = useMemo(() => {
     const edge = (a: number, b: number) => Math.hypot(quad[b].x - quad[a].x, quad[b].y - quad[a].y)
     const quadH = (edge(0, 3) + edge(1, 2)) / 2
-    const h = sourceHeight(quadH)
-    // The source box carries the *real* door's proportions, so an 84×33 leaf
-    // warps as an 84:33 rectangle. This is what makes the preview honest
-    // rather than decorative.
-    const w = h * (widthIn / heightIn)
-    const src = rectQuad(w, h)
-    const from: Quad = flipped
-      ? [{ x: w, y: 0 }, { x: 0, y: 0 }, { x: 0, y: h }, { x: w, y: h }]
-      : src
-    return { w, h, m: solveHomography(from, quad) }
-  }, [quad, heightIn, widthIn, flipped])
+
+    let w: number
+    let h: number
+    let from: Quad
+    if (source.kind === 'art') {
+      // The source box carries the *real* door's proportions, so an 84×33 leaf
+      // warps as an 84:33 rectangle. This is what makes the preview honest
+      // rather than decorative.
+      h = sourceHeight(quadH)
+      w = h * (widthIn / heightIn)
+      from = rectQuad(w, h)
+    } else {
+      /* The photograph *is* the leaf — the admin's cropper straightened it and
+         cut the showroom away — so the whole image warps, edge to edge, and
+         its own proportions are the door's. */
+      h = sourceHeight(quadH)
+      const aspect = source.photo.w && source.photo.h ? source.photo.w / source.photo.h : widthIn / heightIn
+      w = h * aspect
+      from = rectQuad(w, h)
+    }
+    return { w, h, m: solveHomography(flipped ? mirror(from) : from, quad) }
+  }, [source, quad, heightIn, widthIn, flipped])
 
   // A null solve means the quad folded. The editor refuses those moves before
   // they land, so this is belt-and-braces — but rendering nothing beats
@@ -81,7 +114,7 @@ export function DoorLayer({ art, tone, quad, heightIn, widthIn, flipped, ambient
         aria-hidden="true"
         style={{ width: geom.w, height: geom.h, transform: toMatrix3d(geom.m) }}
       >
-        <DoorInner art={art} tone={tone} ambient={ambient ?? null} />
+        <DoorInner source={source} width={geom.w} ambient={ambient ?? null} />
       </div>
     </>
   )
@@ -108,18 +141,32 @@ function ContactShadow({ m, w, h }: { m: Mat3; w: number; h: number }) {
 }
 
 const DoorInner = memo(function DoorInner({
-  art,
-  tone,
+  source,
+  width,
   ambient,
 }: {
-  art: ArtId
-  tone: Tone
+  source: LeafSource
+  width: number
   ambient: Ambient | null
 }) {
   const grade = cssGrade(ambient)
   return (
-    <div className="tryd__grade" style={{ filter: grade.filter }}>
-      <DoorArt art={art} tone={tone} className="tryd__art" />
+    <div
+      className={`tryd__grade${source.kind === 'photo' ? ' tryd__grade--photo' : ''}`}
+      style={{ filter: grade.filter }}
+    >
+      {source.kind === 'art' ? (
+        <DoorArt art={source.art} tone={source.tone} className="tryd__art" />
+      ) : (
+        <img
+          className="tryd__art"
+          src={source.photo.src}
+          srcSet={source.photo.srcSet}
+          sizes={`${Math.round(width)}px`}
+          alt=""
+          decoding="async"
+        />
+      )}
       {grade.tint && <div className="tryd__tint" style={grade.tint} />}
       {grade.fall && <div className="tryd__fall" style={grade.fall} />}
     </div>

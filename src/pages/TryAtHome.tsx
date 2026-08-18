@@ -21,15 +21,18 @@
  * inherits the pathname-keyed ErrorBoundary and the lazy split for free.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { DoorLayer } from '../components/tryathome/DoorLayer'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { QuadEditor } from '../components/tryathome/QuadEditor'
+import { useArSupport } from '../lib/arSupport'
 import { config, whatsappLink } from '../config'
 import { getProduct, quoteFor, tonesFor, tryState, type Product, type Tone } from '../data/products'
+import type { LeafSource } from '../components/tryathome/DoorLayer'
 import { SIZE_LIMITS, configFromLine, formatFtIn, formatSizeLabel, toSizeId } from '../data/pricing'
 import { fmtINR } from '../lib/format'
-import type { Quad } from '../lib/homography'
+import { rectQuad, type Quad } from '../lib/homography'
 import { t } from '../lib/i18n'
 import { rectifyAspect, sizeFromHeight } from '../lib/rectify'
 import { loadPhoto, sampleAmbient, PhotoError, type Ambient, type LoadedPhoto, type PhotoErrorCode } from '../lib/photoLoad'
@@ -45,6 +48,19 @@ import { NotFound } from './NotFound'
 // Route-scoped on purpose — see the file header. Importing it here is what
 // keeps it out of the entry bundle's stylesheet.
 import '../styles/tryathome.css'
+
+/**
+ * Handheld AR, on the devices that have it.
+ *
+ * Lazy because it carries a WebGL renderer and the XR plumbing, and it is only
+ * ever reachable on ARCore-backed Android — every other visitor should not pay
+ * a byte for it. It is mounted as soon as support is known rather than on the
+ * tap, because `requestSession` needs the tap's activation and a download would
+ * spend it; see the header of ArPlacement.tsx.
+ */
+const ArPlacement = lazy(() =>
+  import('../components/tryathome/ArPlacement').then((m) => ({ default: m.ArPlacement })),
+)
 
 /** How much of the photo's height a default (unguessed) leaf takes up. */
 const DEFAULT_FILL = 0.55
@@ -76,9 +92,21 @@ function TryInner({ product }: { product: Product }) {
      option here would reach the pricing table as `undefined` exactly the way
      the stored-cart bug did. */
   const cfg = useMemo(() => {
-    const h = Number(params.get('h'))
-    const w = Number(params.get('w'))
-    return configFromLine(Number.isFinite(h) && Number.isFinite(w) ? toSizeId(h, w) : '')
+    /* ⚠️ `Number(null)` is 0, and `Number.isFinite(0)` is true — so reading the
+       params straight through turned a bare /try/:id (no query at all, which is
+       exactly what a pasted or shared link looks like) into a 0×0 door, which
+       `configFromLine` then clamped to the *smallest* size we sell. The picture
+       went out stamped "5′ × 1′8″" instead of the standard 8′ × 3′. Absent and
+       zero are different answers; say so explicitly. */
+    const num = (key: string): number | null => {
+      const raw = params.get(key)
+      if (raw === null || raw.trim() === '') return null
+      const n = Number(raw)
+      return Number.isFinite(n) && n > 0 ? n : null
+    }
+    const h = num('h')
+    const w = num('w')
+    return configFromLine(h !== null && w !== null ? toSizeId(h, w) : '')
   }, [params])
 
   const tones = useMemo(() => tonesFor(product), [product])
@@ -86,6 +114,22 @@ function TryInner({ product }: { product: Product }) {
     const want = params.get('t') ?? (visual.kind === 'art' ? visual.defaultTone : '')
     return tones.find((x) => x.id === want) ?? tones[0]
   })
+
+  /* What gets stood in the doorway: a drawn leaf tinted by the chosen finish,
+     or a photographed one cropped to the corners marked in /admin. Null means
+     this product has no leaf to place — `tryState` says why.
+     ⚠️ Memoised because it is DoorLayer's memo key. Rebuilt every render it
+     would invalidate the homography and re-reconcile the ~180-node SVG subtree
+     on every frame of a drag — the exact cost DoorInner exists to avoid. */
+  const source = useMemo<LeafSource | null>(
+    () =>
+      visual.kind === 'art'
+        ? { kind: 'art', art: visual.art, tone }
+        : visual.kind === 'photo' && visual.cover.isLeafCrop
+          ? { kind: 'photo', photo: visual.cover }
+          : null,
+    [visual, tone],
+  )
 
   const [photo, setPhoto] = useState<LoadedPhoto | null>(null)
   const [err, setErr] = useState<PhotoErrorCode | null>(null)
@@ -99,6 +143,11 @@ function TryInner({ product }: { product: Product }) {
   const [composing, setComposing] = useState(false)
   const [composeErr, setComposeErr] = useState(false)
   const [shared, setShared] = useState<ShareOutcome | null>(null)
+
+  /* False on every iPhone and on any Android without ARCore, which is most of
+     the reason this is a hook and not a render-time check — the answer is an
+     async round trip to the platform. */
+  const arOk = useArSupport()
 
   const stageRef = useRef<HTMLDivElement>(null)
   const photoRef = useRef<LoadedPhoto | null>(null)
@@ -215,25 +264,39 @@ function TryInner({ product }: { product: Product }) {
      of the route chunk until someone actually finishes a placement. */
   const compose = useCallback(async () => {
     if (!photo || !quadN) return
-    const live = document.querySelector<SVGSVGElement>('.tryd__art')
-    if (!live) return
+    if (!source) return
     setComposing(true)
     setComposeErr(false)
     try {
-      const [{ rasterizeDoor }, { composeTryOn }] = await Promise.all([
+      const [{ rasterizeDoor, loadLeafPhoto, pickLargest }, { composeTryOn }] = await Promise.all([
         import('../lib/doorRaster'),
         import('../lib/compose'),
       ])
-      // Rasterise at roughly the size the leaf lands at, so the grain is drawn
-      // once at the resolution it will be seen at and no finer.
       const cq = scaleQuad(quadN, photo.canvas.width, photo.canvas.height)
       const side = (a: number, b: number) => Math.hypot(cq[b].x - cq[a].x, cq[b].y - cq[a].y)
       const rh = Math.round(Math.min(2048, Math.max(700, (side(0, 3) + side(1, 2)) / 2)))
-      const door = await rasterizeDoor(live, Math.round(rh * (cfg.widthIn / cfg.heightIn)), rh)
+
+      let leaf: { image: HTMLImageElement; quad: Quad }
+      if (source.kind === 'art') {
+        /* Rasterise at roughly the size the leaf lands at — the grain filter is
+           expensive, and detail finer than the destination is thrown away. The
+           *live* node is serialised, so the export is the approved picture. */
+        const live = document.querySelector<SVGSVGElement>('svg.tryd__art')
+        if (!live) throw new Error('the door artwork is not on screen')
+        const rw = Math.round(rh * (cfg.widthIn / cfg.heightIn))
+        leaf = { image: await rasterizeDoor(live, rw, rh), quad: rectQuad(rw, rh) }
+      } else {
+        // The marked corners, in the photograph's own pixels.
+        const img = await loadLeafPhoto(source.photo.srcSet ? pickLargest(source.photo.srcSet) : source.photo.src)
+        const iw = img.naturalWidth
+        const ih = img.naturalHeight
+        leaf = { image: img, quad: rectQuad(iw, ih) }
+      }
+
       const blob = await composeTryOn({
         photo: photo.canvas,
         quadN,
-        door,
+        leaf,
         flipped,
         ambient,
         footer: { name: product.name, size: sizeLabel, site: 'patidartimbers.com' },
@@ -251,7 +314,7 @@ function TryInner({ product }: { product: Product }) {
     } finally {
       setComposing(false)
     }
-  }, [photo, quadN, flipped, ambient, cfg.widthIn, cfg.heightIn, product.name, sizeLabel])
+  }, [photo, quadN, source, flipped, ambient, cfg.widthIn, cfg.heightIn, product.name, sizeLabel])
 
   /* Back to the handles. The composed blob is thrown away rather than kept
      warm — the next placement will differ, and an object URL left behind is a
@@ -274,7 +337,7 @@ function TryInner({ product }: { product: Product }) {
      because only one of them is temporary: a photographed door is still a
      door, it just has no square-on cutout yet. */
   const state = tryState(product)
-  if (state !== 'ready' || visual.kind !== 'art') {
+  if (state !== 'ready' || !source) {
     return (
       <div className="try try--plain page-pad">
         <h1 className="try__oops">{product.name}</h1>
@@ -310,6 +373,20 @@ function TryInner({ product }: { product: Product }) {
               {t('try.pick.choose')}
             </FileButton>
           </div>
+          {/* Appears only where it works, and falls back to nothing — a chunk
+              that 404s after a redeploy must not take the photo flow with it. */}
+          {arOk && (
+            <ErrorBoundary label="ar" fallback={null}>
+              <Suspense fallback={null}>
+                <ArPlacement
+                  source={source}
+                  heightIn={cfg.heightIn}
+                  widthIn={cfg.widthIn}
+                  label={`${product.name} · ${sizeLabel}`}
+                />
+              </Suspense>
+            </ErrorBoundary>
+          )}
           <p className="try__privacy">{t('try.pick.privacy')}</p>
           {err && (
             <p className="try__err" role="alert">
@@ -372,8 +449,7 @@ function TryInner({ product }: { product: Product }) {
               <div className="try__frame" style={{ width: stage.w, height: stage.h }}>
                 <img className="try__photo" src={photo.url} alt="" width={stage.w} height={stage.h} />
                 <DoorLayer
-                  art={visual.art}
-                  tone={tone}
+                  source={source}
                   quad={scaleQuad(quadN, stage.w, stage.h)}
                   heightIn={cfg.heightIn}
                   widthIn={cfg.widthIn}
@@ -393,6 +469,8 @@ function TryInner({ product }: { product: Product }) {
 
           <div className="try__controls">
             <p className="try__hint">{t('try.place.hint')}</p>
+            {/* Finishes are a property of the drawn doors; a photographed leaf
+                is whatever it was shot in. */}
             <div className="try__tones">
               {tones.map((x) => (
                 <button

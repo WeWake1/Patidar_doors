@@ -53,6 +53,50 @@ export async function rasterizeDoor(live: SVGSVGElement, w: number, h: number): 
   }
 }
 
+/**
+ * A catalogue photograph, loaded so its pixels can be *read back* out of a
+ * canvas.
+ *
+ * ⚠️ `crossOrigin` is the whole point of this function. Catalogue photos are
+ * served from Supabase storage, a different origin from the site — draw one to
+ * a canvas without CORS and the canvas is tainted, so `toBlob()` throws a
+ * SecurityError and the customer's picture never appears. Requesting it
+ * anonymously makes the bucket's `Access-Control-Allow-Origin` apply, and a
+ * bucket that does not send one fails here, loudly, instead of at export time.
+ *
+ * The CSS preview needs none of this — only reading pixels back does.
+ */
+export async function loadLeafPhoto(src: string): Promise<HTMLImageElement> {
+  return withTimeout(
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = () => reject(new RasterError('the door photograph could not be read for export'))
+      img.src = src
+    }),
+    RASTER_TIMEOUT_MS,
+  )
+}
+
+/**
+ * The widest candidate in a srcSet — every path that reads pixels *back* wants
+ * all of them there are, whether that is the exporter or the AR texture upload.
+ */
+export function pickLargest(srcSet: string): string {
+  let best = ''
+  let width = -1
+  for (const part of srcSet.split(',')) {
+    const [url, w] = part.trim().split(/\s+/)
+    const n = Number.parseInt(w ?? '', 10)
+    if (url && Number.isFinite(n) && n > width) {
+      width = n
+      best = url
+    }
+  }
+  return best || srcSet.trim().split(/\s+/)[0]
+}
+
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()

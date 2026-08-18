@@ -1,0 +1,113 @@
+/**
+ * Styles for the four-corner editor.
+ *
+ * ⚠️ They live beside the component, not in a page stylesheet, because
+ * QuadEditor is used by **two separate bundles**: the storefront's doorway view
+ * and the admin's photo cropper. They were in `tryathome.css`, which is
+ * route-scoped to the storefront — so in /admin the handles had no positioning
+ * and the outline <polygon> fell back to SVG's default `fill: black`, painting
+ * a large black rectangle over the photo and hiding every control.
+ *
+ * Colours read tier-1 primitives from global.css, which is in the entry
+ * stylesheet and therefore present on every route including the admin.
+ */
+
+/* ── corner handles ────────────────────────────────────── */
+
+.tryq {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  touch-action: none; /* or the browser scrolls the page instead of dragging */
+}
+
+.tryq__outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.tryq__outline polygon {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.tryq__handle {
+  position: absolute;
+  /* --touch is a floor, and a thumb needs all of it — but the *visible* dot is
+     the ::before, so the target can be generous without looking clumsy. */
+  width: var(--touch);
+  height: var(--touch);
+  margin: 0;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: none;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.tryq__handle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: var(--r-circle);
+  background: var(--lamp-hot);
+  box-shadow: 0 0 0 2px var(--frame), 0 2px 6px rgb(var(--cast-deep-rgb) / 0.5);
+}
+
+.tryq__handle--corner::before {
+  width: 15px;
+  height: 15px;
+}
+
+.tryq__handle--edge::before {
+  width: 10px;
+  height: 10px;
+  background: var(--gold);
+  opacity: 0.85;
+}
+
+.tryq__handle:focus-visible {
+  outline: none;
+}
+
+.tryq__handle:focus-visible::before {
+  box-shadow: var(--ring-focus), 0 0 0 2px var(--frame);
+}
+
+.tryq__handle:active {
+  cursor: grabbing;
+}
+
+/* A thumb covers the corner it is placing; without this nobody can be accurate. */
+.tryq__loupe {
+  position: absolute;
+  z-index: 2;
+  border: 2px solid var(--lamp-hot);
+  border-radius: var(--r-circle);
+  background-repeat: no-repeat;
+  box-shadow: 0 6px 20px rgb(var(--cast-deep-rgb) / 0.55);
+  pointer-events: none;
+}
+
+.tryq__loupe::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 13px;
+  height: 13px;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--gold);
+  border-radius: var(--r-circle);
+}
