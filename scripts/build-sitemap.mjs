@@ -32,11 +32,11 @@ const STATIC = ['/', '/timbers', '/doors', '/ply', '/wpc', '/shop', '/visit', '/
  * The real `PRODUCTS`, evaluated — not a regex over the source.
  *
  * The catalogue is a *merge*: local products in products.ts, CMS products in
- * catalog.gen.ts, the CMS overriding by id except for the 12 Designer Studio
- * doors, plus brand-new CMS slugs appended. Scraping `id:` out of one file
- * gets 15 of the 49 and re-implementing the merge here would be a second copy
- * of a rule that already moved once. Vite is already a dependency and loads
- * the TypeScript directly, so the sitemap lists exactly what the site routes.
+ * catalog.gen.ts overriding by id, plus brand-new CMS slugs appended, and then
+ * a price overlay on top. Scraping `id:` out of one file misses most of it and
+ * re-implementing the merge here would be a second copy of a rule that has
+ * already moved twice. Vite is already a dependency and loads the TypeScript
+ * directly, so the sitemap lists exactly what the site routes.
  */
 const server = await createServer({ root, logLevel: 'error', server: { middlewareMode: true } })
 let ids

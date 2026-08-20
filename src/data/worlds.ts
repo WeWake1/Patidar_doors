@@ -39,8 +39,6 @@ export const WORLDS: World[] = [
       'Veneer Doors',
       'Laminate & Coated',
       'Membrane Doors',
-      'Designer Studio',
-      'Safety Doors',
     ],
   },
   {

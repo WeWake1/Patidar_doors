@@ -2,8 +2,9 @@
 
 Vite + React + TypeScript site for **Patidar Doors** (D2C brand of Patidar Timbers).
 Showcase site — the goal is footfall to the physical store, not online selling (the cart/
-WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` / `build` /
-`preview` / `lint` / `images:build` / `fonts:build`.
+WhatsApp checkout is kept for the 17 photographed doors, which are the only priced
+products; timber, ply and WPC board are quoted in the store). `npm run dev` / `build` /
+`preview` / `lint` / `images:build` / `fonts:build` / `leaves:build`.
 
 - **Contact details are real** and live in `src/config.ts` (`whatsappNumber`, `phoneDisplay`,
   `email`, `storeAddress`, `mapsUrl`) — the Nagasandra store, its number and its maps link.
@@ -19,11 +20,35 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   · `npm run sitemap:build` (also run by `npm run build`, before `vite build` so `public/`
   is copied) writes `public/robots.txt` + `public/sitemap.xml`. It gets the product list
   by **evaluating** `src/data/products.ts` through Vite's SSR loader, not by scraping it:
-  the catalogue is a merge of local + `catalog.gen.ts` with Designer Studio protected, so
-  a regex over one file finds 15 of the 49. robots disallows `/admin`, `/checkout` and
+  the catalogue is a merge of local + `catalog.gen.ts` plus a price overlay on top, so
+  a regex over one file misses most of the 37. robots disallows `/admin`, `/checkout` and
   `/order-confirmed`; the sitemap omits those plus the `/door/:id` legacy redirect.
 - **Product copy is unverified draft** — tags/stories/specs across all four worlds were
   drafted by AI and must be confirmed with the client.
+- ⚠️ **The 12 drawn "Designer Studio" doors were REMOVED 2026-08-20** (11 of them plus
+  The Sentinel, which sat alone under "Safety Doors"). They were original SVG artwork
+  drafted as placeholders while the client's photography was pending, and a showcase whose
+  whole purpose is footfall cannot front designs the shop floor does not stock. Gone with
+  them: their two subcategories in `worlds.ts`, the twelve `DoorArt` designs, the paint and
+  steel tone ramps, `Product.motif` and `.pdp__motif`, and every carve-out that protected
+  them (the CMS merge, `seed-supabase.mjs`). **Every product in the catalogue is now either
+  a photograph of a real door or a generated material swatch** — 37 products, 15 factory
+  doors among them.
+  · The catalogue's *only* drawn leaf left is `classic`, and it is not a product: it is the
+  hero corridor's Doors texture and the stand-in for a door not yet photographed.
+  · **The cart survived the removal** — the 12 were the only priced products, so removing
+  them would have left checkout with nothing to sell. The 17 photographed doors are priced
+  instead, from `PLACEHOLDER_PRICES` in `products.ts`. ⚠️ **Every number in it is invented**
+  (asked for and confirmed by the client 2026-08-20 as a placeholder), like the rates in
+  `pricing.ts`. It is applied **after** the CMS merge, not written into the product
+  literals, because `catalog:fetch` replaces a merged product wholesale and a locally-set
+  price on an id Supabase also carries would vanish on the next fetch. Delete a door's line
+  the day a real price is typed into `/admin`.
+  · Photographed doors now get the configurator and the cart, which changed three things
+  that were previously unreachable: the PDP falls back to `product.tag` where a factory
+  door has no `story`; `ProductStage` takes `cfg` so the try-on link carries the size the
+  sliders are actually set to; and the cart drawer draws the **leaf cut-out**, not an
+  `ArtId` — every line was rendering the same generic `classic` leaf.
 - **Four worlds IA**: `/timbers` `/doors` `/ply` `/wpc` render one `WorldPage` themed by
   `[data-world]` token scopes in `src/styles/worlds.css`. Worlds/subcategories defined in
   `src/data/worlds.ts`. The hero corridor's `.wcard`s carry `data-world` too, so they read
@@ -94,6 +119,12 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   single map visual→component (cards, PDP, admin preview all use it). `PhotoShowcase.tsx`
   = the non-swinging photo treatment. `purchasable` + `price` ⇒ size(+finish if art)
   configurator & cart; otherwise "Enquire on WhatsApp" PDP. Legacy `/door/:id` → `/product/:id`.
+  ⚠️ `art` survives in the union but **no product uses it** since 2026-08-20 — so
+  `tonesFor()` returns `[]` for everything, and anything typed as `Tone` that came from
+  `tones[0]` is actually `undefined`. That crashed `/try` on every door (`tone.id`, one
+  screenful below a ⚠️ warning about exactly this in `pickTone`'s dep array). `tone` is now
+  typed `Tone | undefined` and a separate `toneId` falls back to `defaultToneId`. If you
+  add code that reads a finish, assume there isn't one.
   ⚠️ `MaterialArt` takes a **`seed`** (always the product id) and draws plank widths, kerf
   positions, end-grain placement, sheet count/thickness and WPC cell pitch off it. Without
   it the geometry is fixed, so every board of one species came out of the same mould —
@@ -226,6 +257,9 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   birch ply, slate-green WPC), not the world accent — that stays on the frame/rule via
   `--wd`. Replaced the glass-globe treatment 2026-08-03: the sphere, its spinning
   specular sweep and the bobbing float read as a toy against the rest of the site.
+  ⚠️ The doors card drew `meridian` until 2026-08-20 and draws `classic` now. It slices the
+  leaf like a texture so any leaf would do, but it must stay a **drawn** one — a photo
+  cannot survive `preserveAspectRatio="none"`.
   ⚠️ The card's contents are split into a memoised `WorldCardInner`. The corridor
   re-renders every frame of the reveal — that is the point of it — but only the Link's
   inline style differs; behind it sit ~180 static SVG nodes across the four cards, and
@@ -344,10 +378,14 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   `wpc-digital-veneer-door` are in. **Timber and ply are not doors** and are out — as is
   `wpc-sheets`, which is 6–18mm board. The rule reads `visual.kind` because the catalogue
   already draws the line: a door is `art` (drawn) or `photo` (photographed), while
-  `material` is a swatch of stock. 29 doors in scope; 12 render today and the other 17 are
-  `'soon'` until their leaf corners are marked in `/admin`. An earlier draft of this plan
-  had "surface" and "volume" modes for ply/timber — dropped 2026-08-16, there is no
-  "see this plywood in your hallway".
+  `material` is a swatch of stock. **All 17 doors in the catalogue render** since
+  2026-08-20 — see the leaf-crop bullet below. An earlier draft of this plan had "surface"
+  and "volume" modes for ply/timber — dropped 2026-08-16, there is no "see this plywood in
+  your hallway".
+  ⚠️ `tryState` no longer branches on `visual.kind` first — it asks `leafOf(product)`,
+  the one function that decides what is placeable, so the route, the PDP button and the
+  state can't disagree. `'soon'` is now what a *newly uploaded* photo reports before it is
+  cropped, not the state of the whole catalogue.
   ⚠️ The instruction is **"drag the corners onto your existing door"**, never "the
   doorway", and that is architecture, not wording. Outlining the real leaf makes the
   replacement provably cover the old door (no halo), leaves the architrave/reveal
@@ -436,9 +474,33 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   serves both the cropper and the storefront, so there is one corner-dragger, not two.
   ⚠️ `crop.mode === 'leaf'` is the contract: set by the cropper, read by `fetch-catalog.mjs`
   into `ProductImage.isLeafCrop`, and gated on by `tryState`. Older whole-showroom photos
-  lack it and report `soon` — warping one would put our shop floor in a customer's hallway.
+  lack it — warping one would put our shop floor in a customer's hallway.
   It lives in the existing `crop` jsonb; **no migration needed**. (A `leaf_quad` column was
   added and then dropped the same day — the cropper made it redundant.)
+  · ⚠️ **But the cropper was never run, and that broke the feature for two months.**
+  `grep -c isLeafCrop src/data/catalog.gen.ts` was `0`: all 17 photographed doors reported
+  `soon`, so "see it in your doorway" worked *only* for the 12 drawn doors — and those were
+  removed on 2026-08-20, which would have left it working for nothing at all.
+  **Fix: `npm run leaves:build`** (`scripts/build-leaves.mjs`) cuts each leaf out of its
+  photograph from four corners hand-marked per door in `src/data/photoMap.ts`, using the
+  *same* homography as `rectifyImage.ts` re-expressed against raw pixel buffers, and takes
+  the leaf's true aspect from `rectifyAspect` so an angled shot is not stretched. Output:
+  `public/images/leaves/<id>.webp` + `src/data/leaves.gen.ts` (404 kB for 17, committed).
+  ⚠️ It is a **second image, never a replacement for the cover** — the cover keeps the room
+  around the door, which is what makes it read as a real door on a card; the leaf has no
+  context and would look like a swatch. Cards and PDP galleries are untouched. It rides on
+  `Visual.leaf`, and an `/admin` crop still **wins**: that one is cut from the untouched
+  original, this one only ever had the committed 960px web copy.
+  ⚠️ It is applied as a **post-merge overlay** in `products.ts` for the same reason the
+  price table is — the CMS carries all 17 ids and replaces them wholesale.
+  ⚠️ Marking a quad is eyeball work with a feedback loop, not a one-shot: render the crop,
+  look at it, correct. Four of the seventeen were wrong the first time in a way that only
+  showed *after* cropping (`main-03` and `main-11` are a door plus a fixed side panel, not
+  one wide leaf; `main-27` has a carved transom above the leaf). `verify:geometry` now
+  fails any leaf outside 1.4:1–3.6:1, which is what catches that class of mistake.
+  ⚠️ Several of these photos carry a third-party watermark that survives the crop
+  (`room-03`, `room-20`) and `room-31` is a 480px-wide group shot of three doors, so its
+  leaf is only ~140px across. They are placeholders; re-shoot and re-mark.
   · **Flip left-to-right** (`crop.flip`, added 2026-08-17). `.door-scene__leaf` hinges on
   `transform-origin: left center`, so every door on the site swings open from its left edge
   and the handle has to be on the right — a photo of a right-hung door gave a card that
@@ -649,11 +711,13 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   email's areas *overlap* on adjacent lines, so a tap aimed at the number opened the
   mail client. That contact line is now a `.policies__contact` list that breaks to one
   entry per row on a phone; the padding is scoped to the two standalone `__sub` links.
-- **SVG art**: 12 catalog designs + hero `classic` in `src/components/DoorArt.tsx`
-  (original artwork — do not replace with Pinterest photos; see `docs/design-research.md`).
+- **SVG art**: `classic` alone in `src/components/DoorArt.tsx` — the 12 catalog designs
+  went with the Designer Studio doors on 2026-08-20 (`ArtId` is now the single literal
+  `'classic'`, and `docs/design-research.md` is history). It is **not a product**: it is
+  the hero corridor's Doors texture and the fallback for a door not yet photographed.
   Shared filters in `<DoorArtDefs/>` (mounted once in App, also used by MaterialArt);
   per-instance gradient ids are uid-prefixed.
-- **Door configurator / pricing** (Designer Studio only) — model in `src/data/pricing.ts`,
+- **Door configurator / pricing** (every priced door — see the removal bullet) — model in `src/data/pricing.ts`,
   UI in `DoorConfigurator.tsx`, both driven from one `DoorConfig`. Replaced the five fixed
   size buttons 2026-08-08 (modelled on brightdoors.in's Uni CPO setup, rebuilt client-side:
   they POST to WordPress on every slider tick and it visibly lags).
@@ -696,6 +760,16 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   tap-to-zoom), redirect, the door configurator (panel-snap steps, conditional frame
   groups, breakdown sums to the headline, mobile 44px targets), full cart→wa.me flow,
   mobile. Keep it green.
+  ⚠️ Its catalogue counts are assertions about the data, not decoration: 37 products, 15
+  doors. They were 49 and 27 before the Designer Studio removal, and a count that no longer
+  matches is the first thing a bad merge shows up as.
+  ⚠️ The **exhaustive** "every door has a leaf cut-out" check lives in `verify:geometry`,
+  not here — it is a fact about the data and the browser would pay a page load per product
+  to learn it. The E2E asserts one door per range instead; a single passing door is exactly
+  what hid the two-month `isLeafCrop = 0` bug.
+  ⚠️ The result screen's finish switcher is deliberately **not** covered any more: no
+  product is drawn, so the swatch row never renders. The code stays for the `classic`
+  fallback path; a test driving it would be testing a screen no customer can reach.
   ⚠️ The door-wall steps go through `gotoDoorWall()`, which walks to the band's *reserve*
   (`.doorwall-hold`, the only thing in the page before the chunk mounts) and re-centres on
   `.doorwall__wall` once it renders. No fixed offset can find it — it is lazy, mounted on

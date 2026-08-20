@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react'
 import type { DoorConfig } from '../data/pricing'
 import { configFromLine, configKey, describeConfig, formatSizeInches } from '../data/pricing'
-import { getProduct, getSize, getTone, priceFor } from '../data/products'
+import { getProduct, getSize, getTone, leafOf, priceFor, tonesFor } from '../data/products'
+import type { ProductImage } from '../data/products'
 
 export interface CartLine {
   /** productId|sizeId|toneId|configKey */
@@ -20,11 +21,35 @@ export interface CartLine {
 
 export interface CartLineView extends CartLine {
   name: string
+  /**
+   * What the drawer draws for this line: the door's own leaf cut-out where
+   * there is one, its cover shot otherwise, and the drawn `classic` leaf only
+   * as a last resort.
+   *
+   * It used to be an `ArtId` alone, which was right while the only sellable
+   * doors were the drawn ones. Every sellable door is now a photograph, so an
+   * art id would have made every line in the cart the same generic leaf — a
+   * cart of four different doors showing four identical thumbnails. The leaf
+   * crop is preferred over the cover because this box is 44px wide and 3:8:
+   * a room photo squeezed into it is mostly wall.
+   */
+  photo: ProductImage | null
   art: string
   sizeLabel: string
   /** The same size in plain inches, for the workshop. */
   sizeInches: string
-  toneName: string
+  /**
+   * The chosen finish, or **null** where the product has none to choose.
+   *
+   * ⚠️ `getTone` falls back to a neutral wood tone so pricing always has a
+   * delta to add, and that fallback used to reach the screen: every
+   * photographed door — which since 2026-08-20 is every door we sell — printed
+   * "Golden Teak" beside its size, on a sage-green membrane leaf and a white
+   * primer one alike. A photograph has exactly one finish, the one it was shot
+   * in, and naming a different one in the cart *and in the order message the
+   * workshop cuts from* is worse than naming none.
+   */
+  toneName: string | null
   /** The non-size options in one line, e.g. `30 mm · 3-side frame 4″ × 2″`. */
   optsLabel: string
   unitPrice: number
@@ -174,17 +199,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const product = getProduct(l.productId)
       if (!product) return []
       const size = getSize(l.sizeId)
-      const tone = getTone(product, l.toneId)
+      const tone = tonesFor(product).length > 0 ? getTone(product, l.toneId) : null
       const cfg = configFromLine(l.sizeId, l.opts)
       const unitPrice = priceFor(product, l.sizeId, l.toneId, l.opts)
       return [
         {
           ...l,
           name: product.name,
+          photo: leafOf(product) ?? (product.visual.kind === 'photo' ? product.visual.cover : null),
           art: product.visual.kind === 'art' ? product.visual.art : 'classic',
           sizeLabel: size.label,
           sizeInches: formatSizeInches(cfg.heightIn, cfg.widthIn),
-          toneName: tone.name,
+          toneName: tone?.name ?? null,
           optsLabel: describeConfig(cfg),
           unitPrice,
           lineTotal: unitPrice * l.qty,

@@ -12,7 +12,7 @@ export interface OrderCustomer {
 export interface OrderLineSnapshot {
   name: string
   sizeLabel: string
-  toneName: string
+  toneName: string | null
   /**
    * The made-to-measure options, already flattened to a string. Optional
    * because orders placed before the configurator shipped have no such line.
@@ -96,7 +96,9 @@ function coerce(raw: unknown): LastOrder | null {
         {
           name: str(r.name),
           sizeLabel: str(r.sizeLabel),
-          toneName: str(r.toneName),
+          /* Null is a real answer here — a photographed door has no finish to
+             choose — so this must not be flattened to `''` by `str`. */
+          toneName: typeof r.toneName === 'string' && r.toneName ? r.toneName : null,
           optsLabel: typeof r.optsLabel === 'string' ? r.optsLabel : undefined,
           qty: num(r.qty),
           unitPrice: num(r.unitPrice),

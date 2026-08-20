@@ -1,5 +1,5 @@
 /**
- * Made-to-measure pricing model for the Designer Studio doors.
+ * Made-to-measure pricing model for the doors the site sells outright.
  *
  * Shape (borrowed from how door shops actually quote, not from area alone):
  *

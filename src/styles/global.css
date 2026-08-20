@@ -1291,15 +1291,6 @@ button { font-family: var(--sans); }
 .pdp__cat { font: var(--type-label-sm); letter-spacing: var(--track-open); text-transform: uppercase; color: var(--accent-text); }
 .pdp__name { margin: 8px 0 0; font: var(--type-page); }
 .pdp__story { margin: 18px 0 0; font: var(--type-body); color: var(--mut); max-width: var(--measure); }
-.pdp__motif {
-  margin-top: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font: var(--type-label);
-  letter-spacing: var(--track-tight);
-  color: var(--accent-text);
-}
 .pdp__price-row { display: flex; align-items: baseline; gap: 14px; margin: 30px 0 6px; }
 .pdp__price { font: 600 32px var(--sans); color: var(--ink); }
 .pdp__price-note { font: var(--type-meta); color: var(--mut2); }
@@ -1585,7 +1576,12 @@ button { font-family: var(--sans); }
   border: 3px solid var(--border-strong);
   box-shadow: 0 4px 10px rgba(35, 25, 12, 0.18);
 }
-.drawer__thumb svg { width: 100%; height: auto; aspect-ratio: 3 / 8; }
+/* A CSS width always paired with a CSS height — ProductPhoto renders the
+   photo's real width/height attributes, and an unpaired author width lets the
+   height *attribute* set the box (see the PDP gallery scar). `height: auto`
+   plus a definite width is what lets `aspect-ratio` hold this box at 3:8. */
+.drawer__thumb svg,
+.drawer__thumb img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 8; object-fit: cover; }
 .drawer__line-main { flex: 1; min-width: 0; }
 .drawer__line-name { font: var(--type-name-sm); color: var(--ink); }
 .drawer__line-meta { font: var(--type-fine); color: var(--mut); margin-top: 2px; }

@@ -46,7 +46,7 @@ const en = {
   'cart.close': 'Close cart',
   'cart.empty.title': 'Your cart is empty',
   'cart.empty.body':
-    'Designer Studio doors are priced and ordered here. Everything else in the catalogue — timber, ply, WPC and our other door ranges — is quoted in the store or on WhatsApp.',
+    'Doors are priced and ordered here. Timber, ply and WPC boards are cut and sold by the foot or the sheet, so those are quoted in the store or on WhatsApp.',
   'cart.browse': 'Browse the catalogue',
   'cart.each': '{price} each',
   'cart.decrease': 'Decrease quantity of {name}',
@@ -72,13 +72,13 @@ const en = {
   // ── checkout ──────────────────────────────────────────────────────────
   'checkout.title': 'Checkout',
   /* An empty checkout is nearly always a customer who tried to buy something
-     the site does not sell — timber, ply, a door outside the Designer Studio
-     twelve. So this says which twelve transact and where the rest are quoted,
+     the site does not sell — a cubic foot of teak, a sheet of ply. So this says
+     which half of the catalogue transacts and where the other half is quoted,
      the way the cart drawer already does, instead of the line that used to sit
      here ("every great room starts at the door"), which was a slogan standing
      where an explanation was needed. */
   'checkout.empty':
-    'There is nothing to check out yet. The twelve Designer Studio doors are the ones priced and ordered on the site — timber, ply, WPC and our other door ranges are quoted in the store or on WhatsApp.',
+    'There is nothing to check out yet. Doors are the ones priced and ordered on the site — timber, ply and WPC boards are cut to your list, so they are quoted in the store or on WhatsApp.',
   'checkout.h.details': 'Delivery details',
   /* Only two of the eight fields are optional, so the form marks those and
      states the rule once rather than stamping "required" six times. Without
@@ -232,6 +232,12 @@ const en = {
   'try.result.redrawing': 'Redrawing…',
   'try.result.share': 'Send it to us on WhatsApp',
   'try.result.save': 'Save the picture',
+  /* The secondary is a plain wa.me link — it opens a chat with the message but
+     carries no picture, because only the share sheet can attach a file. Where
+     the share sheet exists it is labelled the same as the primary button, so
+     this says what the difference is; a customer who taps the one that looks
+     like the button they already have and gets no photo has been misled. */
+  'try.result.chat': 'Ask us about it instead',
   'try.result.adjust': 'Adjust the corners',
   /* Shown after a download rather than a share sheet — on desktop and in the
      in-app browsers that expose navigator.share but refuse files. The picture

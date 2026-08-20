@@ -60,7 +60,15 @@ function TryLink({ product, cfg, toneId }: { product: ProductT; cfg?: DoorConfig
   )
 }
 
-function ProductStage({ product }: { product: ProductT }) {
+/**
+ * `cfg` is threaded in so the try-on link carries the size the customer has
+ * actually dialled in. It used to default here, which was right while no
+ * photographed door had a configurator; now that they all do, a link built
+ * from DEFAULT_CONFIG would quietly send an 8′ × 3′ door to /try however the
+ * sliders were set — and that number is burnt into the picture that reaches
+ * our WhatsApp.
+ */
+function ProductStage({ product, cfg }: { product: ProductT; cfg: DoorConfig }) {
   const visual = product.visual
   if (visual.kind === 'material') {
     return (
@@ -96,7 +104,7 @@ function ProductStage({ product }: { product: ProductT }) {
             ))}
           </div>
         )}
-        <TryLink product={product} />
+        <TryLink product={product} cfg={cfg} />
       </div>
     )
   }
@@ -176,7 +184,7 @@ function ProductInner({ product }: { product: ProductT }) {
             <TryLink product={product} cfg={cfg} toneId={tone.id} />
           </div>
         ) : (
-          <ProductStage product={product} />
+          <ProductStage product={product} cfg={cfg} />
         )}
 
         {configurable ? (
@@ -185,13 +193,9 @@ function ProductInner({ product }: { product: ProductT }) {
               {world?.name} · {product.sub} · Made to measure
             </div>
             <h1 className="pdp__name">{product.name}</h1>
-            <p className="pdp__story">{product.story}</p>
-            {product.motif && (
-              <div className="pdp__motif">
-                <span className="diamond" aria-hidden="true" />
-                Styled after the {product.motif}
-              </div>
-            )}
+            {/* Factory doors carry no long story, only the one-line tag —
+                without the fallback the heading sat on a blank paragraph. */}
+            <p className="pdp__story">{product.story ?? product.tag}</p>
 
             <div className="pdp__price-row">
               <div className="pdp__price">{fmtINR(price)}</div>

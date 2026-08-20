@@ -223,11 +223,13 @@ await step('door wall: click a tile, big viewer follows', async () => {
 await shot('04b-home-doorwall')
 
 /* ── SHOP / CATALOGUE ──────────────────────────────────── */
-await step('catalogue shows all 49 products', async () => {
+/* 37, not 49: the 12 drawn "Designer Studio" doors were removed on 2026-08-20.
+   15 factory doors + 11 timbers + 8 ply + 3 WPC. */
+await step('catalogue shows all 37 products', async () => {
   await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
   await page.waitForSelector('.card')
   const n = await page.locator('.card').count()
-  if (n !== 49) throw new Error(`expected 49 cards, got ${n}`)
+  if (n !== 37) throw new Error(`expected 37 cards, got ${n}`)
   // it moved to the home page — showing it twice would halve it
   if (await page.locator('.doorwall, .doorwall-hold').count()) throw new Error('door wall still on the catalogue')
 })
@@ -240,7 +242,7 @@ await step('world filter works', async () => {
   await page.getByRole('button', { name: 'Doors', exact: true }).click()
   await page.waitForTimeout(300)
   const n = await page.locator('.card').count()
-  if (n !== 27) throw new Error(`expected 27 doors, got ${n}`)
+  if (n !== 15) throw new Error(`expected 15 doors, got ${n}`)
   if (!page.url().includes('world=doors')) throw new Error('url param missing')
 })
 
@@ -279,8 +281,8 @@ await step('admin route is auth-gated (never public)', async () => {
 
 /* ── PRODUCT ───────────────────────────────────────────── */
 await step('legacy /door/:id redirects to /product/:id', async () => {
-  await page.goto(BASE + '/door/meridian', { waitUntil: 'networkidle' })
-  await page.waitForURL('**/product/meridian')
+  await page.goto(BASE + '/door/burma-teak-door', { waitUntil: 'networkidle' })
+  await page.waitForURL('**/product/burma-teak-door')
 })
 
 /** Drag a dimension slider to an exact value and return the new price text. */
@@ -290,10 +292,10 @@ const setDim = async (which, inches) => {
 }
 
 await step('product page + made-to-measure configurator', async () => {
-  await page.goto(BASE + '/product/meridian', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/product/burma-teak-door', { waitUntil: 'networkidle' })
   await page.waitForSelector('.pdp__price')
   const p1 = await page.locator('.pdp__price').innerText()
-  if (!p1.includes('86,900')) throw new Error(`default price wrong (8'x3' ebony 84500+2400): ${p1}`)
+  if (!p1.includes('68,000')) throw new Error(`default price wrong (8'x3' plain 30mm = product.price): ${p1}`)
 
   const p2 = await setDim('height', 78)
   if (p2 === p1) throw new Error('price did not change with height')
@@ -323,21 +325,21 @@ await step('product page + made-to-measure configurator', async () => {
   const total = await page.locator('.cfg__break-total .cfg__break-amt').innerText()
   if (total.trim() !== framed.trim()) throw new Error(`breakdown total ${total} != headline ${framed}`)
 
-  // switch finish to walnut (delta 0)
-  await page.locator('.cfg__tone').first().click()
-  const toned = await page.locator('.pdp__price').innerText()
-  if (toned === framed) throw new Error('price did not change with finish')
+  /* No finish swatches: every sellable door is a photograph of a real leaf now,
+     and a photograph has one finish — the one it was shot in. `tonesFor()`
+     returns [] for a photo visual, so the Finish fieldset does not render. The
+     drawn-door path that owned it went with the Designer Studio doors. */
+  if (await page.locator('.cfg__tone').count()) throw new Error('a photographed door offered SVG finishes')
 })
-await shot('06-pdp-meridian')
+await shot('06-pdp-burma-teak')
 
 await step('add to cart shows toast and badge', async () => {
-  // back to a plain 8'0" x 3'0" ebony leaf
+  // back to a plain 8'0" x 3'0" leaf
   await page.getByRole('radio', { name: /Leaf only/ }).click()
   await page.getByRole('radio', { name: /30 mm/ }).click()
   await page.locator('.cfg__tick').nth(3).click()
-  await page.locator('.cfg__tone').nth(4).click() // ebony
   const price = await page.locator('.pdp__price').innerText()
-  if (!price.includes('86,900')) throw new Error(`reset to 8'x3' ebony gave ${price}`)
+  if (!price.includes('68,000')) throw new Error(`reset to 8'x3' gave ${price}`)
   await page.getByRole('button', { name: /Add to cart/ }).click()
   await page.waitForSelector('.toast')
   const badge = await page.locator('.nav__badge').innerText()
@@ -351,8 +353,8 @@ await step('cart persists across reload', async () => {
 })
 
 /* second product into cart */
-await step('add second product (flute, sage)', async () => {
-  await page.goto(BASE + '/product/flute', { waitUntil: 'networkidle' })
+await step('add second product (membrane door)', async () => {
+  await page.goto(BASE + '/product/membrane-door', { waitUntil: 'networkidle' })
   await page.getByRole('button', { name: /Add to cart/ }).click()
   await page.waitForSelector('.toast')
 })
@@ -405,8 +407,8 @@ await step('valid order opens WhatsApp + confirmation', async () => {
   for (const frag of [
     `wa.me/${WA_NUMBER}`,
     'NEW ORDER — PD-',
-    'The Meridian',
-    'The Flute',
+    'Burma Teak Door',
+    'Membrane Doors',
     // the workshop needs the measured size and the spec, not just the name
     '96″ × 36″',
     '30 mm',
@@ -490,7 +492,7 @@ await step('mobile door wall taps open the full-screen photo', async () => {
 })
 
 await step('mobile shop + pdp', async () => {
-  await page.goto(BASE + '/product/haveli', { waitUntil: 'networkidle' })
+  await page.goto(BASE + '/product/architect-teak-door', { waitUntil: 'networkidle' })
   await page.waitForTimeout(500)
   await shot('16-mobile-pdp')
 })
@@ -533,7 +535,7 @@ const doorwayJpeg = await (async () => {
 })()
 
 const placeDoor = async () => {
-  await page.goto(`${BASE}/try/kyoto?h=84&w=33&t=teak`, { waitUntil: 'networkidle' })
+  await page.goto(`${BASE}/try/membrane-door?h=84&w=33`, { waitUntil: 'networkidle' })
   await page.setInputFiles('.try__file', {
     name: 'doorway.jpg',
     mimeType: 'image/jpeg',
@@ -545,9 +547,9 @@ const placeDoor = async () => {
 await step('try-at-home is offered on doors and refused on materials', async () => {
   // The scope rule, asserted rather than trusted: every door, nothing but
   // doors. WPC doors are doors; timber and ply are not. See tryState().
-  await page.goto(`${BASE}/product/kyoto`, { waitUntil: 'networkidle' })
+  await page.goto(`${BASE}/product/membrane-door`, { waitUntil: 'networkidle' })
   const href = await page.locator('.pdp__try').getAttribute('href')
-  if (!href?.startsWith('/try/kyoto?h=')) throw new Error(`bad try href: ${href}`)
+  if (!href?.startsWith('/try/membrane-door?h=')) throw new Error(`bad try href: ${href}`)
 
   await page.goto(`${BASE}/product/burmese-teak`, { waitUntil: 'networkidle' })
   if (await page.locator('.pdp__try').count()) throw new Error('timber must not offer the doorway view')
@@ -556,11 +558,37 @@ await step('try-at-home is offered on doors and refused on materials', async () 
   const note = await page.locator('.try__note').innerText()
   if (!/is for doors/i.test(note)) throw new Error(`timber got the wrong refusal: ${note}`)
 
-  // A photographed door IS a door — it just has no square-on cutout yet, so it
-  // must get the temporary refusal, never the "not a door" one.
+  /* A WPC door is a door — WPC is what the leaf is made of, not a different
+     kind of product. It used to reach the *temporary* refusal here because no
+     photograph had a leaf cut-out; every catalogue door has one since
+     2026-08-20 (`npm run leaves:build`), so it must now place, not refuse. */
+  await page.goto(`${BASE}/product/wpc-cnc-door`, { waitUntil: 'networkidle' })
+  if (!(await page.locator('.pdp__try').count())) throw new Error('a WPC door was denied the doorway view')
   await page.goto(`${BASE}/try/wpc-cnc-door`, { waitUntil: 'networkidle' })
-  const wpc = await page.locator('.try__note').innerText()
-  if (/is for doors/i.test(wpc)) throw new Error('a WPC door was refused as "not a door"')
+  if (await page.locator('.try__note').count()) throw new Error('a WPC door was refused the doorway view')
+  await page.waitForSelector('.try__pickrow')
+
+  /* And a sheet of WPC board is not a door, which is the other half of the
+     rule — same world, opposite answer. */
+  await page.goto(`${BASE}/try/wpc-sheets`, { waitUntil: 'networkidle' })
+  const sheet = await page.locator('.try__note').innerText()
+  if (!/is for doors/i.test(sheet)) throw new Error(`WPC board got the wrong refusal: ${sheet}`)
+})
+
+await step('a door from every range offers the doorway view', async () => {
+  /* The regression this exists for: "see it in your doorway" worked only for
+     the twelve drawn Designer Studio doors and reported `soon` for all 17 real
+     ones, because `isLeafCrop` was never set on a single catalogue photograph.
+     Removing the drawn doors would have left the feature working for nothing.
+
+     One door per range rather than one door full stop — a single passing door
+     is exactly what hid this. The exhaustive check over the whole catalogue is
+     in `npm run verify:geometry`, which can read the data directly instead of
+     paying a page load per product. */
+  for (const id of ['burma-teak-door', 'honne-ab-door', 'veneer-cng-door', 'primer-door', 'korean-membrane-door']) {
+    await page.goto(`${BASE}/product/${id}`, { waitUntil: 'networkidle' })
+    if (!(await page.locator('.pdp__try').count())) throw new Error(`${id} does not offer the doorway view`)
+  }
 })
 
 await step('handheld AR stays invisible where WebXR is not backed by ARCore', async () => {
@@ -574,7 +602,7 @@ await step('handheld AR stays invisible where WebXR is not backed by ARCore', as
      as support resolves — that is what preserves the tap's activation for
      requestSession — so a regression in the gate would be invisible in the UI
      while still shipping a WebGL renderer to every iPhone on the route. */
-  await page.goto(`${BASE}/try/kyoto`, { waitUntil: 'networkidle' })
+  await page.goto(`${BASE}/try/membrane-door`, { waitUntil: 'networkidle' })
   if (await page.locator('.arx__open').count()) throw new Error('AR was offered on a device without WebXR')
   if (await page.locator('.arx__overlay').count()) throw new Error('the AR overlay root mounted without WebXR')
   const fetched = await page.evaluate(() =>
@@ -592,7 +620,7 @@ await step('the live viewfinder opens, frames and hands over a real photo', asyn
      the guides — how square-on the shot is decides whether the size read off
      the outline is good to 1% or 6% — so the guides are asserted alongside the
      capture itself. */
-  await page.goto(`${BASE}/try/kyoto?h=84&w=33&t=teak`, { waitUntil: 'networkidle' })
+  await page.goto(`${BASE}/try/membrane-door?h=84&w=33`, { waitUntil: 'networkidle' })
   await page.locator('.try__shoot').click()
   await page.waitForSelector('.cam__feed', { timeout: 10000 })
 
@@ -624,7 +652,7 @@ await step('the camera never replaces the photo-library route', async () => {
   /* Half of all visitors are trying a door they photographed yesterday, and the
      counter staff work from photos customers sent on WhatsApp. Whatever the
      camera does, that button and its input have to survive. */
-  await page.goto(`${BASE}/try/kyoto`, { waitUntil: 'networkidle' })
+  await page.goto(`${BASE}/try/membrane-door`, { waitUntil: 'networkidle' })
   if (!(await page.locator('.try__pickrow input.try__file').count()))
     throw new Error('the photo-library input is gone')
 })
@@ -634,7 +662,7 @@ await step('a bare /try link falls back to the standard door size', async () => 
      is 0 and `Number.isFinite(0)` is true, so this once produced a 0×0 door
      clamped to the smallest size we sell, and the shared picture went out
      stamped 5′ × 1′8″. */
-  await page.goto(`${BASE}/try/kyoto`, { waitUntil: 'networkidle' })
+  await page.goto(`${BASE}/try/membrane-door`, { waitUntil: 'networkidle' })
   const name = await page.locator('.try__name').innerText()
   if (!/8′\s*×\s*3′/.test(name)) throw new Error(`expected the 8′ × 3′ default, got: ${name}`)
 })
@@ -743,37 +771,13 @@ await step('the photo yields a size estimate and a price', async () => {
   if (!/estimated|measure/i.test(est)) throw new Error(`the estimate carries no caveat: ${est}`)
 })
 
-await step('a finish picked on the result screen redraws the picture', async () => {
-  /* The cheap half of what people wanted the room view for: the same door in
-     another finish, without going back to the corners. The result screen holds
-     a flat JPEG, so this has to *redraw* — the assertion is that the blob URL
-     actually changes, not merely that a swatch lit up. */
-  const swatches = page.locator('.try__finish .try__tone')
-  if ((await swatches.count()) < 2) throw new Error('the result screen offers no finishes')
-
-  const before = await page.locator('.try__out').getAttribute('src')
-  const estBefore = await page.locator('.try__est').innerText()
-
-  // The first swatch that is not already selected.
-  const idx = (await swatches.nth(0).getAttribute('aria-pressed')) === 'true' ? 1 : 0
-  await swatches.nth(idx).click()
-
-  await page.waitForFunction(
-    (prev) => document.querySelector('.try__out')?.getAttribute('src') !== prev,
-    before,
-    { timeout: 25000 },
-  )
-  const after = await page.locator('.try__out').getAttribute('src')
-  if (!after || after === before) throw new Error('the picture was not redrawn')
-  if ((await swatches.nth(idx).getAttribute('aria-pressed')) !== 'true')
-    throw new Error('the picked finish is not marked selected')
-
-  /* The height the customer already gave still holds — it is the same doorway
-     and the same outline — so clearing it would make them re-tap a chip to get
-     their size and price back for the same door in a different colour. */
-  const estAfter = await page.locator('.try__est').innerText()
-  if (estAfter !== estBefore) throw new Error(`the size estimate was lost: "${estBefore}" -> "${estAfter}"`)
-})
+/* The result screen's finish switcher is deliberately NOT asserted any more.
+   It redraws a drawn <DoorArt> in another tone, and no product in the
+   catalogue is drawn: every sellable door is a photograph of one real leaf in
+   one real finish. `tonesFor()` returns [] for a photo, so the swatch row does
+   not render and there is nothing to click. The code stays — it is the path a
+   door whose photograph has not landed yet would take through `classic` — but
+   a test that drives it would be testing a screen no customer can reach. */
 
 await step('the estimate reaches WhatsApp with its caveat attached', async () => {
   const href = await page.locator('.try__actions a[href*="wa.me"]').getAttribute('href')
@@ -790,14 +794,14 @@ await step('sharing hands WhatsApp a real image file', async () => {
   if (shared.type !== 'image/jpeg') throw new Error(`wrong type: ${shared.type}`)
   if (shared.size < 15000) throw new Error(`the file is too small to be a photo: ${shared.size}`)
   if (!shared.name.endsWith('-in-my-doorway.jpg')) throw new Error(`bad filename: ${shared.name}`)
-  if (!/Kyoto/.test(shared.text)) throw new Error(`share text lost the design: ${shared.text}`)
+  if (!/Membrane Doors/.test(shared.text)) throw new Error(`share text lost the design: ${shared.text}`)
 })
 
 await step('the wa.me fallback carries the design and the size', async () => {
   const href = await page.locator('.try__actions a[href*="wa.me"]').getAttribute('href')
   if (!href.includes(WA_NUMBER)) throw new Error('wrong WhatsApp number')
   const text = decodeURIComponent(href.split('text=')[1] ?? '')
-  if (!/Kyoto/.test(text)) throw new Error(`thin message: ${text}`)
+  if (!/Membrane Doors/.test(text)) throw new Error(`thin message: ${text}`)
   // In-app browsers truncate long URLs silently — same ceiling checkout keeps.
   if (href.length > 1900) throw new Error(`over the wa.me ceiling: ${href.length}`)
 })

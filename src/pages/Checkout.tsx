@@ -124,7 +124,7 @@ export function Checkout() {
         [
           `• ${l.qty} × ${l.name}`,
           `   ${l.sizeLabel} (${l.sizeInches})`,
-          `   ${l.toneName} · ${l.optsLabel}`,
+          `   ${l.toneName ? `${l.toneName} · ` : ''}${l.optsLabel}`,
           `   ${fmtINROrder(l.unitPrice)} each`,
         ].join('\n'),
       )
@@ -385,7 +385,8 @@ export function Checkout() {
                   {l.qty} × {l.name}
                 </div>
                 <div className="checkout__line-meta">
-                  {l.sizeLabel} · {l.toneName}
+                  {l.sizeLabel}
+                  {l.toneName && ` · ${l.toneName}`}
                 </div>
                 <div className="checkout__line-meta">{l.optsLabel}</div>
               </div>

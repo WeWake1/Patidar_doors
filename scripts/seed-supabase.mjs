@@ -37,11 +37,6 @@ registerHooks({
 const { PRODUCTS } = await import('../src/data/products.ts')
 const { WORLDS } = await import('../src/data/worlds.ts')
 
-const DESIGNER_IDS = new Set([
-  'kyoto', 'meridian', 'jaali', 'deco', 'haveli', 'chevron',
-  'linea', 'duet', 'flute', 'atrium', 'noir', 'sentinel',
-])
-
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 const q = (v) => (v === null || v === undefined ? 'null' : `'${String(v).replace(/'/g, "''")}'`)
 const jsonb = (v) => `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb`
@@ -50,7 +45,10 @@ const jsonb = (v) => `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb`
 const subOrder = new Map()
 for (const w of WORLDS) w.subcategories.forEach((name, i) => subOrder.set(`${w.id}|${name}`, i))
 
-const managed = PRODUCTS.filter((p) => !DESIGNER_IDS.has(p.id))
+/* Every product is the client's to manage now. The carve-out that used to sit
+   here protected the 12 Designer Studio doors, whose artwork and prices lived
+   in code; they were removed on 2026-08-20. */
+const managed = PRODUCTS
 
 // collect subcategories actually used
 const subs = new Map()

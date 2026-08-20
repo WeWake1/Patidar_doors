@@ -29,6 +29,44 @@ try {
   const { solveHomography, toMatrix3d, invert, mapPoint, isConvex, rectQuad } =
     await server.ssrLoadModule('/src/lib/homography.ts')
   const { rectifyAspect, sizeFromHeight } = await server.ssrLoadModule('/src/lib/rectify.ts')
+  const { PRODUCTS, tryState, leafOf } = await server.ssrLoadModule('/src/data/products.ts')
+
+  /* ── the catalogue's own invariant ───────────────────── */
+
+  /* "See it in your doorway" can only warp an image that *is* the leaf, and
+     for two months not one catalogue photograph was one: `isLeafCrop` was 0
+     across the board, so all 17 real doors reported `soon` and the feature
+     worked only for the 12 drawn Designer Studio doors. Those were removed on
+     2026-08-20 — which would have left it working for nothing at all — and the
+     leaves are now generated from the corners marked in photoMap.ts.
+
+     Checked here rather than in the browser test because it is a fact about
+     the data, and the browser would pay a page load per product to learn it. */
+  const doors = PRODUCTS.filter((p) => p.visual.kind === 'photo')
+  ok('every photographed door is a door the catalogue can place', doors.length >= 17, `only ${doors.length}`)
+
+  const missing = doors.filter((p) => tryState(p) !== 'ready').map((p) => p.id)
+  ok('every catalogue door has a leaf cut-out', missing.length === 0, missing.join(', '))
+
+  /* A leaf that is not the shape of a door means the corners were marked
+     around the frame, or around a door plus its side panel — the crop looks
+     fine in isolation and only reads as wrong once it is in someone's hallway. */
+  const odd = doors
+    .map((p) => ({ id: p.id, leaf: leafOf(p) }))
+    .filter(({ leaf }) => leaf && !(leaf.h / leaf.w > 1.4 && leaf.h / leaf.w < 3.6))
+    .map(({ id, leaf }) => `${id} ${(leaf.h / leaf.w).toFixed(2)}`)
+  ok('every leaf cut-out is door-shaped (1.4:1 – 3.6:1)', odd.length === 0, odd.join(', '))
+
+  /* Nothing that is not a door may be placeable, which is the other half of
+     the rule and the half that would embarrass us: a cubic foot of teak or a
+     sheet of ply standing in a customer's doorway. */
+  const notDoors = PRODUCTS.filter((p) => p.visual.kind === 'material')
+  ok(
+    'no material swatch is placeable',
+    notDoors.every((p) => tryState(p) === 'no'),
+    notDoors.filter((p) => tryState(p) !== 'no').map((p) => p.id).join(', '),
+  )
+
 
   /* ── homography ──────────────────────────────────────── */
 

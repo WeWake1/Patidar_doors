@@ -16,6 +16,13 @@ built and what it cost.
 
 ## 0. The blocker that comes first
 
+> **Resolved 2026-08-20.** This section is kept as written because the reasoning still
+> holds; what changed is the answer. The 12 drawn doors were removed from the catalogue
+> (AI-drafted placeholders the shop floor did not stock), which would have left this
+> feature working for *nothing*, and the 17 photographs were leaf-cropped by hand —
+> `scripts/build-leaves.mjs`, from corners marked in `src/data/photoMap.ts`. All 17 report
+> `ready`, and `npm run verify:geometry` now fails if any door loses its cut-out.
+
 ```
 $ grep -c isLeafCrop src/data/catalog.gen.ts
 0

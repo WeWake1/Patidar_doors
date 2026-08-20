@@ -76,7 +76,8 @@ export function OrderConfirmed() {
                 {l.qty} × {l.name}
               </div>
               <div className="checkout__line-meta">
-                {l.sizeLabel} · {l.toneName}
+                {l.sizeLabel}
+                {l.toneName && ` · ${l.toneName}`}
               </div>
               {l.optsLabel && <div className="checkout__line-meta">{l.optsLabel}</div>}
             </div>

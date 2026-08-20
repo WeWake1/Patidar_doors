@@ -8,6 +8,7 @@ import { fmtINR } from '../lib/format'
 import { t } from '../lib/i18n'
 import { useScrollLock } from '../lib/useScrollLock'
 import { DoorArt } from './DoorArt'
+import { ProductPhoto } from './ProductPhoto'
 
 export function CartDrawer() {
   const cart = useCart()
@@ -62,12 +63,19 @@ export function CartDrawer() {
               return (
                 <div key={l.key} className="drawer__line">
                   <div className="drawer__thumb">
-                    <DoorArt art={l.art as ArtId} tone={getTone(product, l.toneId)} />
+                    {/* The door itself where we have a photograph of it; the
+                        drawn leaf only stands in for one we have not shot. */}
+                    {l.photo ? (
+                      <ProductPhoto photo={l.photo} sizes="64px" />
+                    ) : (
+                      <DoorArt art={l.art as ArtId} tone={getTone(product, l.toneId)} />
+                    )}
                   </div>
                   <div className="drawer__line-main">
                     <div className="drawer__line-name">{l.name}</div>
                     <div className="drawer__line-meta">
-                      {l.sizeLabel} · {l.toneName}
+                      {l.sizeLabel}
+                      {l.toneName && ` · ${l.toneName}`}
                     </div>
                     <div className="drawer__line-meta">{l.optsLabel}</div>
                     <div className="drawer__line-meta">{t('cart.each', { price: fmtINR(l.unitPrice) })}</div>

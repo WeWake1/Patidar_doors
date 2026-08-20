@@ -48,7 +48,7 @@ type WorldArt =
    and a muted slate-green WPC — a saturated teal board read as a toy. */
 const WORLD_ARTS: WorldArt[] = [
   { id: 'timbers', kind: 'material', material: 'timber', tone: t('w-timbers', 'Amber Teak', '#8a6234', '#63431f', '#ab8149') },
-  { id: 'doors', kind: 'door', art: 'meridian', tone: WOOD_TONES[1] },
+  { id: 'doors', kind: 'door', art: 'classic', tone: WOOD_TONES[1] },
   { id: 'ply', kind: 'material', material: 'ply', tone: t('w-ply', 'Birch Ply', '#c3a279', '#8c6c45', '#e0c8a4') },
   { id: 'wpc', kind: 'material', material: 'wpc', tone: t('w-wpc', 'Slate Green', '#5d7b76', '#3d5854', '#8ba5a1', false) },
 ]

@@ -31,7 +31,16 @@ import { QuadEditor } from '../components/tryathome/QuadEditor'
 import { useArSupport } from '../lib/arSupport'
 import { cameraAvailable, type CameraErrorCode } from '../lib/cameraCapture'
 import { config, whatsappLink } from '../config'
-import { getProduct, quoteFor, tonesFor, tryState, type Product, type Tone } from '../data/products'
+import {
+  defaultToneId,
+  getProduct,
+  leafOf,
+  quoteFor,
+  tonesFor,
+  tryState,
+  type Product,
+  type Tone,
+} from '../data/products'
 import type { LeafSource } from '../components/tryathome/DoorLayer'
 import { SIZE_LIMITS, configFromLine, formatFtIn, formatSizeLabel, toSizeId } from '../data/pricing'
 import { fmtINR } from '../lib/format'
@@ -113,25 +122,38 @@ function TryInner({ product }: { product: Product }) {
   }, [params])
 
   const tones = useMemo(() => tonesFor(product), [product])
-  const [tone, setTone] = useState<Tone>(() => {
+  /* ⚠️ `Tone | undefined`, and the type is the point. `tonesFor` returns [] for
+     anything that is not a drawn door, so `tones[0]` is undefined — which is
+     now *every* product in the catalogue, since the drawn doors were removed
+     and every sellable door is a photograph of one real leaf in one real
+     finish. Typing this as `Tone` was a lie the compiler could not catch, and
+     `tone.id` two hundred lines below crashed the whole route. Same scar as
+     `pickTone`'s dependency array; see the ⚠️ on it. */
+  const [tone, setTone] = useState<Tone | undefined>(() => {
     const want = params.get('t') ?? (visual.kind === 'art' ? visual.defaultTone : '')
     return tones.find((x) => x.id === want) ?? tones[0]
   })
+  /* What to price with. `getTone` already falls back to a neutral wood tone
+     with a zero delta when a product has no finishes, so this is the honest
+     answer for a photographed door rather than a placeholder. */
+  const toneId = tone?.id ?? defaultToneId(product)
 
   /* What gets stood in the doorway: a drawn leaf tinted by the chosen finish,
-     or a photographed one cropped to the corners marked in /admin. Null means
-     this product has no leaf to place — `tryState` says why.
+     or a photographed one cut out of its catalogue shot — either by the
+     admin's corner cropper or by `npm run leaves:build` from the corners
+     marked in photoMap.ts. `leafOf` owns that choice so this route and the PDP
+     button can never disagree; null means there is no leaf to place, and
+     `tryState` says why.
      ⚠️ Memoised because it is DoorLayer's memo key. Rebuilt every render it
      would invalidate the homography and re-reconcile the ~180-node SVG subtree
      on every frame of a drag — the exact cost DoorInner exists to avoid. */
   const source = useMemo<LeafSource | null>(
-    () =>
-      visual.kind === 'art'
-        ? { kind: 'art', art: visual.art, tone }
-        : visual.kind === 'photo' && visual.cover.isLeafCrop
-          ? { kind: 'photo', photo: visual.cover }
-          : null,
-    [visual, tone],
+    () => {
+      if (visual.kind === 'art' && tone) return { kind: 'art', art: visual.art, tone }
+      const leaf = leafOf(product)
+      return leaf ? { kind: 'photo', photo: leaf } : null
+    },
+    [product, visual, tone],
   )
 
   const [photo, setPhoto] = useState<LoadedPhoto | null>(null)
@@ -293,7 +315,7 @@ function TryInner({ product }: { product: Product }) {
       ? sizeFromHeight(result.ratio, estHeight, SIZE_LIMITS)
       : null
   const estLabel = estimate ? formatSizeLabel(estimate.heightIn, estimate.widthIn) : null
-  const estQuote = estimate ? quoteFor(product, { ...cfg, ...estimate }, tone.id) : null
+  const estQuote = estimate ? quoteFor(product, { ...cfg, ...estimate }, toneId) : null
 
   /* ⚠️ The estimate reaches WhatsApp only with its caveat welded on. This
      number is good to about an inch, and the workshop cuts from that message. */
@@ -537,10 +559,10 @@ function TryInner({ product }: { product: Product }) {
                     <button
                       key={x.id}
                       type="button"
-                      className={`try__tone${x.id === tone.id ? ' is-on' : ''}`}
+                      className={`try__tone${x.id === tone?.id ? ' is-on' : ''}`}
                       style={{ background: x.base }}
                       aria-label={x.name}
-                      aria-pressed={x.id === tone.id}
+                      aria-pressed={x.id === tone?.id}
                       disabled={composing}
                       onClick={() => pickTone(x)}
                     />
@@ -583,8 +605,10 @@ function TryInner({ product }: { product: Product }) {
               <button type="button" className="btn btn--ghost" onClick={adjust}>
                 {t('try.result.adjust')}
               </button>
+              {/* Text-only fallback: wa.me cannot carry the file, so this is a
+                  different action from the button above it and has to say so. */}
               <a className="btn btn--ghost" href={whatsappLink(shareText)} target="_blank" rel="noreferrer">
-                {t('try.result.share')}
+                {canShareFiles() ? t('try.result.chat') : t('try.result.share')}
               </a>
             </div>
             <p className="try__hint">{t('try.result.note')}</p>
@@ -624,10 +648,10 @@ function TryInner({ product }: { product: Product }) {
                 <button
                   key={x.id}
                   type="button"
-                  className={`try__tone${x.id === tone.id ? ' is-on' : ''}`}
+                  className={`try__tone${x.id === tone?.id ? ' is-on' : ''}`}
                   style={{ background: x.base }}
                   aria-label={x.name}
-                  aria-pressed={x.id === tone.id}
+                  aria-pressed={x.id === tone?.id}
                   onClick={() => pickTone(x)}
                 />
               ))}
