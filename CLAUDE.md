@@ -393,6 +393,14 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   It reads tier-1 primitives, not world roles, on purpose: the stage is a neutral dark room
   the customer judges their own photo in, and skinning it per world would wrap a hallway
   photo in terracotta on `/ply`. Its two `#000` mask stops are alpha mattes, not colours.
+  ⚠️ But it **restates the tier-2 action roles on `.try`** (2026-08-20), and has to: `.btn`
+  is a role-reading component and `--action` is `--ink`, a fill drawn for a cream page. On
+  `--deep` it paints near-black on near-black — the pick step shipped a black slab ("Take a
+  photo") beside an outline nobody could see ("Choose a photo"), and the AR button the same.
+  A dark room is a ground like a world is, so it restates `--action{,-text,-hover,-hover-text}`
+  + `--focus{,-halo}` once instead of patching each button (which is what the old
+  `.try__controls .btn--ghost` rule was, now generalised to `.try .btn--ghost` — the
+  secondary stays a step quieter than the cream primary beside it).
   · **Export** (`compose.ts` + `doorRaster.ts`, both lazy; `shareImage.ts` static). CSS
   transforms can't be screenshotted, so the export inverts the *same* homography and
   samples per-pixel on the CPU. Preview and export share `solveHomography` **and**

@@ -21,6 +21,36 @@
   min-height: 100dvh;
   background: var(--deep);
   color: var(--cream-on-dark);
+
+  /* ⚠️ The one place this surface touches tier 2, and it has to. `.btn` is a
+     role-reading component and `--action` is `--ink` — a fill designed for a
+     cream page. On `--deep` that paints near-black on near-black: the pick
+     step's two controls were an invisible outline ("Choose a photo") beside a
+     black slab ("Take a photo"), and the AR button the same. The dark room is
+     a ground like a world is, so it restates the roles once rather than
+     patching each button; anything role-reading that lands here later is
+     right by default. */
+  --action: var(--cream-on-dark);
+  --action-text: var(--deep);
+  --action-hover: var(--gold-l);
+  --action-hover-text: var(--deep);
+  --focus: var(--gold-l);
+  --focus-halo: rgba(217, 184, 115, 0.24);
+}
+
+/* The secondary control stays a step quieter than the filled primary beside
+   it — cream text, but a border at --lamp3 rather than the full cream the
+   restated --action would give it. */
+.try .btn--ghost {
+  border-color: var(--lamp3);
+  color: var(--cream-on-dark);
+}
+@media (hover: hover) {
+  .try .btn--ghost:hover {
+    border-color: var(--action-hover);
+    background: var(--action-hover);
+    color: var(--action-hover-text);
+  }
 }
 
 /* Full-screen means full screen: the fixed chrome steps aside while a photo is
@@ -357,11 +387,6 @@ body.has-fullscreen .wa-float {
 .try__done[disabled] {
   opacity: 0.6;
   cursor: progress;
-}
-
-.try__controls .btn--ghost {
-  border-color: var(--lamp3);
-  color: var(--cream-on-dark);
 }
 
 /* ── the not-yet-supported note ────────────────────────── */
