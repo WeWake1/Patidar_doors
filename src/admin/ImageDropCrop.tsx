@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { QuadEditor } from '../components/tryathome/QuadEditor'
 import { COMMON_SIZES } from '../data/products'
 import type { Quad } from '../lib/homography'
+import { guessDoorQuad } from '../lib/quadGuess'
 import { t } from '../lib/i18n'
 import { rectifyAspect } from '../lib/rectify'
 import { flipWinding, mirrorQuad, rectifyToCanvas, squareUp } from '../lib/rectifyImage'
@@ -49,13 +50,61 @@ const MAX_BYTES = 25 * 1024 * 1024
 
 const mb = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 
-/** A centred starting quad — most photos have the door somewhere near the middle. */
+/**
+ * Where the handles sit when nothing better is known — most photos have the
+ * door somewhere near the middle. `guessDoorQuad` beats this most of the time;
+ * see `guessStart`.
+ */
 const START: Quad = [
   { x: 0.28, y: 0.08 },
   { x: 0.72, y: 0.08 },
   { x: 0.72, y: 0.95 },
   { x: 0.28, y: 0.95 },
 ]
+
+/**
+ * Put the handles on the door before the owner touches anything.
+ *
+ * Same `guessDoorQuad` the storefront runs on a customer's doorway photo —
+ * Sobel column/row energy on a 240px copy, ~5 ms, zero bytes of download. It
+ * was wired into `/try` only until 2026-08-20, which was half a feature: the
+ * person who crops every door in the catalogue was the one still dragging four
+ * handles in from the corners on every upload.
+ *
+ * ⚠️ The bar is *much* lower here than on the storefront, and that asymmetry is
+ * why this is worth doing even though the guess is often wrong. A customer
+ * cannot tell a bad guess from a good one — which is why `quadGuess.ts` argues
+ * a 60%-accurate detector is worse than none. The shop owner is looking
+ * straight at the door in their own photograph with the outline drawn over it:
+ * a wrong guess is *obvious* and costs one drag, and a right one saves four.
+ * Measured over the 17 catalogue photos: 9 land close enough to accept or
+ * nudge, 5 decline outright (→ START, exactly as before), and 3 are visibly
+ * wrong — a low-contrast white-on-white door, a double door, and a group shot
+ * of three doors, all of which the owner corrects in seconds.
+ *
+ * It never runs after a drag, and never overrides a saved crop.
+ */
+function guessStart(img: HTMLImageElement): Quad {
+  try {
+    const c = document.createElement('canvas')
+    c.width = img.naturalWidth
+    c.height = img.naturalHeight
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return START
+    ctx.drawImage(img, 0, 0)
+    /* `findSill` is on here and off on the storefront — a catalogue photo has
+       the whole leaf in frame and an owner who can see whether the line
+       landed; see GuessOptions. */
+    const g = guessDoorQuad(c, { findSill: true })
+    if (!g) return START
+    // Back to the normalised space the editor stores; see the `measure` effect.
+    const n = (pt: { x: number; y: number }) => ({ x: pt.x / c.width, y: pt.y / c.height })
+    return [n(g[0]), n(g[1]), n(g[2]), n(g[3])]
+  } catch {
+    // A guess is a convenience. It must never be the reason an upload fails.
+    return START
+  }
+}
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -143,6 +192,16 @@ export function ImageDropCrop({
   const [lockRatio, setLockRatio] = useState<number | null>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
   const [natural, setNatural] = useState({ w: 0, h: 0 })
+  /**
+   * Set when a *freshly picked* file is waiting for its first paint, so the
+   * handles can be dropped onto the door as it appears.
+   *
+   * Deliberately not armed on the re-crop path: that one either restores the
+   * quad the owner last dragged, or — where no original was kept — is looking
+   * at the previous crop's *output*, which is already the leaf edge to edge and
+   * where a guess would be worse than leaving the handles alone.
+   */
+  const pendingGuess = useRef(false)
   const [busy, setBusy] = useState(false)
   /** Which of the three uploads is in flight — the originals one is the slow one. */
   const [step, setStep] = useState(0)
@@ -169,6 +228,13 @@ export function ImageDropCrop({
       const r = img.getBoundingClientRect()
       if (r.width && r.height) setBox({ w: Math.round(r.width), h: Math.round(r.height) })
       if (img.naturalWidth) setNatural({ w: img.naturalWidth, h: img.naturalHeight })
+      /* Once per picked file, and only before the owner has touched anything —
+         the ref is cleared here, so a resize or a rotation can never move
+         handles that have since been dragged. */
+      if (pendingGuess.current && img.naturalWidth) {
+        pendingGuess.current = false
+        setQuad(guessStart(img))
+      }
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -237,6 +303,8 @@ export function ImageDropCrop({
     const u = URL.createObjectURL(f)
     urls.current.push(u)
     setSrc(u)
+    // START is what shows if the guess declines or the image never decodes.
+    pendingGuess.current = true
     setQuad(START)
     setLockRatio(null)
     setFlip(false)

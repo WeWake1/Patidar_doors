@@ -33,11 +33,30 @@ const WORK_EDGE = 240
 /** A door leaf's height:width. `LEAF_H / LEAF_W` — 96″ × 36″. */
 const DOOR_ASPECT = 800 / 300
 
+export interface GuessOptions {
+  /**
+   * Look for the door's bottom edge instead of deriving it from a standard
+   * leaf's proportions.
+   *
+   * **Off for the storefront, on for `/admin`,** and the split is about what
+   * is in the photograph. A customer photographs the doorway they are standing
+   * in front of: the sill is usually cut off, or buried in floor texture and
+   * shadow, and a wrong sill is invisible to someone who has never seen the
+   * right one. A catalogue photo is a shop's product shot — the whole leaf is
+   * in frame, floor included — and the owner is looking straight at it and can
+   * see in one glance whether the line landed.
+   *
+   * Falls back to the derived sill whenever the edge it finds is weak or would
+   * make a shape no door is, so turning it on can only improve the guess.
+   */
+  findSill?: boolean
+}
+
 /**
- * The four corners of what is probably the customer's existing door, in
- * **canvas pixel** coordinates, or null when nothing convincing was found.
+ * The four corners of what is probably the door, in **canvas pixel**
+ * coordinates, or null when nothing convincing was found.
  */
-export function guessDoorQuad(canvas: HTMLCanvasElement): Quad | null {
+export function guessDoorQuad(canvas: HTMLCanvasElement, opts: GuessOptions = {}): Quad | null {
   const small = downscale(canvas, WORK_EDGE)
   if (!small) return null
   const ctx = small.getContext('2d', { willReadFrequently: true })
@@ -102,12 +121,54 @@ export function guessDoorQuad(canvas: HTMLCanvasElement): Quad | null {
   // Doors run to the floor far more often than they end mid-frame, so derive
   // the sill from a standard leaf rather than hunting a threshold edge that is
   // usually buried in floor texture. Running out of frame is normal and fine.
-  const bottom = Math.min(H, top + sep * DOOR_ASPECT)
+  const derived = Math.min(H, top + sep * DOOR_ASPECT)
+  const bottom = opts.findSill ? findSill(gray, W, H, xa, xb, top, derived) : derived
   if (bottom - top < H * 0.2) return null
 
   const k = canvas.width / W
   const S = (x: number, y: number) => ({ x: x * k, y: y * k })
   return [S(left, top), S(right, top), S(right, bottom), S(left, bottom)]
+}
+
+/**
+ * The strongest horizontal edge below the door's midpoint — its sill.
+ *
+ * Only ever *replaces* the derived sill, and only when the edge is both strong
+ * against the rest of the column and leaves a shape a door could actually be.
+ * Every rejection returns `derived`, so this cannot make the guess worse than
+ * it was without it.
+ */
+function findSill(
+  gray: Float32Array,
+  W: number,
+  H: number,
+  xa: number,
+  xb: number,
+  top: number,
+  derived: number,
+): number {
+  // Search below the middle of the derived leaf, so a mid-height rail — the
+  // lock rail on a panelled door — cannot be mistaken for the floor line.
+  const from = Math.max(top + 1, Math.round(top + (derived - top) * 0.55))
+  const to = Math.min(H - 1, Math.round(top + (derived - top) * 1.35))
+  if (to - from < 4) return derived
+
+  const row = new Float32Array(H)
+  for (let y = from; y < to; y++) {
+    for (let x = xa; x < xb; x++) row[y] += Math.abs(sobelY(gray, W, H, x, y))
+  }
+  smooth(row)
+
+  const band = row.subarray(from, to)
+  const mean = average(band)
+  const sill = peak(row, from, to, -1, 0)
+  if (sill < 0 || mean <= 0 || row[sill] / mean < 1.6) return derived
+
+  // A leaf is between ~1.6 and ~3.4 times as tall as it is wide. Anything
+  // outside that is a skirting board, a floor joint or a reflection.
+  const aspect = (sill - top) / (xb - xa)
+  if (aspect < 1.6 || aspect > 3.4) return derived
+  return sill
 }
 
 function sobelX(g: Float32Array, W: number, H: number, x: number, y: number): number {

@@ -493,6 +493,23 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   original, this one only ever had the committed 960px web copy.
   ⚠️ It is applied as a **post-merge overlay** in `products.ts` for the same reason the
   price table is — the CMS carries all 17 ids and replaces them wholesale.
+  · **`guessDoorQuad` is wired into `/admin` too** (2026-08-20). The same Sobel
+  column/row guess the storefront runs on a customer's doorway photo now places
+  the cropper's four handles on upload, so adding a door is "nudge a corner",
+  not "drag four handles in from the edges". ⚠️ It takes a `findSill` option —
+  **off on the storefront, on in `/admin`** — which hunts the door's bottom edge
+  instead of deriving it from a standard leaf's proportions; a customer's snap
+  usually cuts the sill off, a product shot never does. It only ever *replaces*
+  the derived sill when the edge is strong and the resulting shape is between
+  1.6:1 and 3.4:1, so it cannot make the guess worse.
+  ⚠️ The accuracy bar is far lower in `/admin` than on the storefront, and that
+  asymmetry is the whole justification — `quadGuess.ts` argues a 60%-accurate
+  detector is *worse* than none, and it is right about a customer who cannot
+  tell a bad guess from a good one. The shop owner is looking straight at their
+  own photograph with the outline drawn on it. Measured over the 17 catalogue
+  photos: 9 land at IoU > 0.6 (median 0.78 with `findSill`, 0.74 without), 5
+  decline outright → the old centred default, 3 are visibly wrong — a
+  white-on-white door, a double door, and a group shot of three doors.
   ⚠️ Marking a quad is eyeball work with a feedback loop, not a one-shot: render the crop,
   look at it, correct. Four of the seventeen were wrong the first time in a way that only
   showed *after* cropping (`main-03` and `main-11` are a door plus a fixed side panel, not
