@@ -351,12 +351,11 @@ button { font-family: var(--sans); }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
 @keyframes slidein { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-/* the toast is centred with translateX(-50%), so its entrance has to carry that
-   through — a plain `rise` (fill-mode: both) would overwrite the centering and
-   leave it hanging off the right edge */
+/* Plain rise: the toast is centred by `margin: 0 auto` between left:0/right:0,
+   not by a transform, so the entrance has no centring to carry through. */
 @keyframes toastin {
-  from { opacity: 0; transform: translate(-50%, 26px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .rise { animation: rise 0.8s ease both; }
@@ -863,20 +862,52 @@ button { font-family: var(--sans); }
 }
 
 /* ── value props ─────────────────────────────────────────── */
+/* Three rows shared across the columns (number, heading, body) rather than
+   three independent stacks: the third heading — "Factory & showroom, one
+   address" — wraps to two lines at ~1200px and up while its neighbours hold
+   one, which pushed its paragraph 33px below theirs and left the row looking
+   untidy at exactly the width the copy is read at. Below that everything wraps
+   and the misalignment hid itself.
+   `subgrid` is the only thing that can align parts *across* siblings, and it
+   degrades honestly: a browser without it drops the declaration and gets
+   today's three independent stacks back, not a broken layout.
+   ⚠️ The row gap has to be split off the shorthand — `gap: 56px` would land
+   between the number, the heading and the body *inside* every column. The
+   items restate `row-gap: 0` so their own spacing stays the margins below,
+   and the 56px only separates the stacked columns on a phone. */
 .props {
   padding: var(--section) var(--gutter);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 56px;
+  grid-template-rows: auto auto auto;
+  column-gap: 56px;
+  row-gap: 56px;
   max-width: var(--band-max);
   margin: 0 auto;
+}
+.props > * {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 0;
 }
 .props__num { font: var(--type-label-lg); letter-spacing: var(--track-wide); color: var(--accent-text); }
 .props__head { margin: 14px 0 10px; font: var(--type-heading); color: var(--ink); }
 .props__body { margin: 0; font: var(--type-body); color: var(--mut); }
 
 /* ── featured ────────────────────────────────────────────── */
-.featured { padding: 0 var(--gutter) var(--section); max-width: var(--page-max); margin: 0 auto; }
+/* ⚠️ The top pad is not optional. This carried `padding-top: 0` until
+   2026-08-18, which was right while `.props` sat above it and closed with its
+   own --section: two adjoining pads on one cream ground would have doubled the
+   gap. Since the Door Wall moved between them (2026-08-13) the section opens
+   against the band's *border* instead, and a colour change is not spacing — the
+   eyebrow rendered flush on the hairline at every width. A light section
+   following a dark band pays for its own opening. */
+.featured { padding: var(--section) var(--gutter); max-width: var(--page-max); margin: 0 auto; }
+/* The link sits on the last line of the sub-heading, not beside the title —
+   `flex-end` is what puts the two baselines on one line across the column's
+   full width. Below ~800px the copy takes the row on its own and the link
+   drops under it on the flex `gap`. */
 .featured__top {
   display: flex;
   align-items: flex-end;
@@ -1016,7 +1047,14 @@ button { font-family: var(--sans); }
 .faq[open] summary::after { transform: translateY(-50%) rotate(45deg); }
 .faq p { margin: 0 0 22px; font: var(--type-body); color: var(--mut); max-width: var(--measure); }
 
-.faqpage { max-width: 860px; }
+/* ⚠️ The reading measure goes on the *contents*, never on `.page-pad` itself.
+   `.page-pad` carries `margin: 0 auto`, so a narrower `max-width` on the same
+   element re-centres the whole page column: until 2026-08-18 this page's text
+   started 376px from the left at 1440 while /shop, /visit, /checkout and every
+   PDP started at 146px and the footer beneath it at 86px. /faq and /policies
+   link to each other and did not even match each other (376 vs 416). The frame
+   is the site's page column on every route; only the line length changes. */
+.faqpage > * { max-width: 860px; }
 .faqpage__sub { margin: 16px 0 34px; color: var(--mut); max-width: var(--measure); }
 .faqpage__sub a { color: var(--accent-text); }
 
@@ -1731,7 +1769,8 @@ button { font-family: var(--sans); }
 .checkout__empty-msg { margin: 16px 0 26px; color: var(--mut); }
 
 /* ── confirmed ───────────────────────────────────────────── */
-.confirmed { max-width: 760px; }
+/* measure on the contents, not on the padded frame — see .faqpage above */
+.confirmed > * { max-width: 760px; }
 .confirmed__mark { margin-bottom: 18px; }
 .confirmed__mark .diamond { width: 16px; height: 16px; background: var(--slate); }
 .confirmed__sub { margin: 18px 0 0; color: var(--mut); max-width: var(--measure); }
@@ -1749,12 +1788,28 @@ button { font-family: var(--sans); }
 .confirmed > .linkline { margin-top: 40px; }
 
 /* ── policies / notfound ─────────────────────────────────── */
-.policies { max-width: 780px; }
+/* measure on the contents, not on the padded frame — see .faqpage above */
+.policies > * { max-width: 780px; }
 .policies__sub { margin: 16px 0 0; max-width: var(--measure); }
 .policies section { margin-top: 46px; }
 .policies h2 { font: var(--type-title); margin: 0 0 12px; }
 .policies p { color: var(--mut); line-height: 1.75; margin: 0 0 12px; }
 .policies a { color: var(--accent-text); }
+/* The contact line is a list of entries, not a sentence, because on a phone it
+   has to be able to break into rows: as running text it wrapped the number and
+   the email onto adjacent lines, which is what stops either of them being given
+   a thumb-sized target (their hit areas would overlap and steal each other's
+   taps). Desktop still reads as one dot-separated line. */
+.policies__contact {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  color: var(--mut);
+  line-height: 1.75;
+}
+.policies__contact li + li::before { content: '·'; padding: 0 10px; color: var(--mut2); }
 .notfound { text-align: center; padding-top: 180px; padding-bottom: 160px; }
 .notfound__code { font: 500 15vw/1 var(--serif); color: var(--line2); }
 .notfound p { color: var(--mut); margin: 14px 0 30px; }
@@ -1797,11 +1852,21 @@ button { font-family: var(--sans); }
 }
 
 /* ── toast & whatsapp float ──────────────────────────────── */
+/* ⚠️ Centred with left:0/right:0 + `width: fit-content; margin: 0 auto`, never
+   `left: 50%` + translateX(-50%). The latter shipped until 2026-08-18 and is
+   the site's oldest layout trap: with `left` set and no `right`, shrink-to-fit
+   gets only the *remaining* half of the viewport, so `max-width` can never be
+   reached on a phone. "The Meridian added to cart" was laid out in a 195px
+   column on a 390px screen — half the 358px it was allowed — and wrapped onto
+   two lines. The same mistake had already been fixed once, on the hero's
+   scroll cue. */
 .toast {
   position: fixed;
   bottom: calc(30px + env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  width: fit-content;
+  margin: 0 auto;
   max-width: min(92vw, 420px);
   z-index: 120;
   background: var(--ink);
@@ -2467,8 +2532,11 @@ button { font-family: var(--sans); }
        luxurious on a 27" display and wasteful on a 6" one — */
   .page-pad { padding: 116px var(--gutter-phone) var(--section-phone); }
   .props { padding: var(--section-phone) var(--gutter-phone); gap: 40px; }
-  .featured { padding: 0 var(--gutter-phone) var(--section-phone); }
-  .featured__top { margin-bottom: 30px; }
+  .featured { padding: var(--section-phone) var(--gutter-phone); }
+  /* the link wraps onto its own row here, so this margin is what separates it
+     from the card grid — at 30px it read as equidistant between the copy above
+     (the flex `gap`, 24px) and the cards below, i.e. attached to neither */
+  .featured__top { margin-bottom: 40px; }
   .econ { padding: var(--section-phone) var(--gutter-phone); }
   .econ__label { margin-top: 40px; }
   .econ__label--after { margin-top: 46px; }
@@ -2573,6 +2641,26 @@ button { font-family: var(--sans); }
   .btn { padding: 15px 24px; }
   .btn--ghost { min-height: var(--touch); padding: 12px 18px; }
   .linkline { display: inline-flex; align-items: center; min-height: var(--touch); }
+  /* Links inside running prose can't take a 44px *box* — `display:inline-block`
+     on a link that wraps mid-sentence breaks the paragraph — but vertical
+     padding on an inline box never enters the line box, so it grows the hit
+     area and leaves the paragraph laid out exactly as before. 14px either side
+     of a 16px line lands on 44.
+     ⚠️ Scoped to these two links on purpose. Applied to prose links in general
+     it makes *adjacent lines* overlap: /policies' contact line wrapped the
+     phone number and the email onto consecutive lines, their 44px areas met in
+     the middle, and a tap aimed at the number opened the mail client instead —
+     worse than the 16px target it was fixing. These two are each the only link
+     in a one-off intro sentence, with nothing above or below to collide with.
+     The contact line itself is fixed by giving each entry its own row; see
+     `.policies__contact`. */
+  .policies__sub a,
+  .faqpage__sub a { padding-block: 14px; }
+  /* one entry per row, so the number and the email can each carry a real
+     44px box without meeting in the middle */
+  .policies__contact { display: block; }
+  .policies__contact li + li::before { content: none; }
+  .policies__contact a { display: inline-flex; align-items: center; min-height: var(--touch); }
   .crumbs { margin-bottom: 24px; }
   .crumbs a { display: inline-flex; align-items: center; min-height: var(--touch); }
   .cfg__size { min-height: 56px; padding: 11px 16px; }
@@ -2616,7 +2704,9 @@ button { font-family: var(--sans); }
   }
   .drawer__foot { padding: 18px 20px calc(22px + env(safe-area-inset-bottom)); }
   .drawer__line-controls { gap: 6px; }
-  .qty button { width: 42px; height: 42px; font-size: 17px; }
+  /* var(--touch), not 42 — these were the only two controls on the site under
+     the 44px minimum, and they sit in the cart, on a phone, next to Remove. */
+  .qty button { width: var(--touch); height: var(--touch); font-size: 17px; }
   .drawer__remove { display: inline-flex; align-items: center; min-height: var(--touch); padding: 0 10px; }
 
   /* — PDP: keep the door the hero of the first screen, just a little tighter — */

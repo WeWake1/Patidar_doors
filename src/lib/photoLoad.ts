@@ -80,6 +80,29 @@ export async function loadPhoto(file: File): Promise<LoadedPhoto> {
   const nh = img.naturalHeight
   if (!nw || !nh) throw new PhotoError('decode')
 
+  const out = await photoFromSource(img, nw, nh)
+  img.src = '' // let the full-size decode go now, not at the next GC
+  return out
+}
+
+/**
+ * Cap, draw and wrap any already-decoded source as a `LoadedPhoto`.
+ *
+ * Split out of `loadPhoto` so the live camera lands on **exactly** the same
+ * object the file picker produces — same 1600px cap, same JPEG object URL, same
+ * `release()`. Everything downstream (the quad guess, ambient sampling, the
+ * rectifier, the compositor) then cannot tell which one it was handed, which is
+ * the point: there is one photo pipeline, entered by two doors.
+ *
+ * ⚠️ Callers pass the intrinsic size explicitly because the two sources spell
+ * it differently — `naturalWidth` on an <img>, `videoWidth` on a <video>. A
+ * <video>'s `width` is its CSS box and is nearly always wrong.
+ */
+export async function photoFromSource(
+  src: CanvasImageSource,
+  nw: number,
+  nh: number,
+): Promise<LoadedPhoto> {
   const scale = Math.min(1, MAX_EDGE / Math.max(nw, nh))
   const w = Math.max(1, Math.round(nw * scale))
   const h = Math.max(1, Math.round(nh * scale))
@@ -89,8 +112,7 @@ export async function loadPhoto(file: File): Promise<LoadedPhoto> {
   canvas.height = h
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new PhotoError('decode')
-  ctx.drawImage(img, 0, 0, w, h)
-  img.src = '' // let the full-size decode go now, not at the next GC
+  ctx.drawImage(src, 0, 0, w, h)
 
   const url = await toObjectUrl(canvas)
   return {

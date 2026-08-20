@@ -512,3 +512,148 @@ body.has-fullscreen .wa-float {
   height: 1024px;
   pointer-events: none;
 }
+
+/* ── the viewfinder (live camera behind "Take a photo") ──────────────────────
+
+   Works anywhere getUserMedia does, iPhones included — this is a <video> and a
+   canvas, not WebXR. It exists for the guides: how square-on the shot is decides
+   whether the size read back off the outline is good to 1% or to 6%, and that is
+   a thing only askable while the customer is still standing at the door. */
+.cam {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--deep);
+}
+
+.cam__feed {
+  position: absolute;
+  inset: 0;
+  /* Fill rather than letterbox: black bars around a live feed read as a broken
+     camera. The capture reads videoWidth/videoHeight, so what is written to the
+     canvas is the full frame regardless of how this box crops it. */
+  block-size: 100%;
+  inline-size: 100%;
+  object-fit: cover;
+}
+
+/* Two uprights and a floor line. Not a door-shaped outline: the customer's door
+   is an unknown shape, and drawing one they cannot match invites them to move
+   until the *wrong* thing lines up. */
+.cam__guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cam__upright,
+.cam__floor {
+  position: absolute;
+  background: var(--gold);
+  opacity: 0.72;
+}
+
+.cam__upright {
+  inline-size: 2px;
+  inset-block: 14%;
+}
+
+.cam__upright--l {
+  inset-inline-start: 22%;
+}
+
+.cam__upright--r {
+  inset-inline-end: 22%;
+}
+
+.cam__floor {
+  block-size: 2px;
+  inset-block-end: 14%;
+  inset-inline: 22%;
+}
+
+.cam__hint {
+  position: relative;
+  margin: calc(14px + env(safe-area-inset-top)) auto 0;
+  max-width: 30ch;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background: rgb(var(--cast-deep-rgb) / 0.62);
+  color: var(--cream-on-dark);
+  font: var(--type-body-sm);
+  text-align: center;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.cam__bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px calc(var(--gutter-phone) + env(safe-area-inset-right))
+    calc(22px + env(safe-area-inset-bottom)) calc(var(--gutter-phone) + env(safe-area-inset-left));
+  background: linear-gradient(to top, rgb(var(--cast-deep-rgb) / 0.78), transparent);
+}
+
+.cam__cancel,
+.cam__spacer {
+  flex: 1 0 0;
+  min-height: var(--touch);
+  color: var(--cream-on-dark);
+  font: var(--type-label);
+  letter-spacing: var(--track-mid);
+  text-align: start;
+  text-transform: uppercase;
+}
+
+/* The one control that has to be findable without reading: a shutter, where a
+   shutter goes, at the size a thumb expects. */
+.cam__shutter {
+  flex: 0 0 auto;
+  block-size: 68px;
+  inline-size: 68px;
+  border: 3px solid var(--cream-on-dark);
+  border-radius: var(--r-circle);
+  background: var(--gold);
+  box-shadow: var(--cast-chrome);
+}
+
+.cam__shutter:disabled {
+  background: transparent;
+  opacity: 0.5;
+}
+
+/* ── the hidden raster stage (finish switch on the result screen) ──────────
+
+   The result screen shows a flat composed JPEG, so switching finish has to
+   *redraw* it rather than re-render a preview. This is the artwork the exporter
+   serialises for that pass, mounted only while it runs. Off-screen rather than
+   display:none — an unrendered SVG has no layout, and Safari has historically
+   serialised such a node at a default 300×150. */
+.tryre {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  inline-size: 400px;
+  block-size: 1024px;
+  pointer-events: none;
+}
+
+/* The picture is stale for the second or so the redraw takes; saying so beats
+   letting the old finish sit there looking like the answer. */
+.try__out.is-working {
+  opacity: 0.45;
+  transition: opacity var(--dur-quick) var(--ease-out);
+}
+
+.try__finish {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}

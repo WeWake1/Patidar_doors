@@ -81,10 +81,20 @@ export function Policies() {
 
       <section>
         <h2>Contact</h2>
-        <p>
-          {config.brand} · <a href={`tel:${config.phoneTel}`}>{config.phoneDisplay}</a> ·{' '}
-          <a href={`mailto:${config.email}`}>{config.email}</a> · {config.hours}
-        </p>
+        {/* A list, not a sentence: on a phone each entry takes its own row, which
+            is what lets the number and the email carry a thumb-sized target
+            without their hit areas overlapping. The dots are drawn by CSS and
+            only on wide screens. */}
+        <ul className="policies__contact">
+          <li>{config.brand}</li>
+          <li>
+            <a href={`tel:${config.phoneTel}`}>{config.phoneDisplay}</a>
+          </li>
+          <li>
+            <a href={`mailto:${config.email}`}>{config.email}</a>
+          </li>
+          <li>{config.hours}</li>
+        </ul>
       </section>
     </div>
   )

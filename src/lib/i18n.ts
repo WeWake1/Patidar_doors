@@ -213,6 +213,23 @@ const en = {
   'try.err.compose':
     'The picture couldn’t be saved on this phone. Send us the size on WhatsApp instead and we’ll quote it.',
   'try.working': 'Fitting the door…',
+  /* The viewfinder. Its job is a square-on shot — that is what decides whether
+     the size we read back off the outline is good to 1% or to 6% — so the guide
+     copy names the thing to line up, not the thing to photograph. */
+  'try.cam.title': 'Camera',
+  'try.cam.starting': 'Starting the camera…',
+  'try.cam.guide': 'Stand square to your door and fit both sides between the lines.',
+  'try.cam.shoot': 'Take the photo',
+  'try.cam.cancel': 'Cancel',
+  /* Every one of these leaves the photo-library button sitting right behind the
+     message — a camera that will not open is an inconvenience here, never a
+     dead end. */
+  'try.cam.err.denied': 'The camera wasn’t allowed. You can still choose a photo you already have.',
+  'try.cam.err.none': 'No camera was found on this device. Choose a photo instead.',
+  'try.cam.err.busy': 'Another app is using the camera. Close it and try again, or choose a photo.',
+  'try.cam.err.unsupported': 'The camera can’t be opened in this browser. Choose a photo instead.',
+  'try.result.finish': 'See it in another finish',
+  'try.result.redrawing': 'Redrawing…',
   'try.result.share': 'Send it to us on WhatsApp',
   'try.result.save': 'Save the picture',
   'try.result.adjust': 'Adjust the corners',

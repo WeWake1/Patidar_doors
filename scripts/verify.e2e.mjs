@@ -19,6 +19,15 @@ const logs = []
 const browser = await chromium.launch({
   channel: 'chrome',
   headless: true,
+  /* A synthetic camera, so the viewfinder is testable rather than merely
+     assumed. Chrome's fake device produces a rolling pattern at a real
+     resolution and the fake UI auto-grants the permission prompt, which
+     together cover everything the live path does except the lens itself. */
+  /* ⚠️ These two and no more. `--auto-accept-camera-and-microphone-capture`
+     was tried alongside them and crashes this Chrome on launch (SIGTRAP before
+     the first page); it is also redundant, since the fake UI already answers
+     the permission prompt. */
+  args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
 })
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
 const page = await ctx.newPage()
@@ -578,6 +587,48 @@ await step('handheld AR stays invisible where WebXR is not backed by ARCore', as
   if (buttons !== 2) throw new Error(`expected both photo buttons, found ${buttons}`)
 })
 
+await step('the live viewfinder opens, frames and hands over a real photo', async () => {
+  /* Runs against Chrome's fake capture device. The point of the viewfinder is
+     the guides — how square-on the shot is decides whether the size read off
+     the outline is good to 1% or 6% — so the guides are asserted alongside the
+     capture itself. */
+  await page.goto(`${BASE}/try/kyoto?h=84&w=33&t=teak`, { waitUntil: 'networkidle' })
+  await page.locator('.try__shoot').click()
+  await page.waitForSelector('.cam__feed', { timeout: 10000 })
+
+  if ((await page.locator('.cam__upright').count()) !== 2) throw new Error('the framing uprights are missing')
+  if (!(await page.locator('.cam__floor').count())) throw new Error('the floor guide is missing')
+
+  /* The shutter stays disabled until a frame actually exists — tapping it on a
+     stream that has not started would capture a 0×0 canvas. */
+  const shutter = page.locator('.cam__shutter')
+  await page.waitForFunction(() => !document.querySelector('.cam__shutter')?.disabled, null, { timeout: 15000 })
+  const sb = await shutter.boundingBox()
+  if (!sb || sb.height < 44 || sb.width < 44) throw new Error(`shutter is only ${sb?.width}×${sb?.height}`)
+
+  await shutter.click()
+
+  // The viewfinder closes onto the place step, with the outline already up.
+  await page.waitForSelector('.tryq__handle--corner', { timeout: 15000 })
+  if (await page.locator('.cam').count()) throw new Error('the viewfinder stayed open after the shot')
+
+  const dims = await page.locator('.try__photo').evaluate((el) => ({
+    w: el.naturalWidth,
+    h: el.naturalHeight,
+  }))
+  if (!dims.w || !dims.h) throw new Error('the captured frame has no pixels')
+  if (dims.w > 1600 || dims.h > 1600) throw new Error(`the capture skipped the 1600px cap (${dims.w}×${dims.h})`)
+})
+
+await step('the camera never replaces the photo-library route', async () => {
+  /* Half of all visitors are trying a door they photographed yesterday, and the
+     counter staff work from photos customers sent on WhatsApp. Whatever the
+     camera does, that button and its input have to survive. */
+  await page.goto(`${BASE}/try/kyoto`, { waitUntil: 'networkidle' })
+  if (!(await page.locator('.try__pickrow input.try__file').count()))
+    throw new Error('the photo-library input is gone')
+})
+
 await step('a bare /try link falls back to the standard door size', async () => {
   /* No query at all is what a pasted or shared link looks like. `Number(null)`
      is 0 and `Number.isFinite(0)` is true, so this once produced a 0×0 door
@@ -690,6 +741,38 @@ await step('the photo yields a size estimate and a price', async () => {
   // The number is good to about an inch and the workshop cuts from WhatsApp,
   // so it must never appear without saying it is an estimate.
   if (!/estimated|measure/i.test(est)) throw new Error(`the estimate carries no caveat: ${est}`)
+})
+
+await step('a finish picked on the result screen redraws the picture', async () => {
+  /* The cheap half of what people wanted the room view for: the same door in
+     another finish, without going back to the corners. The result screen holds
+     a flat JPEG, so this has to *redraw* — the assertion is that the blob URL
+     actually changes, not merely that a swatch lit up. */
+  const swatches = page.locator('.try__finish .try__tone')
+  if ((await swatches.count()) < 2) throw new Error('the result screen offers no finishes')
+
+  const before = await page.locator('.try__out').getAttribute('src')
+  const estBefore = await page.locator('.try__est').innerText()
+
+  // The first swatch that is not already selected.
+  const idx = (await swatches.nth(0).getAttribute('aria-pressed')) === 'true' ? 1 : 0
+  await swatches.nth(idx).click()
+
+  await page.waitForFunction(
+    (prev) => document.querySelector('.try__out')?.getAttribute('src') !== prev,
+    before,
+    { timeout: 25000 },
+  )
+  const after = await page.locator('.try__out').getAttribute('src')
+  if (!after || after === before) throw new Error('the picture was not redrawn')
+  if ((await swatches.nth(idx).getAttribute('aria-pressed')) !== 'true')
+    throw new Error('the picked finish is not marked selected')
+
+  /* The height the customer already gave still holds — it is the same doorway
+     and the same outline — so clearing it would make them re-tap a chip to get
+     their size and price back for the same door in a different colour. */
+  const estAfter = await page.locator('.try__est').innerText()
+  if (estAfter !== estBefore) throw new Error(`the size estimate was lost: "${estBefore}" -> "${estAfter}"`)
 })
 
 await step('the estimate reaches WhatsApp with its caveat attached', async () => {

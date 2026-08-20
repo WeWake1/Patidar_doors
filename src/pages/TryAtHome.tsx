@@ -23,10 +23,13 @@
 
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { DoorArt } from '../components/DoorArt'
 import { DoorLayer } from '../components/tryathome/DoorLayer'
 import { ErrorBoundary } from '../components/ErrorBoundary'
+import { CameraShot } from '../components/tryathome/CameraShot'
 import { QuadEditor } from '../components/tryathome/QuadEditor'
 import { useArSupport } from '../lib/arSupport'
+import { cameraAvailable, type CameraErrorCode } from '../lib/cameraCapture'
 import { config, whatsappLink } from '../config'
 import { getProduct, quoteFor, tonesFor, tryState, type Product, type Tone } from '../data/products'
 import type { LeafSource } from '../components/tryathome/DoorLayer'
@@ -149,6 +152,17 @@ function TryInner({ product }: { product: Product }) {
      async round trip to the platform. */
   const arOk = useArSupport()
 
+  /* The viewfinder, which — unlike AR — works anywhere getUserMedia does,
+     iPhones included. Synchronous: this is a capability check, not a permission
+     one. Permission is what the shutter tap asks for. */
+  const [cam, setCam] = useState(false)
+  const [camErr, setCamErr] = useState<CameraErrorCode | null>(null)
+
+  /* Set when a finish is picked on the *result* screen, which has to redraw the
+     saved picture rather than just re-render a preview. Holding the tone here
+     is what makes the hidden raster stage mount for exactly one pass. */
+  const [reTone, setReTone] = useState<Tone | null>(null)
+
   const stageRef = useRef<HTMLDivElement>(null)
   const photoRef = useRef<LoadedPhoto | null>(null)
   const resultRef = useRef<{ blob: Blob; url: string; ratio: number | null } | null>(null)
@@ -159,10 +173,10 @@ function TryInner({ product }: { product: Product }) {
      is on screen — the same `body`-class lever useScrollLock already pulls for
      overlays, rather than branching Storefront. */
   useEffect(() => {
-    if (!photo) return
+    if (!photo && !cam) return
     document.body.classList.add('has-fullscreen')
     return () => document.body.classList.remove('has-fullscreen')
-  }, [photo])
+  }, [photo, cam])
 
   // One capped surface at a time. Leaving the route with a 1600px canvas and
   // an object URL still live is how this feature would leak a tab's memory.
@@ -206,34 +220,62 @@ function TryInner({ product }: { product: Product }) {
     return () => clearTimeout(timer)
   }, [photo, quadN])
 
+  /**
+   * Everything that happens once we hold pixels, whichever door they came in
+   * through — an uploaded file or a frame off the live camera. Both produce the
+   * same `LoadedPhoto`, so past this point there is one path, not two.
+   */
+  const acceptPhoto = useCallback(
+    (next: LoadedPhoto) => {
+      photoRef.current?.release()
+      /* The guess runs before the place step's first paint, so the handles
+         are simply already there — there is no "detecting" state to show and
+         nothing to wait for. When it declines, a centred default lands
+         instead and the customer cannot tell which happened. */
+      const guess = guessDoorQuad(next.canvas)
+      const q = guess
+        ? scaleQuad(guess, 1 / next.canvas.width, 1 / next.canvas.height)
+        : defaultQuad(next.w, next.h, cfg.widthIn, cfg.heightIn)
+      setPhoto(next)
+      setQuadN(q)
+      setAmbient(sampleAmbient(next.canvas, scaleQuad(q, next.canvas.width, next.canvas.height)))
+      setFlipped(false)
+    },
+    [cfg.widthIn, cfg.heightIn],
+  )
+
   const onPick = useCallback(
     async (file: File | undefined) => {
       if (!file) return
       setBusy(true)
       setErr(null)
       try {
-        const next = await loadPhoto(file)
-        photoRef.current?.release()
-        /* The guess runs before the place step's first paint, so the handles
-           are simply already there — there is no "detecting" state to show and
-           nothing to wait for. When it declines, a centred default lands
-           instead and the customer cannot tell which happened. */
-        const guess = guessDoorQuad(next.canvas)
-        const q = guess
-          ? scaleQuad(guess, 1 / next.canvas.width, 1 / next.canvas.height)
-          : defaultQuad(next.w, next.h, cfg.widthIn, cfg.heightIn)
-        setPhoto(next)
-        setQuadN(q)
-        setAmbient(sampleAmbient(next.canvas, scaleQuad(q, next.canvas.width, next.canvas.height)))
-        setFlipped(false)
+        acceptPhoto(await loadPhoto(file))
       } catch (e) {
         setErr(e instanceof PhotoError ? e.code : 'decode')
       } finally {
         setBusy(false)
       }
     },
-    [cfg.widthIn, cfg.heightIn],
+    [acceptPhoto],
   )
+
+  /* The viewfinder closes on the shot, so the place step is what the customer
+     sees next — the camera never lingers over a photo already taken. */
+  const onShot = useCallback(
+    (next: LoadedPhoto) => {
+      setCam(false)
+      setCamErr(null)
+      setErr(null)
+      acceptPhoto(next)
+    },
+    [acceptPhoto],
+  )
+
+  const onCamFail = useCallback((code: CameraErrorCode) => {
+    setCam(false)
+    setCamErr(code)
+  }, [])
 
   const reset = useCallback(() => {
     if (!photo) return
@@ -262,7 +304,8 @@ function TryInner({ product }: { product: Product }) {
   /* Compose on "Looks right", not on the share tap — see the shareImage import.
      Everything heavy is behind this one await chain, and both modules stay out
      of the route chunk until someone actually finishes a placement. */
-  const compose = useCallback(async () => {
+  const composeFrom = useCallback(
+    async (artSelector: string, keepEstimate = false) => {
     if (!photo || !quadN) return
     if (!source) return
     setComposing(true)
@@ -281,7 +324,12 @@ function TryInner({ product }: { product: Product }) {
         /* Rasterise at roughly the size the leaf lands at — the grain filter is
            expensive, and detail finer than the destination is thrown away. The
            *live* node is serialised, so the export is the approved picture. */
-        const live = document.querySelector<SVGSVGElement>('svg.tryd__art')
+        /* The *live* node is serialised rather than re-rendered, so the saved
+           picture carries the same gradient ids as the one on screen. Which
+           node that is depends on where we are: the place step's warped leaf,
+           or — when a finish is switched on the result screen, where no leaf is
+           on display — the hidden raster stage mounted for this pass. */
+        const live = document.querySelector<SVGSVGElement>(artSelector)
         if (!live) throw new Error('the door artwork is not on screen')
         const rw = Math.round(rh * (cfg.widthIn / cfg.heightIn))
         leaf = { image: await rasterizeDoor(live, rw, rh), quad: rectQuad(rw, rh) }
@@ -307,14 +355,61 @@ function TryInner({ product }: { product: Product }) {
       const est = rectifyAspect(cq, photo.canvas.width, photo.canvas.height)
       if (resultRef.current) URL.revokeObjectURL(resultRef.current.url)
       setResult({ blob, url: URL.createObjectURL(blob), ratio: est?.ratio ?? null })
-      setEstHeight(null)
+      /* A finish change redraws the same doorway from the same outline, so the
+         height the customer already told us still holds. Clearing it would make
+         them re-tap a chip to get their size and price back for what is, to
+         them, the same door in a different colour. */
+      if (!keepEstimate) setEstHeight(null)
       setShared(null)
     } catch {
       setComposeErr(true)
     } finally {
       setComposing(false)
     }
-  }, [photo, quadN, source, flipped, ambient, cfg.widthIn, cfg.heightIn, product.name, sizeLabel])
+    },
+    [photo, quadN, source, flipped, ambient, cfg.widthIn, cfg.heightIn, product.name, sizeLabel],
+  )
+
+  /** The place step's "Looks right" — the leaf is on screen, warped. */
+  const compose = useCallback(() => {
+    void composeFrom('svg.tryd__art')
+  }, [composeFrom])
+
+  /**
+   * Switching finish.
+   *
+   * On the place step this is just a re-render: the leaf is live vector under
+   * an unchanged `matrix3d`, so a new tone costs nothing. On the *result*
+   * screen there is no leaf on display — only a flat composed JPEG — so the
+   * picture has to be drawn again, which is what `reTone` schedules.
+   */
+  const pickTone = useCallback(
+    (next: Tone) => {
+      if (next.id === tone?.id || composing) return
+      setTone(next)
+      if (resultRef.current) setReTone(next)
+    },
+    /* ⚠️ `tone`, never `tone.id`. A dependency array is evaluated on *every*
+       render, and `tone` is undefined for anything `tonesFor` returns [] for —
+       i.e. every material. Dereferencing it here threw before the doors-only
+       refusal below could return, so /try/burmese-teak crashed instead of
+       explaining itself. */
+    [tone, composing],
+  )
+
+  /* Runs after the commit that mounts the hidden raster stage, so the artwork
+     is guaranteed to be in the document by the time it is serialised — and
+     `composeFrom` has already been rebuilt around the new tone. */
+  useEffect(() => {
+    if (!reTone) return
+    let alive = true
+    void composeFrom('.tryre svg', true).finally(() => {
+      if (alive) setReTone(null)
+    })
+    return () => {
+      alive = false
+    }
+  }, [reTone, composeFrom])
 
   /* Back to the handles. The composed blob is thrown away rather than kept
      warm — the next placement will differ, and an object URL left behind is a
@@ -366,9 +461,28 @@ function TryInner({ product }: { product: Product }) {
         <div className="try__pick">
           <p className="try__lede">{t('try.pick.hint')}</p>
           <div className="try__pickrow">
-            <FileButton className="btn btn--dark btn--big" capture onPick={onPick} busy={busy}>
-              {t('try.pick.take')}
-            </FileButton>
+            {/* The viewfinder can draw the framing guides on the room itself,
+                which is where the square-on shot the rectifier needs actually
+                gets taken. Where getUserMedia is unavailable — an insecure
+                origin, an old browser — the original `capture` input stands in,
+                so the control never disappears. */}
+            {cameraAvailable() ? (
+              <button
+                type="button"
+                className="btn btn--dark btn--big try__shoot"
+                disabled={busy}
+                onClick={() => {
+                  setCamErr(null)
+                  setCam(true)
+                }}
+              >
+                {t('try.pick.take')}
+              </button>
+            ) : (
+              <FileButton className="btn btn--dark btn--big" capture onPick={onPick} busy={busy}>
+                {t('try.pick.take')}
+              </FileButton>
+            )}
             <FileButton className="btn btn--ghost btn--big" onPick={onPick} busy={busy}>
               {t('try.pick.choose')}
             </FileButton>
@@ -393,13 +507,47 @@ function TryInner({ product }: { product: Product }) {
               {t(`try.err.${err}`)}
             </p>
           )}
+          {camErr && (
+            <p className="try__err" role="alert">
+              {t(`try.cam.err.${camErr}`)}
+            </p>
+          )}
         </div>
       ) : result ? (
         <>
           <div className="try__stage">
-            <img className="try__out" src={result.url} alt="" />
+            <img className={`try__out${composing ? ' is-working' : ''}`} src={result.url} alt="" />
+            {/* Only mounted while a finish is being redrawn: ~180 SVG nodes
+                under a turbulence filter is not something to keep parked on a
+                screen that is otherwise a single flat JPEG. */}
+            {reTone && source.kind === 'art' && (
+              <div className="tryre" aria-hidden="true">
+                <DoorArt art={source.art} tone={source.tone} />
+              </div>
+            )}
           </div>
           <div className="try__controls">
+            {/* The one thing people actually wanted the room view for: the same
+                door in a different finish, without going back to the corners. */}
+            {tones.length > 1 && (
+              <div className="try__finish">
+                <p className="try__hint">{composing ? t('try.result.redrawing') : t('try.result.finish')}</p>
+                <div className="try__tones">
+                  {tones.map((x) => (
+                    <button
+                      key={x.id}
+                      type="button"
+                      className={`try__tone${x.id === tone.id ? ' is-on' : ''}`}
+                      style={{ background: x.base }}
+                      aria-label={x.name}
+                      aria-pressed={x.id === tone.id}
+                      disabled={composing}
+                      onClick={() => pickTone(x)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             {result.ratio != null && (
               <div className="try__size">
                 <p className="try__hint">{t('try.size.ask')}</p>
@@ -480,7 +628,7 @@ function TryInner({ product }: { product: Product }) {
                   style={{ background: x.base }}
                   aria-label={x.name}
                   aria-pressed={x.id === tone.id}
-                  onClick={() => setTone(x)}
+                  onClick={() => pickTone(x)}
                 />
               ))}
             </div>
@@ -514,6 +662,8 @@ function TryInner({ product }: { product: Product }) {
           </div>
         </>
       )}
+
+      {cam && <CameraShot onShot={onShot} onCancel={() => setCam(false)} onFail={onCamFail} />}
     </div>
   )
 }

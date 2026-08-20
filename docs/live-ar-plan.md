@@ -1,6 +1,7 @@
 # Live AR — Phase 2
 
-Status: **WebXR AR shipped 2026-08-17, Android only.** See §8 for what was built.
+Status: **WebXR AR shipped 2026-08-17 (Android only). Rung 2a — the live viewfinder — and
+the result-screen finish switch shipped 2026-08-18.** See §8 and §9.
 
 This document began as a costing of the one line `CLAUDE.md` used to carry ("live AR is
 Phase 2"). Its analysis is kept below because it is still the reason the feature is shaped
@@ -277,3 +278,65 @@ hardware. The arithmetic and the support gate are covered; everything downstream
 `grep -c isLeafCrop src/data/catalog.gen.ts` is still `0`. 17 of the 29 in-scope doors report
 `soon` and can be placed in neither a photo nor a room. AR does not change that, and it
 remains the highest-value work available on this feature.
+
+---
+
+## 9. Rung 2a and the finish switch (2026-08-18)
+
+Both of the items §3 and §4 flagged as the genuinely valuable ones, built after the AR path
+rather than instead of it.
+
+### The live viewfinder
+
+§4 called this the one unserved win, and it is the one that works on **every** phone — it is
+a `<video>` and a canvas, so iPhones get it too.
+
+`src/lib/cameraCapture.ts` + `src/components/tryathome/CameraShot.tsx`. "Take a photo" now
+opens an in-page camera with two uprights and a floor line drawn over the room; the shutter
+freezes a frame into the *same* `LoadedPhoto` the file picker produces, so the place step,
+`quadGuess`, `rectifyAspect`, grading, compose and share were all untouched. The shared tail
+of `loadPhoto` was extracted as `photoFromSource` to guarantee that.
+
+It is the guides that matter, not the convenience: how square-on the shot is decides whether
+the size read back off the outline is good to ~1% or ~6%, and that is only askable while the
+customer is still standing at the door.
+
+Everything §4 warned about held. `playsInline`/`muted`/`autoPlay` are all load-bearing on
+iOS; `facingMode` is `ideal` rather than `exact`; every rejection path (`denied`, `none`,
+`busy`, `unsupported`) lands beside the untouched photo-library button rather than
+dead-ending; and the `capture="environment"` input is still there wherever `getUserMedia`
+is not.
+
+**It is actually tested**, which was not expected to be possible: Chrome's
+`--use-fake-device-for-media-stream --use-fake-ui-for-media-stream` gives the E2E a real
+synthetic camera, and the suite drives open → guides → shutter → place step, then asserts
+the 1600px cap held.
+
+⚠️ Do not add `--auto-accept-camera-and-microphone-capture` alongside those two. It crashes
+this Chrome on launch (SIGTRAP before the first page) and is redundant — the fake UI already
+answers the prompt.
+
+### The finish switch
+
+§3's table said the "try several quickly" want was a Phase 1 UX gap rather than an AR one.
+The result screen now carries the finish swatches, so "show me that in walnut" costs a tap
+instead of a trip back to the corners.
+
+Not as cheap as §3 implied, for one reason worth recording: the result screen holds a flat
+composed JPEG, and the exporter serialises the *live* SVG — which is not on screen there. So
+a switch **redraws** through a hidden raster stage (`.tryre`) mounted for exactly one pass.
+The redraw deliberately keeps the height estimate: same doorway, same outline, so clearing it
+would make the customer re-tap a chip for the same door in another colour.
+
+⚠️ One real bug came out of this and is worth remembering: `pickTone`'s dependency array
+originally read `[tone.id, composing]`. Dep arrays evaluate on **every** render, and `tone` is
+undefined wherever `tonesFor` returns `[]` — every material — so `/try/burmese-teak` threw
+before the doors-only refusal could render its explanation. Caught by the existing scope
+E2E, not by types.
+
+### What is still not done
+
+- **The 17 doors from §0.** Unchanged. `isLeafCrop` is still `0`.
+- **AR on real hardware.** Unchanged from §8 — still never run on an ARCore device.
+- **Rungs 2b and 2c.** Not built, and §6's advice stands: hold them until something in how
+  2a is used says stillness or tracking is what is actually in the way.

@@ -259,6 +259,20 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   ⚠️ It carries **no "see the catalogue" link of its own**, though it is a teaser now —
   `.featured` closes with exactly that link and both are on screen at once at 900px; the
   pair read as a stutter. The hand-off is the next section's.
+  ⚠️ The move also left `.featured` **opening flush against this band's border**:
+  it carried `padding-top: 0` because `.props` used to sit above it and close with
+  its own `--section` (two pads on one cream ground would have doubled the gap), and
+  a band's bottom padding is dark — a colour change is not spacing, so "From the
+  floor" sat on the hairline at every width until 2026-08-18. A light section that
+  follows a dark band pays for its own opening.
+  ⚠️ `.props` (the 01/02/03 band above the wall) is a **subgrid**: each column spans
+  the same three parent rows, so the number, the heading and the body line up across
+  all three whatever the copy does. Before 2026-08-18 they were three independent
+  stacks and "Factory & showroom, one address" wrapped to two lines at ~1200px and up
+  while its neighbours held one, dropping its paragraph 33px below theirs — at exactly
+  the widths the section is read at, since below that everything wraps and it hid
+  itself. The row gap has to stay **split off the `gap` shorthand**: as a shorthand it
+  lands between the number, the heading and the body *inside* every column.
   ⚠️ **Mount it only through `DoorWallSlot.tsx`**, never by importing `DoorWall` directly.
   Two separate reasons, both fatal on the home page: (1) `Home` is eager, so a plain
   import puts `DriftWall` + the photo manifest into the *entry* bundle (the slot's `lazy`
@@ -495,6 +509,50 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   beside it. It is in `index.html`'s `modulepreload` list, so it is fetched in parallel and
   costs no extra round trip — net eager payload +190 bytes. Re-check that preload survives
   if the chunking is ever touched.
+- **Live viewfinder** (`src/lib/cameraCapture.ts` + `components/tryathome/CameraShot.tsx`,
+  2026-08-18): "Take a photo" opens an in-page rear camera with framing guides instead of
+  handing off to the OS picker. Unlike the AR path this works **anywhere `getUserMedia`
+  does, iPhones included** — it is a `<video>` and a canvas, not WebXR.
+  · It exists for the *guides*, not for the convenience. `rectifyAspect`'s accuracy is
+  dominated by how square-on the shot was, and until now that was asked for in words
+  (`try.pick.hint`) and discovered afterwards. Two uprights and a floor line, drawn on the
+  room while the customer can still take a step back. Deliberately **not** a door-shaped
+  outline: their door is an unknown shape, and one they cannot match invites them to line up
+  the wrong thing.
+  ⚠️ It replaces the `capture="environment"` input **only where it works** (`cameraAvailable()`
+  is a capability check, not a permission one) and **never** the photo-library button — half
+  of visitors are trying a door they shot yesterday and the counter staff work from WhatsApp
+  photos. `verify:e2e` asserts that input still exists.
+  ⚠️ `playsInline` + `muted` + `autoPlay` are all load-bearing on iOS: without `playsInline`
+  Safari hands the stream to the native fullscreen player, taking the guides and the shutter
+  off screen with it.
+  ⚠️ `facingMode` is `ideal`, not `exact` — as `exact` it throws OverconstrainedError on any
+  device whose back camera isn't labelled as expected, where a front camera would have done.
+  ⚠️ `stopCamera` runs from effect cleanup, not from the shutter. A live track keeps the
+  camera indicator lit and locks the lens away from every other app on most Androids. The
+  unmount-during-permission-sheet race is handled explicitly — it is the common one on a phone.
+  · `grabFrame` reads `videoWidth/videoHeight`, never `width/height` (the CSS box), and hands
+  back a `LoadedPhoto` from the **shared** `photoFromSource` that `loadPhoto` also uses — same
+  1600px cap, same object URL, same `release()`. Past that point there is one photo pipeline
+  entered by two doors, which is why nothing downstream needed changing.
+  · Tested for real: `verify:e2e` launches Chrome with `--use-fake-device-for-media-stream
+  --use-fake-ui-for-media-stream` and drives open → guides → shutter → place step.
+  ⚠️ Do **not** add `--auto-accept-camera-and-microphone-capture` beside them — it crashes
+  this Chrome on launch (SIGTRAP before the first page) and the fake UI already answers the
+  prompt.
+- **Finish switch on the result screen** (2026-08-18): the composed picture carries a swatch
+  row, so "show me that in walnut" no longer means going back to the corners.
+  ⚠️ The result screen holds a flat JPEG, so this **redraws** rather than re-renders — and the
+  exporter serialises the *live* SVG, which is not on screen there. Hence `.tryre`, a hidden
+  raster stage mounted for exactly one pass (`reTone`), and `composeFrom(selector)`. Don't
+  park that artwork permanently: it is ~180 nodes under a turbulence filter.
+  ⚠️ A redraw **keeps the height estimate** (`keepEstimate`). Same doorway, same outline —
+  clearing it would make the customer re-tap a chip to get their size and price back for what
+  is, to them, the same door in another colour. The E2E asserts the estimate survives.
+  ⚠️ `pickTone`'s dep array is `[tone, composing]`, **never `[tone.id, …]`**. Dep arrays
+  evaluate every render and `tone` is undefined wherever `tonesFor` returns `[]` — i.e. every
+  material — so dereferencing it there threw before the doors-only refusal could return, and
+  `/try/burmese-teak` crashed instead of explaining itself.
 - **Handheld AR** (`src/lib/arScene.ts` + `arSupport.ts` + `components/tryathome/
   ArPlacement.tsx`, 2026-08-17): a WebXR `immersive-ar` session that stands the leaf in the
   customer's room at true size, offered as a third button on `/try/:id`'s pick step.
@@ -563,6 +621,26 @@ WhatsApp checkout is kept for the 12 Designer Studio doors only). `npm run dev` 
   · absolutely positioned centred things use `left:0;right:0` + `width:fit-content;
   margin:0 auto`, never `left:50%` + `translateX(-50%)` — the latter shrink-to-fits
   inside only half the width and wraps the text (it did exactly that to the scroll cue).
+  ⚠️ **The toast was the second occurrence**, fixed 2026-08-18. Its declared
+  `max-width: min(92vw, 420px)` — widened again to `100vw - 32px` inside the phone
+  breakpoint — was unreachable the whole time: "The Meridian added to cart" was laid
+  out in a **195px column on a 390px screen**, exactly half, and wrapped onto two
+  lines. Desktop hid it (245px is under half of 1440). If a centred overlay ever
+  looks narrower than it should, this is the first thing to check.
+  · **A page's reading measure goes on its contents, never on `.page-pad`.**
+  `.page-pad` carries `margin: 0 auto`, so a narrower `max-width` on the *same*
+  element re-centres the whole page column instead of shortening its lines. `/faq`,
+  `/policies` and `/order-confirmed` did that until 2026-08-18 and started 376/416/426px
+  from the left at 1440 while every other route started at 146 and the footer under
+  them at 86 — three different left edges, and the two that link to each other did not
+  even match. They now set the measure on `> *`.
+  · **Prose links can take vertical padding, not a box.** Padding on an inline box
+  never enters the line box, so `padding-block: 14px` gives a 16px link a 44px target
+  and leaves the paragraph laid out identically — but only where the link has no
+  neighbour: applied to `.policies a` wholesale it made the phone number's and the
+  email's areas *overlap* on adjacent lines, so a tap aimed at the number opened the
+  mail client. That contact line is now a `.policies__contact` list that breaks to one
+  entry per row on a phone; the padding is scoped to the two standalone `__sub` links.
 - **SVG art**: 12 catalog designs + hero `classic` in `src/components/DoorArt.tsx`
   (original artwork — do not replace with Pinterest photos; see `docs/design-research.md`).
   Shared filters in `<DoorArtDefs/>` (mounted once in App, also used by MaterialArt);
