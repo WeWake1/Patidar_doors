@@ -116,18 +116,72 @@ await step('home loads', async () => {
 })
 await shot('01-home-hero')
 
-await step('hero photo door renders (frame + leaf)', async () => {
-  await page.waitForSelector('.pdoor__unit')
-  await page.waitForSelector('.pdoor__leaf img')
+/* Scroll to a fraction of the hero track. The keyhole hero's phases are
+   fractions of track progress, so every assertion below is written in those
+   terms rather than in pixels. */
+async function heroTo(frac) {
+  const y = await page.evaluate((f) => {
+    const el = document.querySelector('.portal')
+    return el.offsetTop + (el.offsetHeight - window.innerHeight) * f
+  }, frac)
+  await wheelTo(y)
+}
+
+await step('the keyhole is a vector cut-out that opens on scroll', async () => {
+  await page.waitForSelector('.keyhole')
+  /* It opens by re-projecting its viewBox, never by CSS-scaling the element —
+     a scaled composited layer stretches its raster and the edge of the cut
+     goes soft, on the one shape the whole opening shot is made of. So the
+     viewBox width shrinking IS the animation, and this is the assertion that
+     catches someone "simplifying" it back to a transform. */
+  const boxW = () =>
+    page.evaluate(() => Number(document.querySelector('.keyhole')?.getAttribute('viewBox').split(' ')[2] ?? 0))
+  const wide = await boxW()
+  await heroTo(0.16)
+  const narrow = await boxW()
+  if (!(narrow > 0 && narrow < wide * 0.7)) throw new Error(`keyhole did not open (viewBox ${wide} → ${narrow})`)
 })
 
-await step('hero door opens on scroll (phase A)', async () => {
-  await page.mouse.wheel(0, 900)
-  await page.waitForTimeout(700)
-  const tf = await page.evaluate(() => getComputedStyle(document.querySelector('.pdoor__leaf')).transform)
-  if (tf === 'none') throw new Error('leaf transform not applied on scroll')
+await step('the tunnel is real door photographs, flying at the camera', async () => {
+  const srcs = await page.$$eval('.ktun__leaf img', (els) => els.map((e) => new URL(e.src).pathname))
+  if (srcs.length !== 5) throw new Error(`expected 5 tunnel doors, got ${srcs.length}`)
+  /* Leaf cut-outs, not catalogue covers: a cover brings the showroom wall and
+     architrave along with it, which is the one thing a door flying past the
+     camera must not have. */
+  const stray = srcs.filter((s) => !s.startsWith('/images/leaves/'))
+  if (stray.length) throw new Error(`tunnel door is not a leaf cut-out: ${stray[0]}`)
+
+  /* The first door must genuinely grow on approach. This is the check that
+     would have caught the first cut of the tunnel, where NEAR was small enough
+     that every door faded out at about the size it came in at. */
+  const firstH = () => page.evaluate(() => document.querySelector('.ktun__door').getBoundingClientRect().height)
+  const far = await firstH()
+  await heroTo(0.26)
+  const near = await firstH()
+  if (!(near > far * 1.8)) throw new Error(`door did not fly at the camera (${Math.round(far)}px → ${Math.round(near)}px)`)
 })
-await shot('02-home-hero-open')
+await shot('02-home-hero-tunnel')
+
+await step('the last door opens onto the corridor, not onto a dead frame', async () => {
+  /* The corridor has to be lit before the final fly-by finishes. It was not,
+     once: the tunnel ran to 0.76 and the corridor opened at 0.72, and because
+     the corridor's own fade takes a further stretch to reach strength the
+     screen was empty black across roughly 0.67–0.80 — the exact moment the
+     hero is supposed to be arriving somewhere. */
+  await heroTo(0.63)
+  const vis = await page.evaluate(() => getComputedStyle(document.querySelector('.portal__corridor')).opacity)
+  if (Number(vis) < 0.6) throw new Error(`corridor still dark while the last door passes (opacity ${vis})`)
+})
+
+await step('?hero=old still renders the portal hero', async () => {
+  /* Temporary, and it goes when the prototype is resolved: while both heroes
+     are in the tree the old one keeps its coverage. */
+  await page.goto(BASE + '/?hero=old', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.pdoor__unit')
+  await page.waitForSelector('.pdoor__leaf img')
+  await page.goto(BASE + '/', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.hero__title')
+})
 
 await step('portal corridor appears with 4 world cards (phase C)', async () => {
   const target = await page.evaluate(() => {

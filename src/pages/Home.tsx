@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { DoorWallSlot } from '../components/DoorWallSlot'
+import { HeroKeyhole } from '../components/HeroKeyhole'
 import { HeroPortal } from '../components/HeroPortal'
 import { ProductCard } from '../components/ProductCard'
 import { Reveal } from '../components/Reveal'
@@ -15,11 +16,17 @@ export function Home() {
     'Patidar Doors by Patidar Timbers — teak timbers, made-to-measure doors, plywood and WPC from our own yard and factory. Explore online, see it in person.',
   )
   const featured = FEATURED_IDS.map((id) => getProduct(id)!).filter(Boolean)
+  const oldHero = new URLSearchParams(window.location.search).get('hero') === 'old'
 
   return (
     <div>
-      {/* ── PORTAL HERO ──────────────────────────────────────── */}
-      <HeroPortal />
+      {/* ── HERO ─────────────────────────────────────────────────
+          Prototype swap (2026-08-21): the keyhole/tunnel hero is the default
+          and `?hero=old` puts the portal hero back, so the two can be compared
+          on the same page at the same width without a rebuild. Read once at
+          render — there is no reason for this to be reactive, and it is meant
+          to be deleted along with the loser. */}
+      {oldHero ? <HeroPortal /> : <HeroKeyhole />}
 
       {/* ── MARQUEE ──────────────────────────────────────────── */}
       <div className="marquee" aria-hidden="true">

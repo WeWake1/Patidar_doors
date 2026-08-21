@@ -2477,6 +2477,165 @@ button { font-family: var(--sans); }
 .portal--static .wcard__name { color: var(--ink); }
 .portal--static .wcard__tag { color: var(--mut); }
 
+/* ═══════════════ M5b: keyhole hero — peek → tunnel of doors → corridor ════
+   Prototype (2026-08-21) sitting beside the portal hero, not replacing it yet:
+   HeroKeyhole.tsx renders this, HeroPortal.tsx renders the M5 block above, and
+   `?hero=old` on the home page swaps between them. Both share .portal,
+   .portal__sticky, .portal__rays and the whole .portal__corridor/.wcard block —
+   only the opening two phases differ, which is the point of the comparison.
+
+   380vh against the portal's 520. The portal spent five screens of scroll
+   arriving at a nav menu that is also in the header and the footer; this spends
+   its height flying through photographs of doors we actually stock. */
+
+.portal--keyhole { height: 380vh; }
+
+/* ── the plate ─────────────────────────────────────────────────────────────
+   One opaque path with the keyhole punched out of it (fill-rule: evenodd, see
+   HeroKeyhole.tsx). It opens by re-projecting its viewBox rather than by CSS
+   scale, so nothing here may add a transform: a scaled composited layer
+   rasterises once and stretches, and the softened, stepped edge shows on the
+   one shape the entire opening shot is built from.
+
+   `slice` guarantees the viewBox covers the viewport at every zoom, which is
+   what stops the plate reappearing as bands down the sides on the last frames.
+   The path's own rect runs to ±400 user units so the plate still covers when
+   the window is at its widest. */
+.portal--keyhole .portal__corridor { z-index: 1; }
+
+.keyhole {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* the darkest ground on the site: this is meant to read as "no light here yet" */
+.keyhole path { fill: var(--cast-deep); }
+
+/* ── the tunnel ────────────────────────────────────────────────────────────
+   perspective comes inline from HeroKeyhole's PERSPECTIVE constant, because
+   the z values it writes are only meaningful against it. */
+.ktun {
+  position: absolute;
+  inset: 0;
+  /* above the corridor, not below it — the last doors have to fly past in
+     front of a hall that is already lighting up ahead of them (HeroKeyhole) */
+  z-index: 2;
+  overflow: hidden;
+  /* ⚠️ Never make anything in here interactive. Chrome resolves
+     elementFromPoint (and so mouse events) to the wrong element inside a
+     preserve-3d subtree — the same scar the DriftWall tile and the /try warp
+     surface both carry. The layer opts out of hit-testing entirely. */
+  pointer-events: none;
+}
+/* The room the doors stand in: light pooled at the far end, walls falling away
+   either side. Soft on purpose — a hard floor edge reads as an artefact
+   against photographs, which is what the corridor's .portal__hall learned. */
+.ktun__hall {
+  position: absolute;
+  inset: 0;
+  will-change: opacity;
+  background:
+    /* far end of the hall — deliberately weak, because the real light in this
+       scene is .ktun__gap behind whichever door is currently opening */
+    radial-gradient(34% 28% at 50% 46%, rgba(246, 223, 172, 0.12), transparent 74%),
+    radial-gradient(80% 38% at 50% 100%, rgba(201, 169, 100, 0.09), transparent 74%),
+    linear-gradient(90deg, rgba(10, 7, 3, 0.7) 0%, transparent 30%, transparent 70%, rgba(10, 7, 3, 0.7) 100%);
+}
+.ktun__space {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+/* one door, mid-flight. Height is the only size given: the width comes off the
+   leaf's own aspect (--kt-ar, from leaves.gen.ts), because these are real doors
+   and real doors are not one shape — the same reason the admin cropper stopped
+   forcing every photo into a 3:8 box. */
+.ktun__door {
+  --kt-h: min(78svh, 66vw);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: var(--kt-h);
+  width: calc(var(--kt-h) * var(--kt-ar));
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+/* The opening the door sits in. Without it the leaves are slabs swinging in
+   mid-air: a door needs a wall to be a door, and this is the cheapest thing
+   that reads as one. The inset and the border width are equal, so the ring
+   lands exactly outside the leaf and nothing overlaps it when closed. */
+.ktun__jamb {
+  position: absolute;
+  inset: -18px;
+  border: 18px solid var(--night);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 34px rgba(0, 0, 0, 0.85),
+    0 40px 90px rgba(0, 0, 0, 0.6);
+}
+/* hinge left, handle side sweeping toward the camera — the same swing as every
+   other door on the site (.door-scene__leaf, .pdoor__leaf) */
+.ktun__leaf {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.ktun__leaf img {
+  display: block;
+  /* the width/height PAIR, always: ProductPhoto's scar is that a bare CMS
+     height attribute is a presentational hint nothing in the sheet outranked */
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  border-radius: 2px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+}
+.ktun__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(8, 5, 2, 0.03), rgba(8, 5, 2, 0.5));
+}
+/* The light the leaf swings away from. Parked just behind it in the door's own
+   3D space, and bled well past the leaf's own box on every side: at `inset: 0`
+   with an opaque last stop this was a hard-edged lit rectangle the same size as
+   the door, which read as a light-box standing in the dark rather than as light
+   coming through an opening. It ends on `transparent`, never on a colour — an
+   opaque stop is what draws the edge. */
+.ktun__gap {
+  position: absolute;
+  inset: -15%;
+  transform: translateZ(-40px);
+  background: radial-gradient(48% 44% at 50% 46%, rgba(246, 223, 172, 0.54), rgba(176, 130, 64, 0.16) 46%, transparent 76%);
+}
+
+/* copy keeps the top of the screen, above the plate and the tunnel both */
+.ktun__copy {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 104px var(--gutter) 0;
+  text-align: center;
+  will-change: opacity;
+}
+
+@media (max-width: 720px) {
+  /* 280vh — a phone scrolls in short swipes, and this hero has one fewer phase
+     to get through than the portal's 300. */
+  .portal--keyhole { height: 280vh; }
+  .ktun__door { --kt-h: min(72svh, 104vw); }
+  .ktun__copy { padding: 88px 20px 0; }
+}
+
 /* The home page's `.worldstrip` — four `data-world` tiles under "Where do you
    want to start?" — lived here until 2026-08-13. Removed with the section: it
    rendered the same two fields to the same four routes as the hero corridor's
