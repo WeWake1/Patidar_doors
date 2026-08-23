@@ -118,14 +118,55 @@ await shot('01-home-hero')
 
 /* Scroll to a fraction of the hero track. The keyhole hero's phases are
    fractions of track progress, so every assertion below is written in those
-   terms rather than in pixels. */
+   terms rather than in pixels.
+
+   ⚠️ It converges rather than aiming once, and it has to. Lenis multiplies
+   wheel deltas, so `wheelTo` reaches its target and stops feeding the wheel
+   while Lenis is still travelling toward a target of its own that is further
+   on — the settle at the end of wheelTo then carries the page past where it
+   was asked to stop. The error is proportional to the distance covered, so
+   re-aiming from the new position converges in two passes; left uncorrected it
+   compounds across consecutive steps, which is what put a "scroll to 16% of
+   the track" assertion at 24% and a "scroll to 88%" one off the end of the
+   track entirely, with the sticky released and the wall out of the viewport. */
 async function heroTo(frac) {
-  const y = await page.evaluate((f) => {
-    const el = document.querySelector('.portal')
-    return el.offsetTop + (el.offsetHeight - window.innerHeight) * f
-  }, frac)
-  await wheelTo(y)
+  for (let i = 0; i < 4; i++) {
+    const { y, cur } = await page.evaluate((f) => {
+      const el = document.querySelector('.portal')
+      return {
+        y: el.offsetTop + (el.offsetHeight - window.innerHeight) * f,
+        cur: window.scrollY,
+      }
+    }, frac)
+    if (Math.abs(cur - y) <= 10) return
+    await wheelTo(y)
+  }
 }
+
+await step('the hero ships no WebGL backdrop', async () => {
+  /* The portal hero puts a three.js canvas behind its opening phase — 238 kB
+     gzipped, more than twice the rest of the site. This hero has none, and the
+     assertion is on the *fetch* rather than on the markup for the same reason
+     the handheld-AR one is: a gate that regresses ships the payload to every
+     visitor long before anything looks wrong on screen. Nothing here may pull
+     `three`, so the whole hero is walked before the verdict. */
+  const heavy = []
+  const watch = (r) => {
+    if (/Beams|three/i.test(new URL(r.url()).pathname)) heavy.push(new URL(r.url()).pathname)
+  }
+  page.on('request', watch)
+  await page.goto(BASE + '/', { waitUntil: 'networkidle' })
+  await page.waitForSelector('.hero__title')
+  await heroTo(0.5)
+  await heroTo(1)
+  page.off('request', watch)
+  if (heavy.length) throw new Error(`the keyhole hero fetched a WebGL chunk: ${heavy.join(', ')}`)
+  if (await page.locator('.portal__rays canvas').count()) throw new Error('a Beams canvas is mounted in the keyhole hero')
+  /* Back to the top through Lenis, not with a raw scrollTo — Lenis owns wheel
+     scrolling and lerps the page back to its own target, so a raw jump leaves
+     the next step starting from a position that is still moving. */
+  await wheelTo(0)
+})
 
 await step('the keyhole is a vector cut-out that opens on scroll', async () => {
   await page.waitForSelector('.keyhole')

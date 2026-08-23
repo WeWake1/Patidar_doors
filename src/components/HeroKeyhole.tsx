@@ -1,13 +1,11 @@
 import { Suspense, lazy, memo, useEffect, useRef, useState } from 'react'
 import { LEAF_IMAGES } from '../data/leaves.gen'
 import { smoothScrollTo } from '../lib/smoothScroll'
-import { useDecorativeChunk } from '../lib/useDecorativeChunk'
 import { clamp01, easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
 import { ErrorBoundary } from './ErrorBoundary'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
 import { HeroKicker, WORLD_ARTS, WorldCard } from './heroWorlds'
 
-const Beams = lazy(() => import('./reactbits/Beams'))
 /* The wall is the hero's landing, so unlike the standalone band it cannot be
    gated on `useNearViewport` — inside a sticky pane it is on screen for the
    whole track. It is gated on progress instead, and mounted paused; see
@@ -26,6 +24,21 @@ const DoorWall = lazy(() => import('./DoorWall').then((m) => ({ default: m.DoorW
  * spends its whole height on real doors should not hand you four abstract
  * material swatches at the end of it. The worlds move down the page as
  * `WorldsBand`.
+ *
+ * ⚠️ **No Beams, and none is wanted.** The portal hero puts a WebGL canvas
+ * (three + @react-three/fiber + drei, 238 kB gzipped — more than twice the
+ * rest of the site) behind its opening phase. This hero drops it outright:
+ * the keyhole is a small aperture onto a dark hall, its light comes from
+ * `.portal__rays`' gradient and from the lit doorway behind each tunnel door,
+ * and a full-screen raked shader competed with both. Removing it takes 238 kB
+ * off what a visitor to the home page downloads and a full-screen fragment
+ * shader at DPR 3 off the GPU while the hero is scrubbing.
+ * Consequently there is no `useDecorativeChunk` gate, no `beamsLive` render-loop
+ * gate and no stale-chunk ErrorBoundary here — all three existed to manage that
+ * canvas. `three` currently has exactly one importer left (`Beams`, via
+ * HeroPortal) and it must stay that way: a second one makes Rollup hoist a
+ * vendor chunk. Once the portal hero goes, so do three, @react-three/fiber,
+ * drei and `Beams.tsx`.
  *
  * Prototyped 2026-08-21 beside HeroPortal, which it is a candidate to replace.
  * Both render the same Corridor from ./heroWorlds; `?hero=old` in Home swaps
@@ -300,15 +313,6 @@ export function HeroKeyhole() {
   const p = useTrackProgress(trackRef)
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   const mobile = useMediaQuery('(max-width: 720px)')
-  const beamsWanted = useDecorativeChunk()
-  /* Same hysteresis gate as the portal hero, and for the same reason: hiding
-     the canvas does not stop @react-three/fiber's render loop, and leaving it
-     running costs ~120 WebGL draw calls/sec for the life of the home page. The
-     beams here are the light behind the keyhole, so they go out earlier. */
-  const [beamsLive, setBeamsLive] = useState(true)
-  useEffect(() => {
-    setBeamsLive((live: boolean) => (live ? p < 0.36 : p < 0.26))
-  }, [p])
   /* Two gates on the wall, and they are deliberately not the same gate.
      `wallMounted` is the download and the decode: 4 kB of chunk and 28
      photographs, which must be ready before the last door opens onto them, so
@@ -358,10 +362,10 @@ export function HeroKeyhole() {
   const offsetScale = mobile ? OFFSET_SCALE_MOBILE : 1
   const keyhole = seg(p, 0, KEYHOLE_END)
   const copyOpacity = 1 - seg(p, 0.1, 0.2)
-  /* Out early: the beams are the light behind the keyhole, and once the tunnel
-     has its own lit doorways the two light sources fight — broad gold diagonals
+  /* Out early: this is the light behind the keyhole, and once the tunnel has
+     its own lit doorways the two light sources fight — broad gold diagonals
      raked across a corridor read as a second scene laid over the first. */
-  const beamsOpacity = 1 - seg(p, 0.15, 0.27)
+  const raysOpacity = Math.round((1 - seg(p, 0.15, 0.27)) * 100) / 100
 
   /* The whole field slides forward together: door i starts at -(i+1)·SPACING
      and everything advances by one full field length plus BACK. That spaces
@@ -403,19 +407,20 @@ export function HeroKeyhole() {
   return (
     <section className="portal portal--dark portal--keyhole" ref={trackRef}>
       <div className="portal__sticky">
+        {/* ⚠️ The light behind the keyhole is this CSS gradient and NOTHING
+            else. There is deliberately no WebGL Beams canvas here — see the
+            note above the component. `.portal__rays` was written as a
+            stand-in drawn to look like the canvas that would replace it; in
+            this hero it is not standing in for anything, it is the backdrop.
+            So its "retune both or neither" pairing with the shader no longer
+            binds here, and it can be tuned on its own — but the portal hero
+            still uses it with the canvas over the top, so a change made for
+            this hero has to be checked there too until that hero is deleted. */}
         <div
           className="portal__rays"
-          style={{ opacity: beamsOpacity, visibility: beamsOpacity === 0 ? 'hidden' : 'visible' }}
+          style={{ opacity: raysOpacity, visibility: raysOpacity === 0 ? 'hidden' : 'visible' }}
           aria-hidden="true"
-        >
-          <ErrorBoundary label="beams" fallback={null}>
-            <Suspense fallback={null}>
-              {beamsWanted && beamsLive && (
-                <Beams beamWidth={4} beamHeight={30} beamNumber={12} lightColor="#f2d18a" speed={2} noiseIntensity={1.5} rotation={30} />
-              )}
-            </Suspense>
-          </ErrorBoundary>
-        </div>
+        />
 
         {/* ⚠️ preserve-3d subtree: Chrome resolves elementFromPoint (and so
             mouse events) to the wrong element inside one — the DriftWall and
