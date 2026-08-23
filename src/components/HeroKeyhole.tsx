@@ -1,6 +1,8 @@
 import { Suspense, lazy, memo, useEffect, useRef, useState } from 'react'
 import { LEAF_IMAGES } from '../data/leaves.gen'
 import { smoothScrollTo } from '../lib/smoothScroll'
+import { useIdleAfterLoad } from '../lib/useIdleAfterLoad'
+import { useNearViewport } from '../lib/useNearViewport'
 import { clamp01, easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
 import { ErrorBoundary } from './ErrorBoundary'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
@@ -314,19 +316,45 @@ export function HeroKeyhole() {
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   const mobile = useMediaQuery('(max-width: 720px)')
   /* Two gates on the wall, and they are deliberately not the same gate.
-     `wallMounted` is the download and the decode: 4 kB of chunk and 28
-     photographs, which must be ready before the last door opens onto them, so
-     it fires early. `wallLive` is the rAF — 28 transform writes per frame,
-     which must NOT be running while the keyhole and the first doors are still
-     scrubbing, so it fires late. Mounting early and running late is only
-     possible because DriftWall now takes `paused`.
-     Hysteresis on both, so scrubbing across an edge cannot thrash a mount. */
+
+     MOUNTING is the chunk, the ~56 tiles and the first image requests. That is
+     one visible hitch wherever it happens during the scrub, so it does not
+     happen during the scrub at all: it happens on the first idle callback after
+     `load`, when nothing is moving and none of it is on screen yet.
+     ⚠️ It was a scroll threshold (p > 0.24) until 2026-08-23 and that is
+     precisely what the reported single stutter between the first and second
+     door was — measured, the DoorWall chunk plus nine tile requests all fired
+     at p ≈ 0.25 and their parse, mount and decode landed over the following
+     frames. The progress threshold survives only as the fallback for a page
+     that never goes idle, and the mount is never undone.
+
+     RUNNING is the rAF — a transform write per column per frame — and must not
+     be happening while the keyhole and the first doors are still scrubbing, so
+     it starts late. Mounting early and running late is only possible because
+     DriftWall takes `paused`.
+     ⚠️ `heroNear` is load-bearing and its absence was a real bug. Progress
+     clamps at 1 and STAYS there once the track is behind you, so a gate written
+     only on `p` left the wall animating for the rest of the page — measured at
+     the very bottom of the document, hero off screen, tiles still moving. That
+     is the exact leak `useNearViewport` was written for. */
+  const idleReady = useIdleAfterLoad()
+  const heroNear = useNearViewport(trackRef)
   const [wallMounted, setWallMounted] = useState(false)
-  const [wallLive, setWallLive] = useState(false)
+  const [wallRunning, setWallRunning] = useState(false)
   useEffect(() => {
-    setWallMounted((on: boolean) => (on ? p > 0.16 : p > 0.24))
-    setWallLive((on: boolean) => (on ? p > 0.36 : p > 0.44))
-  }, [p])
+    setWallMounted((on: boolean) => on || idleReady || p > 0.24)
+    /* ⚠️ 0.42, and the number is chosen to dodge something. Doors pass the
+       camera at p ≈ 0.31, 0.39, 0.46, 0.54, 0.62, and starting the loop is a
+       step change in per-frame work plus a fresh burst of lazily-loaded tiles
+       entering the plane. Started at 0.36 that landed between the first and
+       second door — the same window as the mount hitch above, which is not a
+       coincidence: both were sitting in the busiest stretch of the scrub.
+       0.42 is a gap between fly-bys and is still ahead of WALL_IN (0.46), so
+       the wall is already drifting steadily by the time anyone can see it.
+       Hysteresis, so scrubbing across the edge cannot thrash the loop. */
+    setWallRunning((on: boolean) => (on ? p > 0.36 : p > 0.42))
+  }, [p, idleReady])
+  const wallLive = wallRunning && heroNear
 
   if (reduced) {
     return (

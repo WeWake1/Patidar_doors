@@ -353,20 +353,35 @@ await step('the door wall never runs under the hero scrub', async () => {
      to be decoded before the last door opens onto them) but held with
      `paused`, so what is checked here is that nothing is *animating* — the
      tiles' tracks must still be at their initial transform. */
-  if (await page.locator('.drift-wall').count()) throw new Error('door wall mounted at the top of the page')
-
-  await heroTo(0.3)
-  /* `attached`, not the default `visible`: at 0.3 the landing is still fully
-     transparent (visibility: hidden), which is exactly the state under test —
-     mounted and decoding, not yet drawn and not yet animating. */
+  /* ⚠️ Mounted at the top of the page is CORRECT here, and was not always: the
+     wall used to mount on a scroll threshold, and that mount — chunk, ~56 tiles,
+     the first image requests — was a single visible stutter wherever the
+     threshold sat. It now happens on the first idle callback after `load`, off
+     the scrub entirely. So what is asserted is not absence but stillness. */
   await page.waitForSelector('.drift-wall__tile', { state: 'attached' })
   const moved = async () =>
     page.evaluate(() =>
       [...document.querySelectorAll('.drift-wall__track')].map((el) => el.style.transform).join('|'),
     )
-  const a = await moved()
+  let a = await moved()
+  await page.waitForTimeout(900)
+  if ((await moved()) !== a) throw new Error('door wall is animating at the top of the page')
+
+  await heroTo(0.3)
+  a = await moved()
   await page.waitForTimeout(900)
   if ((await moved()) !== a) throw new Error('door wall is animating while the hero is still flying')
+
+  /* …and it stops again on the way out. Progress clamps at 1 and stays there
+     once the track is behind you, so a gate written only on `p` leaves the loop
+     running for the whole rest of the page — which is what happened, and is the
+     leak `useNearViewport` exists to close. */
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.waitForTimeout(1200)
+  a = await moved()
+  await page.waitForTimeout(900)
+  if ((await moved()) !== a) throw new Error('door wall still animating below the hero')
+  await wheelTo(0)
 })
 
 await step('door wall: click a tile, big viewer follows', async () => {
