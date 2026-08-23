@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { DoorWallSlot } from '../components/DoorWallSlot'
 import { HeroKeyhole } from '../components/HeroKeyhole'
+import { WorldsBand } from '../components/heroWorlds'
 import { HeroPortal } from '../components/HeroPortal'
 import { ProductCard } from '../components/ProductCard'
 import { Reveal } from '../components/Reveal'
@@ -78,7 +79,13 @@ export function Home() {
           `w.tagline` to the same four routes as the hero corridor's "Choose
           your world", which every visitor scrolls through to reach any of this
           page. The worlds are still in the nav and the footer.) */}
-      <DoorWallSlot />
+      {/* ⚠️ Wall and worlds swapped places 2026-08-23, and only for the keyhole
+          hero. There the wall IS the hero's landing — you fly through the
+          tunnel of doors and arrive at the doors — so it is mounted inside the
+          sticky track, not here, and the four worlds take the slot it left.
+          The portal hero keeps the old arrangement: its own landing is the
+          corridor, so the wall stays a mid-page band underneath it. */}
+      {oldHero ? <DoorWallSlot /> : <WorldsBand />}
 
       {/* ── FEATURED ─────────────────────────────────────────── */}
       <section className="featured">

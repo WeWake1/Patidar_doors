@@ -5,15 +5,27 @@ import { useDecorativeChunk } from '../lib/useDecorativeChunk'
 import { clamp01, easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
 import { ErrorBoundary } from './ErrorBoundary'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
-import { Corridor, HeroKicker, WORLD_ARTS, WorldCard } from './heroWorlds'
+import { HeroKicker, WORLD_ARTS, WorldCard } from './heroWorlds'
 
 const Beams = lazy(() => import('./reactbits/Beams'))
+/* The wall is the hero's landing, so unlike the standalone band it cannot be
+   gated on `useNearViewport` — inside a sticky pane it is on screen for the
+   whole track. It is gated on progress instead, and mounted paused; see
+   `wallMounted` / `wallLive` below. */
+const DoorWall = lazy(() => import('./DoorWall').then((m) => ({ default: m.DoorWall })))
 
 /**
  * The keyhole hero: you are outside, looking through a keyhole (phase A); the
  * keyhole opens up around you and you fly down a corridor of real doors, each
- * swinging open as you reach it and whipping past the camera (phase B); you
- * come out of the last one into the four worlds (phase C).
+ * swinging open as you reach it and whipping past the camera (phase B); the
+ * last door opens onto the Door Wall — every door in the store, drifting —
+ * and holds there (phase C).
+ *
+ * Phase C was the four world cards until 2026-08-23. The wall is the better
+ * payoff and it is the one the animation has been promising: a tunnel that
+ * spends its whole height on real doors should not hand you four abstract
+ * material swatches at the end of it. The worlds move down the page as
+ * `WorldsBand`.
  *
  * Prototyped 2026-08-21 beside HeroPortal, which it is a candidate to replace.
  * Both render the same Corridor from ./heroWorlds; `?hero=old` in Home swaps
@@ -40,8 +52,12 @@ const TUNNEL = [0.13, 0.7] as const
    0.67 to 0.80 — a third of a second of nothing, at the exact moment the hero
    is supposed to be arriving somewhere. You now fly through the last door INTO
    the corridor, which is also the only reading that makes sense of it. */
-const CORRIDOR_START = 0.46
-const CORRIDOR_END = 0.86
+/* The wall's fade. It starts well before the last door passes (~0.62) so that
+   the final leaf opens onto a wall that is already lit — the arrival is one
+   move, not a cut. Everything after WALL_FULL is dwell: the pane holds, the
+   wall drifts, and you read it at your own pace before the sticky releases. */
+const WALL_IN = 0.46
+const WALL_FULL = 0.66
 
 /* ── the tunnel, in world px in front of a CSS `perspective` of 900 ─────────
    A door's on-screen size is 900/(900 - z), so z = 0 is life-size and z
@@ -162,22 +178,37 @@ function TunnelDoor({
      the camera, so the photograph — the entire point of using real doors —
      stops being visible exactly when it is closest. Closed and growing, then a
      late fast swing, then gone. */
-  const open = easeOutCubic(clamp01((z + 1000) / 1100))
   const fog = clamp01((z - FOG_IN) / (FOG_FULL - FOG_IN))
   const gone = 1 - clamp01((z - (near - 220)) / 220)
-  const opacity = fog * gone
+  const hidden = fog * gone <= 0.002
+
+  /* A door that cannot be seen is parked rather than merely made transparent,
+     and the values that can be are rounded. React diffs inline styles and skips
+     a property whose value has not changed, so a constant style for an
+     invisible door writes nothing, and a shade whose opacity is quantised to
+     1/50 writes on a handful of frames instead of all of them.
+     ⚠️ Worth being honest about: measured at 4× CPU throttle, this pair bought
+     nothing detectable on its own. The hero's style-recalc cost turned out to
+     be almost entirely one custom property set on the wall's wrapper — see the
+     note at `headOpacity`'s call site in DoorWall. Keep this anyway (writing
+     styles for elements nobody can see is still wrong), but do not go hunting
+     here first if the hero ever gets slow again. */
+  const open = hidden ? 0 : easeOutCubic(clamp01((z + 1000) / 1100))
+  const opacity = hidden ? 0 : Math.round(fog * gone * 100) / 100
   return (
     <div
       className="ktun__door"
       style={{
         '--kt-ar': leaf.w / leaf.h,
-        transform: `translate(-50%, -50%) translate3d(${dx}px, ${dy}px, ${z.toFixed(1)}px)`,
+        transform: hidden
+          ? 'translate(-50%, -50%) translate3d(0px, 0px, -9999px)'
+          : `translate(-50%, -50%) translate3d(${dx}px, ${dy}px, ${z.toFixed(0)}px)`,
         opacity,
-        visibility: opacity <= 0.001 ? 'hidden' : 'visible',
+        visibility: hidden ? 'hidden' : 'visible',
       } as React.CSSProperties}
     >
       {/* the lit room the leaf swings away from */}
-      <span className="ktun__gap" style={{ opacity: open * glow }} />
+      <span className="ktun__gap" style={{ opacity: Math.round(open * glow * 50) / 50 }} />
       {/* ⚠️ The jamb is behind the leaf, and that ordering is the same scar
           .door-scene__frame carries: its inset + equal border occupy exactly
           the ring outside the opening, so closed it abuts the leaf either way —
@@ -185,12 +216,12 @@ function TunnelDoor({
           edge overhang the opening. In front, the architrave paints over that
           overhang and an open door reads as tucked behind its own frame. */}
       <span className="ktun__jamb" />
-      <div className="ktun__leaf" style={{ transform: `rotateY(${(-open * 72).toFixed(2)}deg)` }}>
+      <div className="ktun__leaf" style={{ transform: `rotateY(${(-open * 72).toFixed(1)}deg)` }}>
         {/* The first door is what you see through the keyhole before anything
             has moved, so it is the one that must not arrive late. */}
         {first ? <FirstLeaf id={id} /> : <TunnelLeaf id={id} />}
         {/* edge shade as it turns away from the light, exactly as .pdoor__shade */}
-        <span className="ktun__shade" style={{ opacity: open * 0.8 }} />
+        <span className="ktun__shade" style={{ opacity: Math.round(open * 40) / 50 }} />
       </div>
     </div>
   )
@@ -278,6 +309,20 @@ export function HeroKeyhole() {
   useEffect(() => {
     setBeamsLive((live: boolean) => (live ? p < 0.36 : p < 0.26))
   }, [p])
+  /* Two gates on the wall, and they are deliberately not the same gate.
+     `wallMounted` is the download and the decode: 4 kB of chunk and 28
+     photographs, which must be ready before the last door opens onto them, so
+     it fires early. `wallLive` is the rAF — 28 transform writes per frame,
+     which must NOT be running while the keyhole and the first doors are still
+     scrubbing, so it fires late. Mounting early and running late is only
+     possible because DriftWall now takes `paused`.
+     Hysteresis on both, so scrubbing across an edge cannot thrash a mount. */
+  const [wallMounted, setWallMounted] = useState(false)
+  const [wallLive, setWallLive] = useState(false)
+  useEffect(() => {
+    setWallMounted((on: boolean) => (on ? p > 0.16 : p > 0.24))
+    setWallLive((on: boolean) => (on ? p > 0.36 : p > 0.44))
+  }, [p])
 
   if (reduced) {
     return (
@@ -332,13 +377,19 @@ export function HeroKeyhole() {
   /* The corridor still runs on the 0.45→0.9 slice it was written for, so it is
      handed a remapped p rather than having its thresholds retuned in two
      places. */
-  const hallOpacity = 1 - seg(p, CORRIDOR_START + 0.04, 0.68)
-  /* [0.45, 0.95] of the corridor's own schedule, not [0.45, 0.90]: the four
-     cards have to be arriving by the time the LAST door swings open, so that
-     the final thing you fly through opens onto the worlds rather than onto an
-     empty glow. */
-  const corridorP = 0.45 + seg(p, CORRIDOR_START, CORRIDOR_END) * 0.5
-  const corridorInteractive = p > 0.9
+  const hallOpacity = Math.round((1 - seg(p, WALL_IN + 0.04, 0.7)) * 50) / 50
+  /* rounded, and read by all five doors — an unrounded value re-renders every
+     door on every frame for a light level nobody can see change */
+  const glow = Math.round((0.28 + 0.72 * hallOpacity) * 50) / 50
+  const wallOpacity = seg(p, WALL_IN, WALL_FULL)
+  /* The head lands after the last door has gone past, not with the wall. The
+     photographs want to be visible *through* the opening — that is the whole
+     point of the handoff — but a headline does not: a door sweeping across
+     "THE DOOR WALL" mid-word just looks like two things drawn on top of each
+     other. Rounded, and handed to DoorWall as a prop rather than as a custom
+     property on .ktwall — see the note at its call site there. */
+  const headOpacity = Math.round(seg(p, 0.64, 0.74) * 50) / 50
+  const wallInteractive = p > 0.78
 
   const peek = () => {
     const el = trackRef.current
@@ -392,7 +443,7 @@ export function HeroKeyhole() {
                 first={i === 0}
                 dx={OFFSETS[i][0] * offsetScale}
                 dy={OFFSETS[i][1] * offsetScale}
-                glow={0.28 + 0.72 * hallOpacity}
+                glow={glow}
                 near={near}
                 z={-(i + 1) * SPACING - BACK + advance}
               />
@@ -412,10 +463,33 @@ export function HeroKeyhole() {
           <HeroCopy />
         </div>
 
-        {/* After the tunnel and the copy in the document, as in HeroPortal: the
-            corridor's "Choose your world" is an <h2> and must not stand ahead
-            of the page's own <h1> in the heading outline. */}
-        <Corridor p={corridorP} interactive={corridorInteractive} />
+        {/* After the tunnel and the copy in the document: the wall's "THE DOOR
+            WALL" is an <h2> and must not stand ahead of the page's own <h1> in
+            the heading outline. Paint order is z-index, so this costs nothing
+            visually. */}
+        <div
+          className="ktwall"
+          style={{
+            opacity: Math.round(wallOpacity * 100) / 100,
+            visibility: wallOpacity === 0 ? 'hidden' : 'visible',
+            pointerEvents: wallInteractive ? 'auto' : 'none',
+          }}
+          /* `inert` rather than a tabIndex sweep: the wall is a whole
+             interactive subtree (28 tiles, a viewer, a close button), and while
+             the hero is still flying none of it should be reachable by tab or
+             announced by a screen reader. pointer-events is the belt to its
+             braces. */
+          inert={!wallInteractive}
+        >
+          {/* Decorative-adjacent: a stale chunk after a redeploy should cost the
+              landing and nothing else, so this fails to the band's own ground
+              rather than to a crash screen under the hero. */}
+          <ErrorBoundary label="door-wall" fallback={null}>
+            <Suspense fallback={null}>
+              {wallMounted && <DoorWall compact paused={!wallLive} headOpacity={headOpacity} />}
+            </Suspense>
+          </ErrorBoundary>
+        </div>
 
         <button
           type="button"

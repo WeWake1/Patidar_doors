@@ -68,7 +68,11 @@ const ITEMS: DriftWallItem[] = WALL_PHOTOS.map((p) => ({
  * to /shop, and it must be mounted through `DoorWallSlot` rather than imported
  * directly — the reasons are in that file.
  */
-export function DoorWall() {
+export function DoorWall({
+  compact = false,
+  paused = false,
+  headOpacity,
+}: { compact?: boolean; paused?: boolean; headOpacity?: number } = {}) {
   const split = useMediaQuery(SPLIT_QUERY)
   const [chosen, setChosen] = useState(0)
   const [zoomed, setZoomed] = useState<number | null>(null)
@@ -127,9 +131,28 @@ export function DoorWall() {
   if (!photo) return null
 
   return (
-    <section className="doorwall" aria-labelledby="doorwall-title">
-      <div className="doorwall__head">
+    <section className={`doorwall${compact ? ' doorwall--compact' : ''}`} aria-labelledby="doorwall-title">
+      {/* ⚠️ `headOpacity` is applied HERE, on the head itself, and must never
+          go back to being a custom property set on an ancestor. A changing
+          custom property invalidates style for every element that inherits it,
+          and when the hero drove one on the wall's wrapper it was invalidating
+          the whole wall — 28 tiles, the viewer, the overlay — on every frame of
+          the scrub. That single declaration was 130 ms of style recalc across
+          one pass of the hero, five times everything else it does put
+          together. */}
+      <div className="doorwall__head" style={headOpacity === undefined ? undefined : { opacity: headOpacity }}>
         <div className="kicker kicker--gold">Straight off the shop floor</div>
+        {/* ⚠️ The drawn headline is skipped in the compact variant, and not to
+            save the 46 kB of gsap. StrokeText runs on a ScrollTrigger, and
+            inside a 100dvh sticky pane the band never crosses the viewport —
+            the trigger either fires at the top of the track, minutes of scroll
+            before anyone sees the wall, or not at all. A headline that has
+            already played by the time you arrive is worse than a plain one. */}
+        {compact ? (
+          <h2 className="doorwall__title doorwall__title--plain" id="doorwall-title">
+            {TITLE}
+          </h2>
+        ) : (
         <h2 className="doorwall__title" id="doorwall-title">
           {/* The `-webkit-text-stroke` span holds the same box and the same
               words, so a gsap chunk that fails to load (redeploy under an open
@@ -157,6 +180,7 @@ export function DoorWall() {
           </Suspense>
           </ErrorBoundary>
         </h2>
+        )}
         <p className="doorwall__sub">
           {split
             ? 'Every one of these is standing in the store. Click any door on the wall to bring it forward.'
@@ -203,6 +227,7 @@ export function DoorWall() {
             overlayColor="#1c1610"
             selectedIndex={split ? chosen : (zoomed ?? -1)}
             onSelect={onSelect}
+            paused={paused}
             ariaLabel={t('doorwall.label')}
             style={{ '--dw-ring': 'rgba(201, 169, 100, 0.95)' } as CSSProperties}
           />

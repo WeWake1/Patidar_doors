@@ -128,6 +128,38 @@ export const HeroKicker = memo(function HeroKicker({ className }: { className?: 
   )
 })
 
+/**
+ * The four worlds as an ordinary page band rather than the hero's last phase.
+ *
+ * Added 2026-08-23, when the keyhole hero's payoff became the Door Wall: you
+ * fly through the doors and arrive at the doors, which is the thing the whole
+ * animation has been promising. The worlds still have to be reachable from the
+ * home page though — three of the four are not doors at all, and nothing in a
+ * wall of doors leads anyone to plywood — so they take the slot the wall
+ * vacated, further down the page.
+ *
+ * ⚠️ This is NOT the `.worldstrip` that was deleted on 2026-08-13. That one was
+ * removed for duplicating the hero corridor's "Choose your world" ~600px below
+ * an unskippable copy of itself. With the corridor gone from the hero, this is
+ * the only place on the page the four worlds are offered, so it is the thing
+ * the strip was a second copy of, not a third.
+ */
+export function WorldsBand() {
+  return (
+    <section className="worldsband">
+      <div className="worldsband__head">
+        <div className="kicker kicker--gold">Four ways in</div>
+        <h2>Choose your world</h2>
+      </div>
+      <div className="portal__doors worldsband__doors">
+        {WORLD_ARTS.map((g) => (
+          <WorldCard key={g.id} art={g} tabbable />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export function Corridor({ p, interactive }: { p: number; interactive: boolean }) {
   const heading = seg(p, 0.8, 0.88)
   return (

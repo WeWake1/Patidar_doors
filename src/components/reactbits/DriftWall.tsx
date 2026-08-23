@@ -9,7 +9,8 @@ import './DriftWall.css'
  *  · `onSelect` + `selectedIndex` — clicking a tile is what drives the big
  *    viewer next to the wall, and the picked photo keeps a ring while it drifts;
  *  · the column ref callback has a block body (React 19 treats a returned value
- *    from a ref callback as a cleanup function and throws).
+ *    from a ref callback as a cleanup function and throws);
+ *  · `paused` stops the rAF loop outright — see the prop's own note.
  */
 
 export interface DriftWallItem {
@@ -53,6 +54,21 @@ interface DriftWallProps {
    * says the doors are standing in the store. Defaults to the registry string,
    * so this stays a superset and the file stays re-syncable.
    */
+  /**
+   * Hold the loop. The registry component animates unconditionally for as long
+   * as it is mounted, which is fine for a band you scroll to and fatal for one
+   * mounted inside a scroll-scrubbed hero: ~28 tiles taking a transform write
+   * every frame, on top of the hero's own per-frame work, is what made the
+   * portal hero stutter on mid-range Androids in the first place.
+   *
+   * Mounting late is not a substitute — the tiles are 28 photographs and they
+   * have to be decoded before the hero flies into them. So the hero mounts this
+   * early and paused (images load, nothing animates) and releases it at the
+   * moment the wall actually comes into view. `useNearViewport`, which serves
+   * the same purpose for the standalone band, cannot: inside a sticky pane the
+   * element is on screen for the whole track.
+   */
+  paused?: boolean
   ariaLabel?: string
   className?: string
   style?: React.CSSProperties
@@ -95,6 +111,7 @@ const DriftWall: React.FC<DriftWallProps> = ({
   overlayColor = '#060010',
   selectedIndex = -1,
   onSelect,
+  paused = false,
   ariaLabel = 'Drifting wall of tiles',
   className = '',
   style,
@@ -176,6 +193,12 @@ const DriftWall: React.FC<DriftWallProps> = ({
   )
 
   useEffect(() => {
+    /* Held: lay the plane out once at its rest angle and schedule nothing. The
+       effect re-runs when `paused` clears, which is what starts the loop. */
+    if (paused) {
+      applyPlaneTransform(pointerDampedRef.current.x, pointerDampedRef.current.y)
+      return
+    }
     const animate = (ts: number) => {
       if (lastTsRef.current === null) lastTsRef.current = ts
       const dt = Math.min(0.05, Math.max(0, ts - lastTsRef.current) / 1000)
@@ -223,7 +246,7 @@ const DriftWall: React.FC<DriftWallProps> = ({
       rafRef.current = null
       lastTsRef.current = null
     }
-  }, [baseVelocities, columnMeta, pauseOnHover, parallax, reduced, applyPlaneTransform])
+  }, [baseVelocities, columnMeta, pauseOnHover, parallax, reduced, applyPlaneTransform, paused])
 
   const activate = useCallback((id: string, index: number) => {
     activeIdRef.current = id

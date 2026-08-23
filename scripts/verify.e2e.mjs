@@ -151,26 +151,49 @@ await step('the tunnel is real door photographs, flying at the camera', async ()
   const stray = srcs.filter((s) => !s.startsWith('/images/leaves/'))
   if (stray.length) throw new Error(`tunnel door is not a leaf cut-out: ${stray[0]}`)
 
-  /* The first door must genuinely grow on approach. This is the check that
-     would have caught the first cut of the tunnel, where NEAR was small enough
-     that every door faded out at about the size it came in at. */
-  const firstH = () => page.evaluate(() => document.querySelector('.ktun__door').getBoundingClientRect().height)
-  const far = await firstH()
-  await heroTo(0.26)
-  const near = await firstH()
+  /* A door must genuinely grow on approach, and must then leave. This is the
+     check that would have caught the first cut of the tunnel, where NEAR was
+     small enough that every door faded out at about the size it came in at.
+
+     ⚠️ Measure the largest VISIBLE door, not `.ktun__door:first-child`. Two
+     reasons, and the second one bit. `wheelTo` lands within a dozen pixels but
+     Lenis multiplies wheel deltas, so a short hop overshoots by enough that the
+     first door may already have gone by. And a door past the camera sits at
+     z > perspective, where the projection inverts and `getBoundingClientRect`
+     hands back a nonsense number — which is how an earlier version of this
+     assertion passed while measuring a door that was behind the viewer. */
+  const biggest = () =>
+    page.evaluate(() =>
+      Math.max(
+        ...[...document.querySelectorAll('.ktun__door')]
+          .filter((el) => el.style.visibility !== 'hidden')
+          .map((el) => el.getBoundingClientRect().height),
+      ),
+    )
+  const far = await biggest()
+  await heroTo(0.3)
+  const near = await biggest()
   if (!(near > far * 1.8)) throw new Error(`door did not fly at the camera (${Math.round(far)}px → ${Math.round(near)}px)`)
+
+  /* …and off the other side: the first door is parked once it has passed, so
+     nothing keeps writing a transform for a leaf nobody can see. */
+  await heroTo(0.45)
+  const parked = await page.evaluate(() => document.querySelector('.ktun__door').style.visibility)
+  if (parked !== 'hidden') throw new Error('the first door never flew past the camera')
 })
 await shot('02-home-hero-tunnel')
 
-await step('the last door opens onto the corridor, not onto a dead frame', async () => {
-  /* The corridor has to be lit before the final fly-by finishes. It was not,
-     once: the tunnel ran to 0.76 and the corridor opened at 0.72, and because
-     the corridor's own fade takes a further stretch to reach strength the
-     screen was empty black across roughly 0.67–0.80 — the exact moment the
-     hero is supposed to be arriving somewhere. */
+await step('the last door opens onto the wall, not onto a dead frame', async () => {
+  /* The landing has to be lit before the final fly-by finishes — you fly
+     through the last door INTO the wall, which is the whole reason the wall is
+     stacked under .ktun rather than after it. It was not, once: the tunnel ran
+     to 0.76 and the landing opened at 0.72, and because that fade takes a
+     further stretch to reach strength the screen was empty black across roughly
+     0.67–0.80, the exact moment the hero is supposed to be arriving somewhere. */
   await heroTo(0.63)
-  const vis = await page.evaluate(() => getComputedStyle(document.querySelector('.portal__corridor')).opacity)
-  if (Number(vis) < 0.6) throw new Error(`corridor still dark while the last door passes (opacity ${vis})`)
+  const vis = await page.evaluate(() => getComputedStyle(document.querySelector('.ktwall')).opacity)
+  if (Number(vis) < 0.6) throw new Error(`landing still dark while the last door passes (opacity ${vis})`)
+  if (!(await page.locator('.drift-wall__tile').count())) throw new Error('no wall behind the last door')
 })
 
 await step('?hero=old still renders the portal hero', async () => {
@@ -183,20 +206,32 @@ await step('?hero=old still renders the portal hero', async () => {
   await page.waitForSelector('.hero__title')
 })
 
-await step('portal corridor appears with 4 world cards (phase C)', async () => {
-  const target = await page.evaluate(() => {
-    const el = document.querySelector('.portal')
-    return el.offsetTop + (el.offsetHeight - window.innerHeight) * 0.95
-  })
-  await wheelTo(target)
-  const n = await page.locator('.wcard').count()
-  if (n !== 4) throw new Error(`expected 4 world cards, got ${n}`)
-  const vis = await page.evaluate(() => getComputedStyle(document.querySelector('.portal__corridor')).opacity)
-  if (Number(vis) < 0.9) throw new Error(`corridor not faded in (opacity ${vis})`)
+await step('the hero lands on the door wall (phase C)', async () => {
+  await heroTo(0.95)
+  const vis = await page.evaluate(() => getComputedStyle(document.querySelector('.ktwall')).opacity)
+  if (Number(vis) < 0.9) throw new Error(`landing not faded in (opacity ${vis})`)
+  await page.waitForSelector('.doorwall__wall')
+  /* The drawn StrokeText headline must NOT be here: it runs on a ScrollTrigger,
+     and inside a sticky pane the band never crosses the viewport, so it would
+     either play minutes of scroll before anyone arrives or not at all. */
+  if (await page.locator('.ktwall .stroke-text__svg').count())
+    throw new Error('the drawn headline is in the sticky landing, where its scroll trigger cannot work')
 })
-await shot('02b-portal-corridor')
+await shot('02b-hero-doorwall-landing')
 
-await step('corridor card walks into Timbers world', async () => {
+await step('the four worlds have a band of their own further down', async () => {
+  /* They were the hero's last phase until 2026-08-23. Three of the four are not
+     doors, so a hero that lands on a wall of doors cannot also be their route in
+     — they take the mid-page slot the wall vacated. */
+  await page.locator('.worldsband').scrollIntoViewIfNeeded()
+  await page.waitForTimeout(500)
+  const n = await page.locator('.worldsband .wcard').count()
+  if (n !== 4) throw new Error(`expected 4 world cards in the band, got ${n}`)
+  if (await page.locator('.portal__corridor').count())
+    throw new Error('the hero corridor is back as well as the band — the worlds are offered twice')
+})
+
+await step('a world card walks into the Timbers world', async () => {
   await page.locator('.wcard--timbers').click()
   await page.waitForURL('**/timbers')
   await page.waitForSelector('[data-world="timbers"]')
@@ -228,14 +263,28 @@ await shot('04-home-process')
    the chunk mount, then centre the pane on what actually rendered. */
 async function gotoDoorWall() {
   await page.goto(BASE + '/', { waitUntil: 'networkidle' })
-  const reserve = await page.evaluate(() => {
-    const el = document.querySelector('.doorwall, .doorwall-hold')
-    if (!el) return null
-    return el.getBoundingClientRect().top + window.scrollY
-  })
-  if (reserve === null) throw new Error('no door wall (or its reserve) on the home page')
-  await wheelTo(reserve)
+  /* Two layouts, because two heroes. Under the keyhole hero the wall IS the
+     hero's landing: it lives inside the 100dvh sticky pane, so it is technically
+     "at" scroll 0 for the whole track and no reserve-based walk can find it —
+     the only address it has is a fraction of track progress. Under the portal
+     hero it is still an ordinary mid-page band behind `.doorwall-hold`. */
+  const keyhole = await page.locator('.portal--keyhole').count()
+  if (keyhole) {
+    await heroTo(0.88)
+  } else {
+    const reserve = await page.evaluate(() => {
+      const el = document.querySelector('.doorwall, .doorwall-hold')
+      if (!el) return null
+      return el.getBoundingClientRect().top + window.scrollY
+    })
+    if (reserve === null) throw new Error('no door wall (or its reserve) on the home page')
+    await wheelTo(reserve)
+  }
   await page.waitForSelector('.drift-wall__tile')
+  if (keyhole) {
+    await page.waitForTimeout(700)
+    return
+  }
   const centre = await page.evaluate(() => {
     const r = document.querySelector('.doorwall__wall').getBoundingClientRect()
     return Math.max(0, r.top + window.scrollY + r.height / 2 - window.innerHeight / 2)
@@ -252,13 +301,31 @@ async function clickDoorWall() {
   await page.waitForTimeout(500)
 }
 
-await step('home reserves the door wall band without loading it', async () => {
+await step('the door wall never runs under the hero scrub', async () => {
   await page.goto(BASE + '/', { waitUntil: 'networkidle' })
   await page.waitForSelector('.hero__title')
-  // At the top of the page the band is still a viewport away: the reserve holds
-  // its height, and mounting it here would put DriftWall's rAF under the hero.
-  if (!(await page.locator('.doorwall-hold').count())) throw new Error('no reserve holding the door wall band')
+  /* This is the assertion that matters, and it survived the wall moving into
+     the hero: DriftWall writes a transform to all 28 tiles every frame for as
+     long as it is mounted AND unpaused, and that loop running underneath a
+     scroll-scrubbed hero is what made the portal hero stutter on mid-range
+     Androids. Inside the hero the wall is mounted early (the photographs have
+     to be decoded before the last door opens onto them) but held with
+     `paused`, so what is checked here is that nothing is *animating* — the
+     tiles' tracks must still be at their initial transform. */
   if (await page.locator('.drift-wall').count()) throw new Error('door wall mounted at the top of the page')
+
+  await heroTo(0.3)
+  /* `attached`, not the default `visible`: at 0.3 the landing is still fully
+     transparent (visibility: hidden), which is exactly the state under test —
+     mounted and decoding, not yet drawn and not yet animating. */
+  await page.waitForSelector('.drift-wall__tile', { state: 'attached' })
+  const moved = async () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('.drift-wall__track')].map((el) => el.style.transform).join('|'),
+    )
+  const a = await moved()
+  await page.waitForTimeout(900)
+  if ((await moved()) !== a) throw new Error('door wall is animating while the hero is still flying')
 })
 
 await step('door wall: click a tile, big viewer follows', async () => {

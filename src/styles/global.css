@@ -2503,6 +2503,68 @@ button { font-family: var(--sans); }
    the window is at its widest. */
 .portal--keyhole .portal__corridor { z-index: 1; }
 
+/* ── the landing: the Door Wall, inside the sticky pane ────────────────────
+   Phase C. Same stacking slot the corridor had (below .ktun, so the last doors
+   fly past in front of a wall that is already lit) and the same job: the thing
+   the hero arrives at. */
+.ktwall {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  /* the corridor's ground, so the dissolve out of the tunnel lands on the same
+     dark the hall was fading toward */
+  background: radial-gradient(120% 100% at 50% 0%, #3a2e1e 0%, var(--night) 55%, var(--deep3) 100%);
+  will-change: opacity;
+}
+/* The wall is a full page band by default and has to become one screenful
+   here: the sticky pane is 100dvh and the band's own rhythm (a 140px pad, a
+   ~104px drawn headline, a sub, then min(70vh, 620px) of wall) overflows it at
+   every viewport height we care about. */
+.ktwall .doorwall { padding: 0 var(--gutter); background: none; border: 0; }
+.doorwall--compact .doorwall__head { margin-bottom: 4px; }
+/* opacity is set inline per frame by HeroKeyhole (see DoorWall) */
+.ktwall .doorwall__head { will-change: opacity; }
+.doorwall--compact .doorwall__wall { height: min(56vh, 500px); }
+.doorwall--compact .doorwall__frame { max-height: min(56vh, 500px); }
+/* the plain headline the compact variant uses in place of the drawn one —
+   sized off the corridor's <h2>, which is the heading it replaces */
+.doorwall__title--plain {
+  min-height: 0;
+  font: var(--type-section);
+  color: var(--cream-on-dark);
+}
+.doorwall--compact .doorwall__sub { margin-top: 6px; }
+
+/* ── the four worlds, further down the page ────────────────────────────────
+   The slot the wall vacated. Not the deleted `.worldstrip`: with the hero's
+   corridor gone this is the only place the worlds are offered (see
+   WorldsBand's own note). */
+.worldsband {
+  padding: var(--section) var(--gutter);
+  /* Dark, like `.econ` below it. The wall used to be the dark band between
+     `.props` and `.featured`; with the wall now inside the hero, a cream
+     worlds band would leave `.props` → here → `.featured` as one long light
+     run and lose the page's dark-band rhythm entirely. */
+  background: var(--night);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 34px;
+}
+.worldsband__head { text-align: center; }
+.worldsband__head h2 {
+  margin: 10px 0 0;
+  font: var(--type-section);
+  color: var(--cream-on-dark);
+}
+.worldsband__doors { flex-wrap: wrap; }
+.worldsband .wcard__name { color: var(--cream-on-dark); }
+.worldsband .wcard__tag { color: var(--lamp2); }
+
 .keyhole {
   position: absolute;
   inset: 0;
@@ -2634,6 +2696,16 @@ button { font-family: var(--sans); }
   .portal--keyhole { height: 280vh; }
   .ktun__door { --kt-h: min(72svh, 104vw); }
   .ktun__copy { padding: 88px 20px 0; }
+  .doorwall--compact .doorwall__wall { height: min(58svh, 460px); }
+  .worldsband { gap: 22px; }
+  /* two-up on a phone — four arches across never fits, as in the corridor */
+  .worldsband__doors {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 30px;
+    width: min(88vw, 400px);
+  }
+  .worldsband__doors .wcard { width: min(38vw, 156px); justify-self: center; }
 }
 
 /* The home page's `.worldstrip` — four `data-world` tiles under "Where do you
