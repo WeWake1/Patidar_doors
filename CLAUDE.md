@@ -282,6 +282,16 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   first thing anyone tries. Latched, the key stayed at −96° and the button refused every
   further tap. Don't reintroduce an `if (unlocking) return` guard — a second tap mid-flight
   only re-aims the same scroll at the same target.
+  ⚠️ **A phone gets the same five doors**, and the track is 340vh rather than the
+  desktop's 380 to carry them. It ran a three-door subset (59 kB against 131 kB) until
+  2026-08-31 — these are hero-critical images so the run *is* the payload on a phone —
+  and showing the whole floor won the argument; the extra 72 kB is two
+  `fetchPriority="low"` fetches nothing waits for. The track had to grow with it: fly-bys
+  are spaced in track *progress*, so five doors where three used to be packs the same
+  stretch tighter, and at 280vh each pass fell from 229px of scroll to 150 (340vh gives
+  200, desktop 249). If the weight ever has to come back down, drop `veneer-cng-door`
+  then `burma-teak-door` — the two heaviest, and the two the run can lose without
+  changing what it demonstrates. `verify:e2e` asserts all five at 390px.
   · The brass escutcheon sits **on** the leaf's own black lock strip (90–98% across,
   41–58% down), not on the bare stile below it — two locks on one door is what that read
   as. A second key hint (`?key=insert`, the key sliding in and turning) was built beside

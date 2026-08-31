@@ -175,13 +175,17 @@ const TUNNEL_IDS = [
   'microcoat-door',
   'wpc-cnc-door',
 ]
-/* A phone gets three, not five, and the three are chosen partly by weight.
-   These are hero-critical images — a door cannot fade in late — so the run IS
-   the payload: the five desktop leaves are 129 kB, and this teak → painted →
-   WPC run is 59 kB against the 46 kB the portal hero's two photographs cost.
-   Teak still leads, because it is the thing the business is known for, and on
-   a phone as on a desktop the leading leaf is the one wearing the lock. */
-const TUNNEL_IDS_MOBILE = ['architect-teak-door', 'microcoat-door', 'wpc-cnc-door']
+/* ⚠️ **A phone gets the same five**, and that is a deliberate purchase, not an
+   oversight. It ran a three-door subset (teak → painted → WPC, 59 kB against
+   the full run's 131 kB) until 2026-08-31, chosen on weight: these are
+   hero-critical images, a door cannot fade in late, so the run IS the payload
+   on a phone-first store. Showing the whole floor won the argument — the
+   tunnel is the only place the site says "we make all of this" — and the extra
+   72 kB is spent on two `fetchPriority="low"` fetches that nothing waits for.
+   Only the leading leaf is `high`, because it is the door on screen at rest.
+   If this ever has to come back down, drop `veneer-cng-door` and
+   `burma-teak-door` in that order — they are the two heaviest and the two the
+   run can lose without changing what it demonstrates. */
 
 /**
  * One door in the tunnel. The <img> never changes, so it is memoised away from
@@ -394,10 +398,12 @@ const HeroCopy = memo(function HeroCopy() {
    underneath you to scroll on from. */
 const LAND = 0.86
 /* Long enough that five doors opening and passing is legible, short enough
-   that it is a move and not a cutscene. A phone gets less: it has two fewer
-   doors to show and a shorter track to cover. */
+   that it is a move and not a cutscene. One number for both: a phone was given
+   2.5s while it showed three doors, and it shows the same five now — the
+   flight is a duration, not a distance, so the shorter mobile track does not
+   argue for a shorter flight. At 2.5s the five passes landed inside 664ms,
+   133ms each, against the 186ms the desktop timing was tuned to. */
 const FLIGHT_S = 3
-const FLIGHT_S_MOBILE = 2.5
 /* Eased at both ends — the door has to be seen to swing before anything
    rushes, and the wall has to settle rather than slam.
    ⚠️ Sine, not the cubic this shipped with for an afternoon. The doors pass
@@ -496,7 +502,7 @@ export function HeroKeyhole() {
     )
   }
 
-  const ids = mobile ? TUNNEL_IDS_MOBILE : TUNNEL_IDS
+  const ids = TUNNEL_IDS
   const n = ids.length
   const near = mobile ? NEAR_MOBILE : NEAR
   const offsetScale = mobile ? OFFSET_SCALE_MOBILE : 1
@@ -572,7 +578,7 @@ export function HeroKeyhole() {
     window.clearTimeout(relockRef.current)
     relockRef.current = window.setTimeout(
       () => setUnlocking(false),
-      (mobile ? FLIGHT_S_MOBILE : FLIGHT_S) * 1000 + 400,
+      FLIGHT_S * 1000 + 400,
     )
     /* ⚠️ The wall normally mounts on the first idle callback after `load` —
        early, precisely so its chunk and its ~56 tiles never land during a
@@ -582,7 +588,7 @@ export function HeroKeyhole() {
     const top = el.offsetTop
     const total = el.offsetHeight - window.innerHeight
     smoothScrollTo(top + total * LAND, {
-      duration: mobile ? FLIGHT_S_MOBILE : FLIGHT_S,
+      duration: FLIGHT_S,
       easing: easeInOutSine,
     })
   }

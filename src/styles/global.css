@@ -2946,9 +2946,14 @@ button { font-family: var(--sans); }
 }
 
 @media (max-width: 720px) {
-  /* 280vh — a phone scrolls in short swipes, and this hero has one fewer phase
-     to get through than the portal's 300. */
-  .portal--keyhole { height: 280vh; --kt-h: min(72svh, 104vw); }
+  /* ⚠️ 340vh, up from 280 on 2026-08-31, and it is the door count that moved
+     it. The tunnel's fly-bys are spaced in *track progress*, so putting five
+     doors where three used to be does not lengthen the run — it packs the same
+     stretch tighter, and on a 280vh track each pass fell from 229px of scroll
+     to 150. At 340 it is 200px, against the desktop 380vh track's 249. A phone
+     still scrolls in short swipes, which is what keeps this under desktop, but
+     a fly-by nobody can see is not worth the bytes it costs. */
+  .portal--keyhole { height: 340vh; --kt-h: min(72svh, 104vw); }
   /* ⚠️ The leaf is ~175px wide on a 390px screen, so a label beside the lock
      runs off the right of the viewport. It goes under the plate instead — and
      over the door, which is why it takes a scrim of its own here: micro-caps

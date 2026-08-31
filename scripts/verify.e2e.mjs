@@ -790,6 +790,13 @@ await step('mobile home + burger menu', async () => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(BASE + '/', { waitUntil: 'networkidle' })
   await page.waitForTimeout(500)
+  /* ⚠️ A phone gets the same five doors as a desktop. It ran a three-door
+     subset until 2026-08-31, chosen on weight — these are hero-critical images
+     so the run is the payload — and showing the whole floor won the argument.
+     Asserted here because a weight-saving pass is exactly the kind of change
+     that would quietly put the subset back. */
+  const leaves = await page.locator('.ktun__leaf img').count()
+  if (leaves !== 5) throw new Error(`the phone got ${leaves} tunnel doors, not 5`)
   await shot('13-mobile-home')
   await page.locator('.nav__burger').click()
   await page.waitForSelector('.nav__menu')
