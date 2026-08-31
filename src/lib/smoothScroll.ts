@@ -51,11 +51,23 @@ export function resumeSmoothScroll(): void {
  * tick). Falls back to native smooth scroll when Lenis isn't running
  * (reduced motion, or not yet mounted).
  */
-export function smoothScrollTo(target: number | HTMLElement, opts?: { offset?: number; immediate?: boolean }): void {
+export function smoothScrollTo(
+  target: number | HTMLElement,
+  opts?: { offset?: number; immediate?: boolean; duration?: number; easing?: (t: number) => number },
+): void {
   if (lenis) {
-    lenis.scrollTo(target, { offset: opts?.offset, immediate: opts?.immediate })
+    lenis.scrollTo(target, {
+      offset: opts?.offset,
+      immediate: opts?.immediate,
+      duration: opts?.duration,
+      easing: opts?.easing,
+    })
     return
   }
+  /* ⚠️ `duration` and `easing` are Lenis's, and there is no native equivalent —
+     the fallback below arrives at the same place at the browser's own pace.
+     That only matters for the hero's lock flight, which is a decoration on a
+     scroll the visitor can make by hand anyway. */
   const behavior = opts?.immediate ? 'instant' : 'smooth'
   if (typeof target === 'number') {
     window.scrollTo({ top: target + (opts?.offset ?? 0), behavior })

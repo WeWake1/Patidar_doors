@@ -847,6 +847,19 @@ button { font-family: var(--sans); }
   color: var(--mut2);
 }
 .hero__arrow { color: var(--accent-text); font-size: 16px; animation: bob 1.8s ease-in-out infinite; }
+/* The keyhole hero's lock is the loud invitation, so this one steps back to
+   being the alternative it now is — still on screen, because a visitor who
+   ignores the key and scrolls must not be left wondering whether scrolling
+   does anything, but no longer competing with it for the same tap. */
+.hero__scrollcue--quiet { opacity: 0.62; }
+/* ⚠️ size only — `.portal--dark .hero__scrollcue span:first-child` sets the
+   colour at higher specificity, and the dark hero is the only place this
+   modifier is used. The quieting is the opacity on the button. */
+.hero__scrollcue--quiet span:first-child { font: var(--type-label-xs); }
+.hero__scrollcue--quiet .hero__arrow { font-size: 13px; }
+@media (hover: hover) {
+  .hero__scrollcue--quiet:hover { opacity: 1; }
+}
 
 /* ── marquee ─────────────────────────────────────────────── */
 .marquee {
@@ -2495,7 +2508,10 @@ button { font-family: var(--sans); }
    arriving at a nav menu that is also in the header and the footer; this spends
    its height flying through photographs of doors we actually stock. */
 
-.portal--keyhole { height: 380vh; }
+/* --kt-h is a door's height on screen at z = 0, and it is declared here rather
+   than on .ktun__door because two things are drawn from it now: the doors in
+   the 3D field, and the flat layer that puts the lock on the one up front. */
+.portal--keyhole { height: 380vh; --kt-h: min(78svh, 66vw); }
 
 /* ── the plate ─────────────────────────────────────────────────────────────
    One opaque path with the keyhole punched out of it (fill-rule: evenodd, see
@@ -2606,17 +2622,191 @@ button { font-family: var(--sans); }
 .worldsband .wcard__name { color: var(--cream-on-dark); }
 .worldsband .wcard__tag { color: var(--lamp2); }
 
-.keyhole {
+/* ── the lock on the door up front ─────────────────────────────────────────
+   `.keyhole` — a full-screen opaque plate with a keyhole cut out of it,
+   opening by re-projecting its own viewBox — lived in this slot until
+   2026-08-31. It went with the phase: see the note above HeroKeyhole.
+
+   This layer takes the same z-index and stays FLAT. It repeats the gate's
+   projection (--kg-scale) rather than sharing its transform, because the 3D
+   field is pointer-events: none and must stay that way — Chrome resolves
+   elementFromPoint to the wrong element inside a preserve-3d subtree, the
+   scar the DriftWall tile and the /try warp surface both carry. Repeating one
+   multiplication is the cheap half of that trade. */
+.kgate {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
   z-index: 3;
+  height: calc(var(--kt-h) * var(--kg-scale));
+  width: calc(var(--kt-h) * var(--kg-scale) * var(--kt-ar));
+  transform: translate(-50%, -50%);
+  /* the box is only a ruler for the leaf's edges — nothing in it is clickable
+     except the button, which turns this back on for itself */
+  pointer-events: none;
+  will-change: opacity;
+}
+
+/* On the handle side, at lock height. 62% rather than the 50% a drawn lock
+   would sit at: the architect teak leaf wears a real black hardware strip
+   from 41% to 58%, and a brass escutcheon overlapping it reads as a lock
+   drawn on top of a lock. Below it is where a mortice keyhole actually goes
+   on a door that already has a handle unit, so this is the truthful place as
+   well as the only free one. */
+/* 92% across the leaf, i.e. about 8% in from its swinging edge, which is where
+   a mortice keyhole actually sits. ⚠️ Positioned from `left`, not from `right`:
+   a percentage `right` still resolves against the leaf, but the `translate`
+   that centres the button resolves against the BUTTON, so the two only agree
+   while the button is exactly as wide as the plate. It was not — see the note
+   on `.kgate__label` — and the lock landed 70px inside the door, in the middle
+   of the leaf rather than on its lock stile. */
+/* Centred on the door's own hardware. The architect teak photograph wears a
+   real black lock strip across 90–98% of the leaf's width and 41–58% of its
+   height, and the brass escutcheon sits **on** it — a keyhole belongs in the
+   lock, not on the bare stile 8% below it, which is where this shipped for a
+   day and read as two locks on one door. */
+.kgate__lock {
+  position: absolute;
+  left: 94%;
+  top: 49%;
   display: block;
-  width: 100%;
-  height: 100%;
+  /* ⚠️ 44px minimum, and the padding is what buys it: the plate itself is
+     ~36px wide on a desktop and 28px on a phone, which is a target nobody can
+     hit. The padding overhangs the leaf onto the dark hall, which costs
+     nothing — there is nothing else within 100px to hit. */
+  padding: 12px 14px;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: none;
+  color: var(--lamp2);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+/* ⚠️ The width/height PAIR, and it is the sheet's own standing rule for a
+   reason — `height: auto` collapsed this to 0×0. The button is an absolutely
+   positioned shrink-to-fit box, so its width comes from its content, and the
+   `max-width: 100%` that `img, svg` hands every graphic on the site resolves
+   against a width that is still being decided. Stating both ends the
+   circularity; 76/40 is the viewBox. */
+.kgate__plate {
+  --kg-w: clamp(28px, 2.6vw, 36px);
+  display: block;
+  /* ⚠️ and `max-width: none` with it. `img, svg` hands every graphic on the
+     site `max-width: 100%`, and 100% of a shrink-to-fit box whose width this
+     element is what determines resolves to zero — the plate rendered at 0px
+     wide with its escutcheon spilling out of it, so the door had a keyhole
+     hanging in mid-air with no plate behind it. */
+  max-width: none;
+  width: var(--kg-w);
+  height: calc(var(--kg-w) * 76 / 40);
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+.kgate__escutcheon {
+  fill: url(#kg-brass);
+  stroke: rgba(28, 18, 6, 0.55);
+  stroke-width: 1;
+}
+/* a keyhole is a dark shape, and the dark is the point — this is the one
+   place on the door where the eye is told there is somewhere to go */
+.kgate__hole { fill: #1a1206; }
+.kgate__key {
+  fill: url(#kg-key);
+  stroke: #33230b;
+  stroke-width: 0.9;
+  paint-order: stroke fill;
+  /* ⚠️ view-box, not the default: without a transform-box the origin below is
+     resolved against the element's own bounding box and the key rotates about
+     its bow instead of about the hole it is standing in. */
+  transform-box: view-box;
+  transform-origin: 20px 26px;
+}
+/* the bow is drawn as a ring, so its own stroke IS the metal — it takes the
+   ramp as a stroke where every other part of the key takes it as a fill */
+.kgate__bow { stroke: url(#kg-key); }
+/* The word is what makes the plate read as a control rather than as hardware
+   in the photograph. Micro-caps, in the hall beside the door, never over it.
+   ⚠️ Absolutely positioned, and it has to be: in flow it is ~160px of the
+   button's own width, and the button is what the plate's centring transform
+   is measured against — so the plate came to rest a third of the way across
+   the leaf instead of on its lock stile. Out of flow the button is the plate
+   plus its padding and the arithmetic closes. It stays a child, so it is
+   still part of the target. */
+.kgate__label {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  font: var(--type-label-sm);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--lamp2);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+/* The key is already in the lock, and every few seconds it tries itself. */
+.kgate__key { animation: kg-nudge 3.6s var(--ease-out) infinite; }
+@keyframes kg-nudge {
+  0%,
+  70% { transform: rotate(0deg); }
+  77% { transform: rotate(-24deg); }
+  86% { transform: rotate(4deg); }
+  93%,
+  100% { transform: rotate(0deg); }
+}
+/* a ring of light that breathes out of the plate — the only thing on this
+   screen that says "press me" to someone who reads the key as hardware */
+.kgate__lock::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* the button IS the plate plus padding, so its centre is the plate's */
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: var(--r-circle);
+  box-shadow: 0 0 0 1px rgba(242, 209, 138, 0.5);
+  animation: kg-halo 3.6s var(--ease-out) infinite;
   pointer-events: none;
 }
-/* the darkest ground on the site: this is meant to read as "no light here yet" */
-.keyhole path { fill: var(--cast-deep); }
+@keyframes kg-halo {
+  0%,
+  70% { opacity: 0; transform: scale(0.7); }
+  80% { opacity: 0.55; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+
+/* The turn the click earns. `forwards`, and it overrides the loop above by
+   being declared after it — the key must not spring back to vertical while
+   the door it just unlocked is swinging open. */
+.kgate__lock[data-unlocking] .kgate__key {
+  animation: kg-turn 420ms var(--ease-out) forwards;
+}
+@keyframes kg-turn {
+  to { transform: rotate(-96deg); }
+}
+.kgate__lock[data-unlocking]::before { animation: none; opacity: 0; }
+
+@media (hover: hover) {
+  .kgate__lock:hover .kgate__label { color: var(--cream); }
+  .kgate__lock:hover .kgate__plate { filter: drop-shadow(0 0 10px rgba(242, 209, 138, 0.55)); }
+}
+.kgate__lock:focus-visible {
+  outline: none;
+  border-radius: var(--r-pill);
+  box-shadow: var(--ring-focus);
+}
+
+/* Belt to the braces: the hero returns its static fallback under reduced
+   motion, so none of this should ever be on screen there — but a key that
+   turns itself forever is exactly what that setting is asking us not to do. */
+@media (prefers-reduced-motion: reduce) {
+  .kgate__key,
+  .kgate__lock::before { animation: none; }
+}
 
 /* ── the tunnel ────────────────────────────────────────────────────────────
    perspective comes inline from HeroKeyhole's PERSPECTIVE constant, because
@@ -2658,15 +2848,30 @@ button { font-family: var(--sans); }
    leaf's own aspect (--kt-ar, from leaves.gen.ts), because these are real doors
    and real doors are not one shape — the same reason the admin cropper stopped
    forcing every photo into a 3:8 box. */
+/* ⚠️ **No `will-change` here, and none on `.ktun__leaf` either.** It was on
+   both until 2026-08-31 and it tore the hero apart in Chrome: fly to the wall,
+   scroll back to the top, and the door up front came back rasterised in
+   horizontal bands with the doors behind it showing through the gaps. Safari
+   was fine throughout.
+   A door's composited scale runs from 0.08 to 4.5 across the flight, and
+   `will-change: transform` is a promise to Chrome that the transform will
+   change — which makes it pin a raster and reuse it rather than re-rastering
+   at each new scale. Over a 50× swing that leaves stale tiles behind, and
+   nothing invalidates them on the way back.
+   Removing it costs **nothing**, which is the part worth knowing: measured on
+   the real GPU, the layer count is identical (72 either way) because
+   `translate3d` with a non-zero z already promotes every one of these — the
+   hint was redundant. Mean frame 8.5ms and one frame over 20ms in 195, both
+   before and after. Bisected: removing it from only one of the two still tore
+   (25% of the gate's pixels wrong with the leaf's kept, 78% with the door's
+   kept, 66% with both). Both have to go. */
 .ktun__door {
-  --kt-h: min(78svh, 66vw);
   position: absolute;
   left: 50%;
   top: 50%;
   height: var(--kt-h);
   width: calc(var(--kt-h) * var(--kt-ar));
   transform-style: preserve-3d;
-  will-change: transform, opacity;
 }
 /* The opening the door sits in. Without it the leaves are slabs swinging in
    mid-air: a door needs a wall to be a door, and this is the cheapest thing
@@ -2683,12 +2888,12 @@ button { font-family: var(--sans); }
 }
 /* hinge left, handle side sweeping toward the camera — the same swing as every
    other door on the site (.door-scene__leaf, .pdoor__leaf) */
+/* no `will-change` — see the note on .ktun__door */
 .ktun__leaf {
   position: absolute;
   inset: 0;
   transform-origin: left center;
   transform-style: preserve-3d;
-  will-change: transform;
 }
 .ktun__leaf img {
   display: block;
@@ -2718,7 +2923,15 @@ button { font-family: var(--sans); }
   background: radial-gradient(48% 44% at 50% 46%, rgba(246, 223, 172, 0.54), rgba(176, 130, 64, 0.16) 46%, transparent 76%);
 }
 
-/* copy keeps the top of the screen, above the plate and the tunnel both */
+/* copy keeps the top of the screen, above the lock and the tunnel both.
+   ⚠️ It carries its own ground, and needs it. Until 2026-08-31 the thing
+   behind the headline was an opaque keyhole plate; it is now the top third of
+   a 0.85-scale photograph of a teak door, and cream 16px on figured walnut is
+   not readable — the sub-line lost three words into the grain at 1440. The
+   gradient ends on `transparent`, never on a colour, so it reads as the dark
+   the hall already has more of at the top and not as a panel; and it is on
+   `.ktun__copy` rather than on a layer of its own so it fades on exactly the
+   copy's schedule, one opacity for one thing. */
 .ktun__copy {
   position: absolute;
   inset: 0 0 auto;
@@ -2726,16 +2939,29 @@ button { font-family: var(--sans); }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 104px var(--gutter) 0;
+  padding: 104px var(--gutter) 130px;
   text-align: center;
+  background: linear-gradient(to bottom, rgba(10, 7, 3, 0.92) 0%, rgba(10, 7, 3, 0.82) 38%, transparent 100%);
   will-change: opacity;
 }
 
 @media (max-width: 720px) {
   /* 280vh — a phone scrolls in short swipes, and this hero has one fewer phase
      to get through than the portal's 300. */
-  .portal--keyhole { height: 280vh; }
-  .ktun__door { --kt-h: min(72svh, 104vw); }
+  .portal--keyhole { height: 280vh; --kt-h: min(72svh, 104vw); }
+  /* ⚠️ The leaf is ~175px wide on a 390px screen, so a label beside the lock
+     runs off the right of the viewport. It goes under the plate instead — and
+     over the door, which is why it takes a scrim of its own here: micro-caps
+     in cream on figured teak is the same unreadable pairing the headline
+     needed a ground for. */
+  .kgate__label {
+    left: 50%;
+    top: 100%;
+    transform: translate(-50%, 4px);
+    padding: 4px 9px;
+    border-radius: var(--r-pill);
+    background: rgba(10, 7, 3, 0.62);
+  }
   .ktun__copy { padding: 88px 20px 0; }
   .doorwall--compact .doorwall__wall { height: min(58svh, 460px); }
   .worldsband { gap: 22px; }

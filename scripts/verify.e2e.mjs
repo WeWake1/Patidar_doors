@@ -168,19 +168,102 @@ await step('the hero ships no WebGL backdrop', async () => {
   await wheelTo(0)
 })
 
-await step('the keyhole is a vector cut-out that opens on scroll', async () => {
-  await page.waitForSelector('.keyhole')
-  /* It opens by re-projecting its viewBox, never by CSS-scaling the element —
-     a scaled composited layer stretches its raster and the edge of the cut
-     goes soft, on the one shape the whole opening shot is made of. So the
-     viewBox width shrinking IS the animation, and this is the assertion that
-     catches someone "simplifying" it back to a transform. */
-  const boxW = () =>
-    page.evaluate(() => Number(document.querySelector('.keyhole')?.getAttribute('viewBox').split(' ')[2] ?? 0))
-  const wide = await boxW()
-  await heroTo(0.16)
-  const narrow = await boxW()
-  if (!(narrow > 0 && narrow < wide * 0.7)) throw new Error(`keyhole did not open (viewBox ${wide} → ${narrow})`)
+await step('the door up front is locked, and the key flies you to the wall', async () => {
+  /* The full-screen keyhole plate that opened by re-projecting its own viewBox
+     was phase A until 2026-08-31. It is asserted ABSENT, the way `/`'s FAQ
+     accordion is, so bringing it back trips this rather than quietly leaving
+     two ways in on the same screen. */
+  if (await page.locator('.keyhole').count()) throw new Error('the full-screen keyhole plate is back in the hero')
+
+  await page.waitForSelector('.kgate__lock')
+  /* ⚠️ The plate is ~34px on a desktop and ~26px on a phone; the padding is
+     what buys the 44px. Measure the button, which is the target. */
+  const box = await page.locator('.kgate__lock').boundingBox()
+  if (!(box.width >= 44 && box.height >= 44))
+    throw new Error(`the lock is not a 44px target (${Math.round(box.width)}×${Math.round(box.height)})`)
+
+  /* On the handle side. The leaf hinges left everywhere on this site, so a
+     lock left of the door's centre is a lock on the hinge — which is what a
+     mirrored or reordered leaf would silently produce. */
+  const doorMid = await page.evaluate(() => {
+    const r = document.querySelector('.ktun__door').getBoundingClientRect()
+    return r.left + r.width / 2
+  })
+  if (!(box.x > doorMid)) throw new Error('the lock is on the hinge side of the door')
+
+  /* ⚠️ The flight is the page scrolling and nothing else — one animation, the
+     scrolled one, so what the button gives you is provably what a wheel gives
+     you. This asserts the scroll position actually moved, which is what would
+     catch someone reimplementing it as a local animation with a jump at the
+     end. */
+  const progress = () =>
+    page.evaluate(() => {
+      const el = document.querySelector('.portal')
+      return (window.scrollY - el.offsetTop) / (el.offsetHeight - window.innerHeight)
+    })
+  await page.locator('.kgate__lock').click()
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('.portal')
+      return (window.scrollY - el.offsetTop) / (el.offsetHeight - window.innerHeight) > 0.8
+    },
+    { timeout: 8000 },
+  )
+  const landed = await progress()
+  /* Past WALL_FULL and past the head's reveal: you arrive at a wall that is
+     lit, titled and interactive, not at one still fading up. */
+  if (Number(await page.evaluate(() => getComputedStyle(document.querySelector('.ktwall')).opacity)) < 0.99)
+    throw new Error(`the key landed short of the wall (p ${landed.toFixed(2)})`)
+  if (!(await page.locator('.drift-wall__tile').count())) throw new Error('the key landed on an empty pane')
+
+  /* And the lock goes with the door it is drawn on: it is a flat layer, so a
+     brass plate still pinned mid-screen while the door rushed forward would
+     slide straight off it — and a transparent button over the middle of the
+     wall would swallow a click meant for a tile. */
+  if (await page.locator('.kgate').count()) throw new Error('the lock is still mounted after the flight')
+
+  await wheelTo(0)
+  await page.waitForSelector('.kgate__lock')
+
+  /* ⚠️ **The key must be turnable again.** Scrolling back up puts you in front
+     of the same locked door, and trying the key a second time is the first
+     thing anyone does. It latched on the first turn until 2026-08-31: the key
+     stayed at −96° and the button refused every further tap. */
+  if (await page.locator('.kgate__lock[data-unlocking]').count())
+    throw new Error('the key is still turned after scrolling back to the door')
+  await page.locator('.kgate__lock').click()
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('.portal')
+      return (window.scrollY - el.offsetTop) / (el.offsetHeight - window.innerHeight) > 0.8
+    },
+    { timeout: 8000 },
+  )
+  await wheelTo(0)
+  await page.waitForSelector('.kgate__lock')
+})
+
+await step('the tunnel doors carry no will-change', async () => {
+  /* ⚠️ A guard for a bug this browser cannot see. Headless Chrome rasterises
+     in software; on a real GPU, `will-change` on a door pins its raster and
+     Chrome reuses it instead of re-rastering — and a door's composited scale
+     runs 0.08 → 4.5 across the flight. Fly to the wall, scroll back, and the
+     door up front returned in horizontal bands with the doors behind showing
+     through the gaps. Safari was fine throughout, which is what made it look
+     like someone else's problem.
+     Removing the hint costs nothing (measured: identical layer count, 72
+     either way, because `translate3d` already promotes), so this asserts the
+     declaration is simply absent rather than trying to photograph the tear. */
+  const hinted = await page.evaluate(() =>
+    ['.ktun__door', '.ktun__leaf']
+      .filter((sel) => {
+        const el = document.querySelector(sel)
+        const wc = el && getComputedStyle(el).willChange
+        return wc && wc !== 'auto'
+      })
+      .join(', '),
+  )
+  if (hinted) throw new Error(`will-change is back on ${hinted} — this tears the hero in Chrome`)
 })
 
 await step('the tunnel is real door photographs, flying at the camera', async () => {

@@ -222,6 +222,71 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   `public/images/hero/hero-{frame,leaf}.webp`; skips if the folder is absent.
   ⚠️ Several raw photos carry third-party watermarks (see photoMap.ts header) — they are
   unmapped; replace with client photography.
+- **Locked-door hero** (`src/components/HeroKeyhole.tsx`, phase A rebuilt 2026-08-31):
+  a real door stands close in a dark hall with a **drawn brass keyhole on its lock stile**
+  and a key in it that nudges itself round; turn the key — or scroll — and it swings open
+  and rushes past you, the four behind it do the same, and the last opens onto the Door
+  Wall. Phases: gate opens 0.02–0.15, the field advances 0.13–0.7, wall fades 0.46–0.66,
+  dwell after that; the lock lands you at p 0.86.
+  ⚠️ **The click animates nothing.** `unlock()` scrolls the page (Lenis `scrollTo`, 3s,
+  easeInOutSine) and every door follows because every door is already a function of
+  scroll. So there is one flight, the scrolled one — the visitor lands with a real scroll
+  position under them and can scroll back up and re-watch. Do not reimplement it as a
+  local animation with a jump at the end; `verify:e2e` asserts the scroll actually moved.
+  ⚠️ Judge any change to that easing on how much time it leaves the **middle** (p
+  0.22–0.60), where all five fly-bys happen. It shipped as easeInOutCubic for an afternoon
+  and a cubic spends its time at the ends: all five passes landed inside 555ms.
+  · It replaced a full-screen keyhole plate (an opaque path with the hole punched out by
+  `fill-rule: evenodd`, opening by re-projecting its own viewBox). That had no way in
+  except scroll, and the payoff is three-quarters of a 380vh track away. `verify:e2e`
+  asserts `.keyhole` is **absent**, the way it does for `/`'s FAQ accordion.
+  ⚠️ **The gate is field index 0, not an object in front of the field.** Given its own z
+  schedule it moves at its own speed, and since it is the nearest thing on screen anything
+  slower lets door 2 overtake and fly *through* it. One field, one `advance`.
+  ⚠️ `TUNNEL_IDS[0]` is the door the lock is drawn on, and the order is chosen for it:
+  `architect-teak-door` leads because it is the one leaf that is a whole door, square on,
+  with real hardware at lock height. Burma teak led until 2026-08-31 and cannot — its crop
+  carries a slice of jamb down the left, invisible at 0.4 scale and unmissable at 0.88.
+  ⚠️ The lock is in its **own flat layer** (`.kgate`), never inside `.ktun` — that subtree
+  is `pointer-events: none` because Chrome resolves `elementFromPoint` wrongly inside
+  preserve-3d (the DriftWall and `/try` scars). It repeats the gate's projection instead,
+  and unmounts a few points into the scrub rather than tracking a moving 3D transform.
+  ⚠️ Two CSS scars in that layer, both from the same shape of mistake — a box whose size
+  is being decided by the thing inside it. (1) `.kgate__plate` needs an explicit
+  width/height **pair and `max-width: none`**: the sheet's global `img, svg { max-width:
+  100% }` resolves to zero inside a shrink-to-fit button, so the plate rendered 0×0 with
+  its escutcheon spilling out — a keyhole hanging in mid-air with no plate behind it.
+  (2) `.kgate__label` is **absolutely positioned**: in flow it was ~160px of the button's
+  own width, and the button is what the plate's centring transform measures against, so
+  the lock came to rest a third of the way across the leaf instead of on its stile.
+  · `.ktun__copy` carries its own top-down scrim now. What sits behind the headline is no
+  longer an opaque plate but the top third of a 0.85-scale photograph of a teak door, and
+  cream 16px on figured walnut is not readable — the sub-line lost three words into the
+  grain at 1440. The gradient ends on `transparent`, never on a colour.
+  ⚠️⚠️ **Nothing in the tunnel may carry `will-change`** — not `.ktun__door`, not
+  `.ktun__leaf`. Both did until 2026-08-31 and it tore the hero apart **in Chrome only**:
+  fly to the wall, scroll back to the top, and the door up front came back rasterised in
+  horizontal bands with the doors behind it showing through the gaps. A door's composited
+  scale runs 0.08 → 4.5 across the flight, and `will-change: transform` makes Chrome pin
+  a raster and reuse it rather than re-raster at each scale; over a 50× swing that leaves
+  stale tiles nothing invalidates on the way back. Safari re-rasters and was fine, which
+  is what made it look like someone else's bug. Removing it **costs nothing** — measured
+  on a real GPU the layer count is identical (72 either way) because `translate3d` with a
+  non-zero z already promotes every one of them; mean frame 8.5ms and one frame over 20ms
+  in 195, before and after. Bisected: removing it from only one of the two still tears
+  (25% of the gate's pixels wrong with the leaf's kept, 78% with the door's kept, 66% with
+  both). `verify:e2e` asserts the declaration is **absent**, because headless Chrome
+  rasterises in software and cannot photograph the tear.
+  ⚠️ **The key must be turnable again.** `unlocking` is cleared on a timer, never latched:
+  scrolling back up puts you in front of the same locked door and a second tap is the
+  first thing anyone tries. Latched, the key stayed at −96° and the button refused every
+  further tap. Don't reintroduce an `if (unlocking) return` guard — a second tap mid-flight
+  only re-aims the same scroll at the same target.
+  · The brass escutcheon sits **on** the leaf's own black lock strip (90–98% across,
+  41–58% down), not on the bare stile below it — two locks on one door is what that read
+  as. A second key hint (`?key=insert`, the key sliding in and turning) was built beside
+  the nudge and dropped 2026-08-31: its loop leaves the plate a bare keyhole for a fifth
+  of every cycle, and the key's job is to be there when someone looks.
 - **Portal hero** (`src/components/HeroPortal.tsx`): 520vh (mobile 300vh) sticky track;
   phases: door opens (0–.25) → scale push-through (.25–.55, transform+opacity only) →
   corridor of 4 world-doors (.55–.9). The hero door is `HeroDoorPhoto.tsx`: two photos of

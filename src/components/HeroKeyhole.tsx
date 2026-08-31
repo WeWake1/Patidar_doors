@@ -3,7 +3,7 @@ import { LEAF_IMAGES } from '../data/leaves.gen'
 import { smoothScrollTo } from '../lib/smoothScroll'
 import { useIdleAfterLoad } from '../lib/useIdleAfterLoad'
 import { useNearViewport } from '../lib/useNearViewport'
-import { clamp01, easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
+import { clamp01, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
 import { ErrorBoundary } from './ErrorBoundary'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
 import { HeroKicker, WORLD_ARTS, WorldCard } from './heroWorlds'
@@ -15,11 +15,22 @@ import { HeroKicker, WORLD_ARTS, WorldCard } from './heroWorlds'
 const DoorWall = lazy(() => import('./DoorWall').then((m) => ({ default: m.DoorWall })))
 
 /**
- * The keyhole hero: you are outside, looking through a keyhole (phase A); the
- * keyhole opens up around you and you fly down a corridor of real doors, each
- * swinging open as you reach it and whipping past the camera (phase B); the
- * last door opens onto the Door Wall — every door in the store, drifting —
- * and holds there (phase C).
+ * The locked-door hero: a real door stands close in a dark hall with a brass
+ * keyhole on its handle side, and a key in it that keeps nudging itself round
+ * (phase A); turn the key — or just scroll — and it swings open and rushes
+ * past you, and the doors behind it do the same, each opening as you reach it
+ * (phase B); the last one opens onto the Door Wall — every door in the store,
+ * drifting — and holds there (phase C).
+ *
+ * ⚠️ **Phase A was a full-screen keyhole cut-out until 2026-08-31** — an
+ * opaque plate over the viewport with a keyhole punched out of it, opening by
+ * re-projecting its own viewBox. It was replaced because it had no way in
+ * except scroll: the payoff of this hero is the wall three-quarters of a
+ * 380vh track away, and a phone visitor who does not keep swiping never
+ * reaches it. The lock is that way in, and it is the *same* way in — see
+ * `unlock`, which does not animate anything itself. It scrolls the page.
+ * So there is exactly one animation here, the scroll one, and the flight a
+ * visitor is given is provably the flight a visitor can make by hand.
  *
  * Phase C was the four world cards until 2026-08-23. The wall is the better
  * payoff and it is the one the animation has been promising: a tunnel that
@@ -58,7 +69,12 @@ const DoorWall = lazy(() => import('./DoorWall').then((m) => ({ default: m.DoorW
    (so there is a door approaching in the dark before the hole opens), and the
    last door whips past just as the corridor starts to fade up. Nothing here
    should ever come to a stop — the whole hero is one forward move. */
-const KEYHOLE_END = 0.28
+/* The door up front opens in place over this slice, before the field starts
+   moving at TUNNEL[0] — so the swing is the answer to the key, and the rush
+   forward is a separate beat after it. Overlapping the two by a couple of
+   points is deliberate: the door is ~90% open as it starts to move, which is
+   what makes it read as being pushed through rather than watched. */
+const GATE_OPEN = [0.02, 0.15] as const
 const TUNNEL = [0.13, 0.7] as const
 /* ⚠️ The corridor has to start BEFORE the last door has finished passing, or
    there is a dead frame between them. The first cut ran the tunnel to 0.76 and
@@ -84,7 +100,17 @@ const WALL_FULL = 0.66
    further away at u=0 so the first door has somewhere to come *from*. */
 const PERSPECTIVE = 900
 const SPACING = 900
-const BACK = 400
+/* How far in front the *first* door stands at rest — the one with the lock on
+   it. 900/(900-(-120)) is 0.88, so it is very nearly life-size in the frame
+   and reads as a door you are standing at rather than one down the hall.
+   ⚠️ It replaced a `BACK` of 400 that held the whole field back behind the
+   keyhole plate, and it is the same number for every door: the gate is field
+   index 0, not a separate object in front of the field. That matters. Given
+   its own z schedule it moved at its own speed, and since it is the nearest
+   thing on screen anything slower than the field behind it lets door 2
+   overtake and fly *through* it. One field, one advance, no parallax to get
+   wrong. */
+const GATE_DEPTH = 120
 /* NEAR is where a door is cut, and it is the single number that decides
    whether this reads as flying *through* doors or watching them from a seat.
    900/(900 − 700) is 4.5×, so a leaf ends up around three screens tall and
@@ -134,19 +160,28 @@ const OFFSET_SCALE_MOBILE = 0.35
  * is a 480px group shot whose leaf is ~140px across. The tunnel shows a door
  * at well over full-screen size, so anything soft or marked shows badly here.
  */
+/* ⚠️ `TUNNEL_IDS[0]` is the door up front, the one the lock is drawn on, and
+   the order is chosen for it. The architect teak leaf leads because it is the
+   only leaf in the set that is a whole door, edge to edge and square on, with
+   its own hardware at lock height on the right — so the brass keyhole lands
+   under a real handle instead of on bare grain. Burma teak led until
+   2026-08-31 and cannot: its crop still carries a slice of jamb down the left,
+   which is invisible at 0.4 scale mid-tunnel and unmissable at 0.88 with a
+   headline over it. */
 const TUNNEL_IDS = [
-  'burma-teak-door',
   'architect-teak-door',
+  'burma-teak-door',
   'veneer-cng-door',
   'microcoat-door',
   'wpc-cnc-door',
 ]
 /* A phone gets three, not five, and the three are chosen partly by weight.
    These are hero-critical images — a door cannot fade in late — so the run IS
-   the payload: the five desktop leaves are 131 kB, and this teak → painted →
-   WPC run is 60 kB against the 46 kB the portal hero's two photographs cost.
-   Solid teak still leads, because it is the thing the business is known for. */
-const TUNNEL_IDS_MOBILE = ['burma-teak-door', 'microcoat-door', 'wpc-cnc-door']
+   the payload: the five desktop leaves are 129 kB, and this teak → painted →
+   WPC run is 59 kB against the 46 kB the portal hero's two photographs cost.
+   Teak still leads, because it is the thing the business is known for, and on
+   a phone as on a desktop the leading leaf is the one wearing the lock. */
+const TUNNEL_IDS_MOBILE = ['architect-teak-door', 'microcoat-door', 'wpc-cnc-door']
 
 /**
  * One door in the tunnel. The <img> never changes, so it is memoised away from
@@ -171,6 +206,7 @@ function TunnelDoor({
   dy,
   glow,
   near,
+  open: openProp,
 }: {
   id: string
   z: number
@@ -182,6 +218,13 @@ function TunnelDoor({
   /** how bright the room behind the leaf is — dimmed as the corridor takes
       over, so the last doors open onto the four worlds and not onto a blob */
   glow: number
+  /** 0–1, and only the door up front passes it. Every other door in the field
+      opens on its own z (below), which is the right rule for a door you are
+      catching up with — but the gate is already near at rest and that formula
+      would have it standing wide open before anyone has touched the key. It
+      opens on *progress* instead, over GATE_OPEN, so the swing is the answer
+      to the lock. */
+  open?: number
 }) {
   const leaf = LEAF_IMAGES[id]
   /* Opens on approach, so you are always flying through an opening rather than
@@ -208,7 +251,7 @@ function TunnelDoor({
      note at `headOpacity`'s call site in DoorWall. Keep this anyway (writing
      styles for elements nobody can see is still wrong), but do not go hunting
      here first if the hero ever gets slow again. */
-  const open = hidden ? 0 : easeOutCubic(clamp01((z + 1000) / 1100))
+  const open = hidden ? 0 : (openProp ?? easeOutCubic(clamp01((z + 1000) / 1100)))
   const opacity = hidden ? 0 : Math.round(fog * gone * 100) / 100
   return (
     <div
@@ -249,52 +292,87 @@ const FirstLeaf = memo(function FirstLeaf({ id }: { id: string }) {
   )
 })
 
-/**
- * The keyhole itself: an opaque plate with a keyhole cut out of it, over the
- * whole viewport.
- *
- * ⚠️ It opens by shrinking its own **viewBox**, never by CSS-scaling the
- * element. A `transform: scale()` on a composited layer rasterises once and
- * then stretches those pixels, so by the time the hole is 14× up the edge of
- * the cut is visibly soft and stepped — on the one shape the whole opening
- * shot is made of. Re-projecting the viewBox re-renders the path at the new
- * size instead, so the edge stays a vector edge the whole way out.
- *
- * The plate and the hole are one path with `fill-rule="evenodd"`: a point
- * inside the plate crosses one edge and fills, a point inside the keyhole
- * crosses two and does not. The hole has to be a **single non-overlapping
- * subpath** for that to hold — a circle subpath plus an overlapping trapezoid
- * subpath gives three crossings in the overlap and paints a solid blob across
- * the middle of the keyhole.
- */
-const EYE = { x: 50, y: 40, r: 17 }
-/* where the slot's sides meet the circle: x = 50 ± 6.5 puts y at 40 + √(17²−6.5²) */
-const KEYHOLE_PATH =
-  'M -400 -400 H 400 V 400 H -400 Z ' +
-  'M 43.5 55.71 A 17 17 0 1 1 56.5 55.71 L 63.5 92 L 36.5 92 Z'
+/* ── the lock on the door up front ─────────────────────────────────────────
+   The keyhole is drawn, not photographed, and it has to be. No leaf in the
+   catalogue carries a keyhole big enough or reliably enough placed to be a
+   44px target, and a hero that asks you to click a real door's real hardware
+   would be asking you to hit a different pixel on every door we ever swap in.
+   Brass, because that is the site's accent and this is a teak door.
 
-function Keyhole({ s, box }: { s: number; box: number }) {
-  /* 1 → the plate fills the screen with a small keyhole in it; at the far end
-     the window is entirely inside the circle, so there is no plate left to
-     draw and the whole overlay unmounts. */
-  const zoom = 1 + easeInQuad(s) * (box / 14 - 1)
-  const w = box / zoom
-  /* At rest the keyhole sits in the lower half so the headline keeps the top
-     of the screen, exactly as the portal hero's copy-over-door layout does.
-     But the window has to finish centred *on* the eye or the last frames swing
-     the plate back into shot, so the centre drifts from one to the other. */
-  const cy = EYE.y - (1 - easeInQuad(s)) * 4
+   ⚠️ It lives in its OWN untransformed layer, never inside `.ktun`. That
+   layer is `pointer-events: none` on purpose — Chrome resolves
+   `elementFromPoint`, and so mouse events, to the wrong element inside a
+   preserve-3d subtree, which is the same scar the DriftWall tile and the /try
+   warp surface both carry. So the lock is positioned by repeating the gate's
+   own arithmetic (`--kg-scale`, `--kt-h`, `--kt-ar`) in a flat box, and it is
+   only ever on screen while the gate is standing still at rest — past a few
+   points of progress it is faded and gone, so it never has to track a moving
+   3D transform at all. */
+
+/* The key sits IN the lock and nudges itself round every few seconds. A second
+   variant — the key sliding in from below, turning, and backing out — was
+   built beside it behind `?key=insert` and dropped 2026-08-31: its loop leaves
+   the plate reading as a bare keyhole for about a fifth of every cycle, and
+   the point of the key is to be there when someone looks. */
+
+/* The keyhole cut, in the plate's own 40×76 viewBox. Same construction as the
+   full-screen plate this replaced: circle and tapered slot as ONE
+   non-overlapping subpath, because two overlapping subpaths give three
+   crossings in the overlap and evenodd paints a blob across the middle of it.
+   x = 20 ± 3 is where the slot's sides meet the circle, so y = 26 + √(7²−3²). */
+const LOCK_KEYHOLE = 'M 17 32.32 A 7 7 0 1 1 23 32.32 L 25.5 50 L 14.5 50 Z'
+
+const GateLock = memo(function GateLock({ unlocking, onUnlock }: { unlocking: boolean; onUnlock: () => void }) {
   return (
-    <svg
-      className="keyhole"
-      viewBox={`${(EYE.x - w / 2).toFixed(2)} ${(cy - w / 2).toFixed(2)} ${w.toFixed(2)} ${w.toFixed(2)}`}
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden="true"
+    <button
+      type="button"
+      className="kgate__lock"
+      data-unlocking={unlocking || undefined}
+      onClick={onUnlock}
+      /* The visible words come first in the accessible name, so a voice
+         command for what is written on screen still hits it. */
+      aria-label="Turn the key — open the doors and go to the door wall"
     >
-      <path d={KEYHOLE_PATH} fillRule="evenodd" />
-    </svg>
+      <svg className="kgate__plate" viewBox="0 0 40 76" aria-hidden="true">
+        <defs>
+          <linearGradient id="kg-brass" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#e6c67e" />
+            <stop offset="0.42" stopColor="#b98c3f" />
+            <stop offset="0.62" stopColor="#f2d18a" />
+            <stop offset="1" stopColor="#8a6526" />
+          </linearGradient>
+          {/* ⚠️ A second, brighter ramp for the key, and it earns its place: the
+              key is brass sitting on brass, and at 36px the first version of
+              it disappeared into its own escutcheon — the plate read as a bare
+              keyhole and the thing that is supposed to be nudging itself was
+              invisible. Lighter metal plus the dark outline in the stylesheet
+              is what separates the two. */}
+          <linearGradient id="kg-key" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#fbeec6" />
+            <stop offset="0.55" stopColor="#e8c87f" />
+            <stop offset="1" stopColor="#c39a4c" />
+          </linearGradient>
+        </defs>
+        <rect className="kgate__escutcheon" x="4" y="2" width="32" height="72" rx="16" />
+        {/* the hole is a dark shape ON the plate rather than a hole cut THROUGH
+            it: behind this plate is a photograph of a door, not the hall, so
+            an actual cut-out would show teak where the dark of a keyhole
+            belongs. A keyhole is a dark shape either way. */}
+        <path className="kgate__hole" d={LOCK_KEYHOLE} />
+        {/* The key turns about the hole's centre, which is where its shaft
+            enters — a key rotates about its own axis, so on screen the bow
+            swings around the point of entry and nothing translates. */}
+        <g className="kgate__key">
+          <rect x="18.2" y="38" width="3.6" height="16" rx="1.4" />
+          <circle className="kgate__bow" cx="20" cy="61" r="7.2" fill="none" strokeWidth="3.4" />
+          <rect x="22.8" y="43.5" width="4.6" height="2.8" rx="0.9" />
+          <rect x="22.8" y="48.4" width="3.2" height="2.6" rx="0.9" />
+        </g>
+      </svg>
+      <span className="kgate__label">Turn the key</span>
+    </button>
   )
-}
+})
 
 const HeroCopy = memo(function HeroCopy() {
   return (
@@ -309,6 +387,27 @@ const HeroCopy = memo(function HeroCopy() {
     </>
   )
 })
+
+/* Where the lock flies you to. Past WALL_FULL (0.66) and past the head's
+   reveal (0.74), inside the dwell where the pane simply holds the wall — so
+   you arrive at a wall that is lit, titled and interactive, with track left
+   underneath you to scroll on from. */
+const LAND = 0.86
+/* Long enough that five doors opening and passing is legible, short enough
+   that it is a move and not a cutscene. A phone gets less: it has two fewer
+   doors to show and a shorter track to cover. */
+const FLIGHT_S = 3
+const FLIGHT_S_MOBILE = 2.5
+/* Eased at both ends — the door has to be seen to swing before anything
+   rushes, and the wall has to settle rather than slam.
+   ⚠️ Sine, not the cubic this shipped with for an afternoon. The doors pass
+   between p 0.22 and 0.60, which is the exact middle of the flight, and a
+   cubic spends its time at the ends: measured, all five fly-bys landed inside
+   555ms — about nine frames each, which is a flicker rather than a door.
+   The same span under sine is 795ms and the ends are still eased. Whatever
+   replaces this has to be judged on how long it leaves the MIDDLE, because
+   that is where everything worth seeing happens. */
+const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2
 
 export function HeroKeyhole() {
   const trackRef = useRef<HTMLElement>(null)
@@ -341,6 +440,19 @@ export function HeroKeyhole() {
   const heroNear = useNearViewport(trackRef)
   const [wallMounted, setWallMounted] = useState(false)
   const [wallRunning, setWallRunning] = useState(false)
+  /* Only drives the key's own turn. The flight itself is the page scrolling,
+     so it needs no state — `p` is already telling everything on screen where
+     it is, whether the scroll came from a wheel or from this button.
+     ⚠️ It is cleared on a timer rather than latched, because the key has to be
+     turnable **again**. Scroll back up to the door and you are looking at the
+     same locked door you started at; a latch left it stuck at −96° with the
+     button refusing every further tap, which is the one thing a visitor who
+     has just watched the flight is most likely to try. Do not reintroduce an
+     `if (unlocking) return` guard — a second tap mid-flight merely re-aims the
+     same scroll at the same target, which is harmless. */
+  const [unlocking, setUnlocking] = useState(false)
+  const relockRef = useRef<number>(0)
+  useEffect(() => () => window.clearTimeout(relockRef.current), [])
   useEffect(() => {
     setWallMounted((on: boolean) => on || idleReady || p > 0.24)
     /* ⚠️ 0.42, and the number is chosen to dodge something. Doors pass the
@@ -388,8 +500,17 @@ export function HeroKeyhole() {
   const n = ids.length
   const near = mobile ? NEAR_MOBILE : NEAR
   const offsetScale = mobile ? OFFSET_SCALE_MOBILE : 1
-  const keyhole = seg(p, 0, KEYHOLE_END)
   const copyOpacity = 1 - seg(p, 0.1, 0.2)
+  /* The gate swings on progress, not on its z — see TunnelDoor's `open` prop.
+     It also opens further than the doors behind it (86° against 72°): those
+     are seen for a moment in passing and a leaf past ~80° presents nothing but
+     its own thickness, but this one is stood in front of you being opened, and
+     a door that stops at 72° with the camera still outside it reads as stuck. */
+  const gateOpen = easeOutCubic(seg(p, GATE_OPEN[0], GATE_OPEN[1]))
+  /* The lock is only on screen while the gate is standing still. It goes the
+     moment anything moves — a brass plate pinned to a flat layer while the
+     door it is drawn on rushes forward would slide straight off it. */
+  const lockOpacity = Math.round((1 - seg(p, 0.005, 0.05)) * 100) / 100
   /* Out early: this is the light behind the keyhole, and once the tunnel has
      its own lit doorways the two light sources fight — broad gold diagonals
      raked across a corridor read as a second scene laid over the first. */
@@ -403,8 +524,11 @@ export function HeroKeyhole() {
   /* Door i passes the camera at u = ((i+1)·SPACING + BACK + NEAR) / travel, so
      including NEAR here is what keeps the last fly-by off the very end of the
      phase — otherwise the run finishes after the corridor has begun. */
-  const travel = (n + 1) * SPACING + BACK + near
+  const travel = n * SPACING + GATE_DEPTH + near
   const advance = u * travel
+  /* 900/(900 − z) is the projection, so this is exactly how big the gate is
+     drawn at rest — the lock layer repeats it to sit on the right pixels. */
+  const gateScale = PERSPECTIVE / (PERSPECTIVE + GATE_DEPTH)
 
   /* The corridor still runs on the 0.45→0.9 slice it was written for, so it is
      handed a remapped p rather than having its thresholds retuned in two
@@ -428,8 +552,39 @@ export function HeroKeyhole() {
     if (!el) return
     const top = el.offsetTop
     const total = el.offsetHeight - window.innerHeight
-    const target = p < 0.12 ? top + total * KEYHOLE_END : p < 0.55 ? top + total : top
+    const target = p < 0.12 ? top + total * 0.3 : p < 0.55 ? top + total : top
     smoothScrollTo(target)
+  }
+
+  /**
+   * Turn the key. ⚠️ This animates nothing: it scrolls the page to where the
+   * wall is, and every door on screen follows because every door on screen is
+   * already a function of scroll. That is the whole design of it — there is
+   * one flight, the scrolled one, and the button is a way of asking for it
+   * rather than a second implementation of it. It also means the visitor lands
+   * with the page's real scroll position under them: they can scroll back up
+   * and watch it again, and the sticky releases where it always did.
+   */
+  const unlock = () => {
+    const el = trackRef.current
+    if (!el) return
+    setUnlocking(true)
+    window.clearTimeout(relockRef.current)
+    relockRef.current = window.setTimeout(
+      () => setUnlocking(false),
+      (mobile ? FLIGHT_S_MOBILE : FLIGHT_S) * 1000 + 400,
+    )
+    /* ⚠️ The wall normally mounts on the first idle callback after `load` —
+       early, precisely so its chunk and its ~56 tiles never land during a
+       scrub. A visitor who turns the key before that has happened would fly
+       three seconds into an empty pane, so the flight forces the mount. */
+    setWallMounted(true)
+    const top = el.offsetTop
+    const total = el.offsetHeight - window.innerHeight
+    smoothScrollTo(top + total * LAND, {
+      duration: mobile ? FLIGHT_S_MOBILE : FLIGHT_S,
+      easing: easeInOutSine,
+    })
   }
 
   return (
@@ -478,19 +633,32 @@ export function HeroKeyhole() {
                 dy={OFFSETS[i][1] * offsetScale}
                 glow={glow}
                 near={near}
-                z={-(i + 1) * SPACING - BACK + advance}
+                open={i === 0 ? gateOpen : undefined}
+                z={-i * SPACING - GATE_DEPTH + advance}
               />
             ))}
           </div>
         </div>
 
-        {/* `box` is the viewBox side at rest, and it is what sets how big the
-            keyhole reads. `slice` maps the viewport's LONG axis to exactly that
-            many units — width on a desktop, height on a phone — so the two
-            orientations need different numbers to land on the same apparent
-            size. 340 puts the keyhole at ~34vh on a 16:9 desktop; 230 puts it
-            at ~30vh on a phone. */}
-        {keyhole < 1 && <Keyhole s={keyhole} box={mobile ? 210 : 290} />}
+        {/* The lock, in a flat layer over the door up front. Sized off the same
+            three numbers the gate is drawn from, so it lands on the leaf's
+            handle side whatever the viewport does to the door. Unmounted the
+            moment it is invisible — it is a button, and a transparent button
+            over the middle of the screen would still swallow a click. */}
+        {lockOpacity > 0 && (
+          <div
+            className="kgate"
+            style={
+              {
+                opacity: lockOpacity,
+                '--kg-scale': gateScale.toFixed(3),
+                '--kt-ar': LEAF_IMAGES[ids[0]].w / LEAF_IMAGES[ids[0]].h,
+              } as React.CSSProperties
+            }
+          >
+            <GateLock unlocking={unlocking} onUnlock={unlock} />
+          </div>
+        )}
 
         <div className="ktun__copy" style={{ opacity: copyOpacity, pointerEvents: copyOpacity > 0.3 ? 'auto' : 'none' }}>
           <HeroCopy />
@@ -524,9 +692,13 @@ export function HeroKeyhole() {
           </ErrorBoundary>
         </div>
 
+        {/* Quieter than it was, and kept. The key is the loud invitation, but a
+            visitor who ignores it and starts scrolling must not be left
+            wondering whether scrolling does anything — and the two prompts at
+            equal weight read as two different offers rather than one. */}
         <button
           type="button"
-          className="hero__scrollcue"
+          className="hero__scrollcue hero__scrollcue--quiet"
           style={{ opacity: copyOpacity, pointerEvents: copyOpacity > 0.3 ? 'auto' : 'none' }}
           onClick={peek}
           tabIndex={copyOpacity > 0.5 ? 0 : -1}
