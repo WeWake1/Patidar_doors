@@ -277,6 +277,44 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   (25% of the gate's pixels wrong with the leaf's kept, 78% with the door's kept, 66% with
   both). `verify:e2e` asserts the declaration is **absent**, because headless Chrome
   rasterises in software and cannot photograph the tear.
+  · ⚠️ **This hero is ~3× the portal hero's cost on a phone, and a mobile perf pass on
+  2026-08-31 took it from ~5× to that.** Profiled at 390×844 DPR 3, 4× CPU throttle,
+  scrubbing p 0.05→0.70: main-thread task 625→500ms, script 243→139ms, Commit 109→76ms,
+  layers at p 0.15 65→55. `?hero=old` over the same scrub is 167ms task / 26ms script,
+  which is the number to keep honest about — five full-screen photographs through a CSS
+  3D perspective at DPR 3 is intrinsically expensive and no amount of tuning makes it
+  free. The four things that were wrong, in order of what they cost:
+  · **The Door Wall re-rendered through React on every scroll frame** — half of all
+  script time. `useTrackProgress` setStates per scroll event, `HeroKeyhole` re-renders,
+  and `DoorWall` was a plain function component, so React diffed 56 tiles and 28 `<img>`s
+  60×/sec — **from the top of the page**, since the wall mounts on the first idle after
+  `load`. `DoorWall` is `memo` now and its props are all quantised or constant; see the
+  note on the component. Any new prop has to be quantised too or the memo stops being one.
+  · **Layer explosion.** `Layerize` was the single biggest main-thread item in the trace
+  (1010ms of 3650ms self time) and it runs once a frame over every composited layer —
+  100 of them, 57–65 MB of layer memory on a phone. `.ktun__leaf` was `preserve-3d` for
+  no reason (nothing inside it has a 3D transform), and every child of a preserve-3d box
+  is promoted, so each door cost 6–7 layers. It is flat now; `.ktun__door` must stay
+  preserve-3d for `.ktun__gap`'s `translateZ(-40px)`.
+  · **`visibility: hidden` does not release composited layers.** `.ktwall` also sets
+  `content-visibility: hidden` while the wall is parked, which does — Commit 103→77ms.
+  ⚠️ It brings size containment, so DriftWall's ResizeObserver reads nothing until the
+  reveal; that is safe only because `.doorwall__wall`'s height is pure CSS. Verified it
+  causes no re-raster burst at p 0.46.
+  · **Blurred box-shadows re-raster at every new scale.** A door's projected scale changes
+  every frame, so its layers re-raster every frame, and `.ktun__jamb`/`.ktun__leaf img`
+  carried 90px/70px blurs — 54% of all raster work. Radii halved; keep them small.
+  ⚠️ **Do not flatten `.drift-wall__col`/`__track` to chase the wall's 56 tile layers.**
+  It halves the layer count at p 0.5 (108→53) and **visibly blurs the wall** — 20 tiles
+  merge into one very tall layer that is then perspective-stretched. Those 56 layers are
+  the price of the wall's sharpness; the lever is when they are alive, not merging them.
+  · Still on the table, both measured and neither applied: `Reveal.tsx` creates a fresh
+  `IntersectionObserver` per instance (10 of the home page's 13, for 15 observed elements
+  in total) and `computeIntersections` is 7% of the hero's main thread — `useAjarInView`
+  already shares one observer via a `Map` and `Reveal` should copy it. And `wallRunning`
+  starts at p > 0.42 while doors are still passing at 0.46/0.54/0.62, so the wall's rAF
+  and 56 live layers overlap the last three fly-bys; moving it past ~0.63 clears the
+  busiest stretch at the cost of a static wall through the first part of its fade-in.
   ⚠️ **The key must be turnable again.** `unlocking` is cleared on a timer, never latched:
   scrolling back up puts you in front of the same locked door and a second tap is the
   first thing anyone tries. Latched, the key stayed at −96° and the button refused every

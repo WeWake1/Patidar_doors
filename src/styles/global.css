@@ -2877,23 +2877,52 @@ button { font-family: var(--sans); }
    mid-air: a door needs a wall to be a door, and this is the cheapest thing
    that reads as one. The inset and the border width are equal, so the ring
    lands exactly outside the leaf and nothing overlaps it when closed. */
+/* ⚠️ **Keep these blur radii small.** A door's projected scale runs 0.08 → 2.6×
+   (phone) across the flight and changes EVERY frame, so Chrome re-rasterises
+   the door's layers every frame — and a blurred box-shadow is the most
+   expensive thing in that raster. These two shadows shipped at `0 40px 90px` /
+   `inset 0 0 34px` / `0 30px 70px` until 2026-08-31 and were, measured, 54% of
+   all raster work in the hero: 698 raster tasks over a 2.5s scrub against 323
+   with them off. Halving the radii recovers essentially all of that and the
+   shadows still read — the doors are seen for ~130ms each in passing, which is
+   not long enough for a 90px penumbra to be the thing anyone notices. This is
+   also the item a real phone feels most: headless Chrome rasterises in
+   software, so the GPU cost of re-rastering ~60MB of layer texture at DPR 3 is
+   invisible to the verifier and very much not to the visitor. */
 .ktun__jamb {
   position: absolute;
   inset: -18px;
   border: 18px solid var(--night);
   border-radius: 3px;
   box-shadow:
-    inset 0 0 34px rgba(0, 0, 0, 0.85),
-    0 40px 90px rgba(0, 0, 0, 0.6);
+    inset 0 0 18px rgba(0, 0, 0, 0.85),
+    0 18px 34px rgba(0, 0, 0, 0.6);
 }
 /* hinge left, handle side sweeping toward the camera — the same swing as every
    other door on the site (.door-scene__leaf, .pdoor__leaf) */
 /* no `will-change` — see the note on .ktun__door */
+/* ⚠️ **Flat, NOT preserve-3d**, and the difference is 2 composited layers per
+   door. Every child of a preserve-3d box is promoted into its own layer, so
+   with it here each door cost 6–7 layers (`.ktun__door` + jamb + gap + leaf +
+   img + shade) and five doors cost 33 — on top of the Door Wall's 56. Layer
+   count is what `Layerize` walks once per frame, and Layerize was the single
+   biggest main-thread item in the hero's profile (1010ms of 3650ms self time).
+   Nothing inside the leaf needs a 3D rendering context: `.ktun__shade` is a
+   flat `inset: 0` overlay and the img is flat. `.ktun__door` above must KEEP
+   preserve-3d — `.ktun__gap` sits at `translateZ(-40px)` and is the light
+   behind the leaf.
+   ⚠️ Flattening a box that magnifies is normally a blur risk — the subtree
+   rasterises once and is then stretched by the outer 3D transform. It is safe
+   *here* because the img is `inset: 0`, i.e. exactly the leaf's own size, so
+   there is no magnification inside the flattened box; the scale all comes from
+   the door's transform, which Chrome rasters against. Verified: the rendered
+   leaf is unchanged. The same trick on `.drift-wall__col`/`__track` halves the
+   wall's layer count and DOES visibly blur it — 20 tiles merge into one very
+   tall layer that is then perspective-stretched. Don't. */
 .ktun__leaf {
   position: absolute;
   inset: 0;
   transform-origin: left center;
-  transform-style: preserve-3d;
 }
 .ktun__leaf img {
   display: block;
@@ -2903,7 +2932,8 @@ button { font-family: var(--sans); }
   height: 100%;
   object-fit: fill;
   border-radius: 2px;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+  /* radius kept small on purpose — see the note above .ktun__jamb */
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.55);
 }
 .ktun__shade {
   position: absolute;

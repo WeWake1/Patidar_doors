@@ -679,6 +679,24 @@ export function HeroKeyhole() {
           style={{
             opacity: Math.round(wallOpacity * 100) / 100,
             visibility: wallOpacity === 0 ? 'hidden' : 'visible',
+            /* ⚠️ `visibility: hidden` hides the wall but does NOT release its
+               composited layers — the 56 drift tiles stay in the compositor and
+               `Layerize` keeps walking them once a frame for the whole first
+               half of the track, while the tunnel is the only thing on screen.
+               `content-visibility: hidden` skips the subtree outright and hands
+               those layers back; measured, it takes Commit from 121ms to 86ms
+               over a 2.5s scrub. It pairs with `visibility` rather than
+               replacing it because the two are undone at different moments —
+               this one has to lift the instant the wall starts fading in.
+               ⚠️ It brings size containment with it, so DriftWall's
+               ResizeObserver reads nothing while it is on and its column height
+               stays at the 600px default until the wall is revealed, when it
+               re-measures. That is harmless *because* `.doorwall__wall`'s
+               height is pure CSS (`min(58svh, 460px)`), not content-derived —
+               if that ever becomes content-sized, this line starts costing a
+               re-layout at p 0.46, mid-flight, which is the worst place for
+               one. */
+            contentVisibility: wallOpacity === 0 ? 'hidden' : 'visible',
             pointerEvents: wallInteractive ? 'auto' : 'none',
           }}
           /* `inert` rather than a tabIndex sweep: the wall is a whole

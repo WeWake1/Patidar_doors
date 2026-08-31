@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import DriftWall from './reactbits/DriftWall'
 import type { DriftWallItem } from './reactbits/DriftWall'
@@ -67,8 +67,24 @@ const ITEMS: DriftWallItem[] = WALL_PHOTOS.map((p) => ({
  * two things assume it is not on the catalogue any more: the closing link goes
  * to /shop, and it must be mounted through `DoorWallSlot` rather than imported
  * directly — the reasons are in that file.
+ *
+ * ⚠️ **`memo`, and it is load-bearing inside the keyhero hero.** `HeroKeyhole`
+ * re-renders on every scroll frame — that is what a scrubbed hero is — and this
+ * subtree is 56 tiles and 28 `<img>`s, so unmemoised React re-rendered and
+ * diffed the whole wall 60×/sec. It did it from the very top of the page, too,
+ * because the wall mounts on the first idle callback after `load` and long
+ * before it is visible: measured on a throttled phone profile, that was ~115ms
+ * of script per 2.5s scrub — about half of ALL script time in the hero —
+ * whether or not anything of the wall was on screen. Memoising took the hero's
+ * script cost from 243ms to ~130ms over the same scrub.
+ * The three props are already shaped for it: `compact` is a constant, `paused`
+ * a boolean, and `headOpacity` is quantised to 1/50 by the hero (see the note
+ * at its call site there) — so this re-renders ~50 times across the whole
+ * track instead of ~300. ⚠️ Anything added to the prop list has to be
+ * quantised or referentially stable the same way, or the memo silently stops
+ * being one.
  */
-export function DoorWall({
+export const DoorWall = memo(function DoorWall({
   compact = false,
   paused = false,
   headOpacity,
@@ -281,4 +297,4 @@ export function DoorWall({
       )}
     </section>
   )
-}
+})
