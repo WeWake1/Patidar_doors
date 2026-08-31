@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MAX_QTY_PER_LINE, useCart } from '../cart/CartContext'
 import type { ArtId } from '../data/products'
-import { getProduct, getTone } from '../data/products'
+import { getTone } from '../data/products'
+import { useCatalog } from '../data/useCatalog'
 import { config } from '../config'
 import { fmtINR } from '../lib/format'
 import { t } from '../lib/i18n'
@@ -13,6 +14,10 @@ import { ProductPhoto } from './ProductPhoto'
 export function CartDrawer() {
   const cart = useCart()
   const navigate = useNavigate()
+  // Subscribed so a line whose product only exists in the live catalogue
+  // (added in /admin since the last deploy) resolves once that read lands
+  // instead of silently rendering nothing.
+  const catalogue = useCatalog()
   const closeRef = useRef<HTMLButtonElement>(null)
 
   useScrollLock(cart.isOpen)
@@ -58,7 +63,7 @@ export function CartDrawer() {
             </div>
           ) : (
             cart.lines.map((l) => {
-              const product = getProduct(l.productId)
+              const product = catalogue.find((p) => p.id === l.productId)
               if (!product) return null
               return (
                 <div key={l.key} className="drawer__line">

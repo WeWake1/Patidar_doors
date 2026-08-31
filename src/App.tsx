@@ -8,6 +8,7 @@ import { Footer } from './components/Footer'
 import { Nav } from './components/Nav'
 import { ToastProvider } from './components/Toast'
 import { WhatsAppFloat } from './components/WhatsAppFloat'
+import { useLiveCatalogue } from './data/liveCatalog'
 import { getWorld } from './data/worlds'
 import { t } from './lib/i18n'
 import { smoothScrollTo, useSmoothScroll } from './lib/smoothScroll'
@@ -65,6 +66,9 @@ const AdminApp = lazy(() => import('./admin/AdminApp'))
 /** The public storefront, with its nav/footer/cart chrome. */
 function Storefront() {
   useSmoothScroll()
+  // Re-read the catalogue the client manages in /admin. Runs from an effect,
+  // so the built-in copy paints first and this only ever replaces it.
+  useLiveCatalogue()
   // Keying the page boundary on the path means navigating away from a crashed
   // page clears it — the nav and footer survive the crash, so the visitor can
   // always walk out of it rather than being stuck until they reload.

@@ -152,6 +152,12 @@ export function ProductEditor() {
     setErr(null)
     if (!p.name.trim()) return setErr('Name is required.')
     if (!p.subcategory_id) return setErr('Pick a section.')
+    // Asked for here rather than enforced downstream: the build-time fetcher
+    // used to *drop* a product with no one-liner, so a door saved without one
+    // vanished from the site with nothing anywhere to say why. It is kept now
+    // either way — but a card with a blank line under its name looks broken,
+    // and this is the moment the line is easy to write.
+    if (!p.tag.trim()) return setErr('Add the one-line description — it is the line under the name on every card.')
     if (p.purchasable && (p.price === null || !Number.isFinite(p.price) || p.price < 0)) {
       return setErr('Enter a price, or untick “Sell online”.')
     }

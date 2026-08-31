@@ -11,7 +11,8 @@ import { useToast } from '../components/Toast'
 import { config, whatsappLink } from '../config'
 import { DEFAULT_CONFIG, formatSizeLabel, toSizeId, type DoorConfig } from '../data/pricing'
 import type { Product as ProductT } from '../data/products'
-import { PRODUCTS, defaultToneId, getProduct, getTone, quoteFor, tonesFor, tryState } from '../data/products'
+import { defaultToneId, getTone, quoteFor, tonesFor, tryState } from '../data/products'
+import { useCatalog, useCatalogStatus } from '../data/useCatalog'
 import { getWorld } from '../data/worlds'
 import { fmtINR } from '../lib/format'
 import { t } from '../lib/i18n'
@@ -20,8 +21,15 @@ import { NotFound } from './NotFound'
 
 export function Product() {
   const { id } = useParams()
-  const product = getProduct(id ?? '')
-  if (!product) return <NotFound />
+  const catalogue = useCatalog()
+  const status = useCatalogStatus()
+  const product = catalogue.find((p) => p.id === id)
+  /* A door the client added since the last deploy is not in the bundle's
+     snapshot, so "not found" is only an answer once the live read has come
+     back. Until then this holds the page open the same way a route chunk
+     does — 404-ing a link the client has just sent a customer would be the
+     worst possible moment to be right about a stale copy. */
+  if (!product) return status === 'loading' ? <div className="route-hold" /> : <NotFound />
   // key resets configurator state when navigating between products
   return <ProductInner key={product.id} product={product} />
 }
@@ -152,6 +160,7 @@ function ProductInner({ product }: { product: ProductT }) {
   const { toast } = useToast()
   usePageMeta(product.name, product.tag)
 
+  const catalogue = useCatalog()
   const world = getWorld(product.world)
   // Made-to-measure configurator for anything with a confirmed price — SVG art
   // doors pick a finish too; CMS photo doors configure size and options only.
@@ -159,7 +168,8 @@ function ProductInner({ product }: { product: ProductT }) {
   const tone = getTone(product, toneId)
   const quote = quoteFor(product, cfg, tone.id)
   const price = quote?.total ?? 0
-  const related = PRODUCTS.filter((p) => p.id !== product.id)
+  const related = catalogue
+    .filter((p) => p.id !== product.id)
     .sort((a, b) => Number(b.world === product.world) - Number(a.world === product.world))
     .slice(0, 3)
 

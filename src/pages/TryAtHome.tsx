@@ -33,7 +33,6 @@ import { cameraAvailable, type CameraErrorCode } from '../lib/cameraCapture'
 import { config, whatsappLink } from '../config'
 import {
   defaultToneId,
-  getProduct,
   leafOf,
   quoteFor,
   tonesFor,
@@ -41,6 +40,7 @@ import {
   type Product,
   type Tone,
 } from '../data/products'
+import { useCatalog, useCatalogStatus } from '../data/useCatalog'
 import type { LeafSource } from '../components/tryathome/DoorLayer'
 import { SIZE_LIMITS, configFromLine, formatFtIn, formatSizeLabel, toSizeId } from '../data/pricing'
 import { fmtINR } from '../lib/format'
@@ -90,8 +90,12 @@ const HEIGHT_CHIPS = [78, 81, 84, 96]
 
 export function TryAtHome() {
   const { id } = useParams()
-  const product = id ? getProduct(id) : undefined
-  if (!product) return <NotFound />
+  const catalogue = useCatalog()
+  const status = useCatalogStatus()
+  const product = catalogue.find((p) => p.id === id)
+  // See the PDP: a door added since the last deploy is missing from the
+  // snapshot and present in the live read, so 404 waits for that read.
+  if (!product) return status === 'loading' ? <div className="route-hold" /> : <NotFound />
   return <TryInner key={product.id} product={product} />
 }
 

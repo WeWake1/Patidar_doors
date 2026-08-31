@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import type { WorldId } from '../data/products'
 import { WORLDS } from '../data/worlds'
 import { t } from '../lib/i18n'
 import type { DbProduct, DbSubcategory } from './api'
 import {
+  createSubcategory,
   deleteProduct,
   deleteSubcategory,
   humanError,
@@ -72,6 +74,23 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     if (!window.confirm(`Delete "${p.name}"? This can't be undone.`)) return
     run(p.id, () => deleteProduct(p.id!), (detail) => t('ax.deleteFailed', { name: p.name, detail }))
   }
+  /**
+   * Add a section to a world.
+   *
+   * This existed only inside the product editor's Section dropdown, which is
+   * the last place anyone looks for "add a category" — the client concluded,
+   * fairly, that the admin could not do it. The sections are listed on this
+   * page, so this is where they are made.
+   */
+  function onAddSub(world: WorldId, worldName: string) {
+    const name = window.prompt(`New section in ${worldName}:`)
+    if (!name?.trim()) return
+    run(
+      `new-sub:${world}`,
+      () => createSubcategory(world, name.trim()),
+      (detail) => `Could not add “${name.trim()}” — ${detail}`,
+    )
+  }
   function onRenameSub(s: DbSubcategory) {
     const name = window.prompt('Rename section:', s.name)
     if (!name?.trim() || name === s.name) return
@@ -128,7 +147,7 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           <p>
             {loading
               ? t('ax.loading')
-              : `${products.length} products · changes go live on the site within ~a minute of the next publish.`}
+              : `${products.length} products · saved changes appear on the site straight away.`}
           </p>
         </div>
         <div className="ax-row">
@@ -184,11 +203,21 @@ export function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             const worldProducts = products.filter((p) => p.world === w.id)
             return (
               <section key={w.id} className="ax-world">
-                <h2>
-                  {w.name} <span>({worldProducts.length})</span>
-                </h2>
+                <div className="ax-world__head">
+                  <h2>
+                    {w.name} <span>({worldProducts.length})</span>
+                  </h2>
+                  <button
+                    type="button"
+                    className="ax-btn"
+                    disabled={busy.has(`new-sub:${w.id}`)}
+                    onClick={() => onAddSub(w.id, w.name)}
+                  >
+                    + New section
+                  </button>
+                </div>
                 {worldSubs.length === 0 && (
-                  <div className="ax-empty">No sections yet — add one from any product's editor.</div>
+                  <div className="ax-empty">No sections yet — add the first one with “+ New section”.</div>
                 )}
                 {worldSubs.map((s) => {
                   const items = worldProducts.filter((p) => p.subcategory_id === s.id)

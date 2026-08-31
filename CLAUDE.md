@@ -138,15 +138,60 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   Tables `subcategories`/`products`(FK→subcategory)/`product_images`, `admins` allow-list;
   buckets `catalog`(public)/`originals`(private); RLS = anyone reads published, only
   allow-listed admins write. Admin app in `src/admin/` (lazy-loaded under `/admin`, off the
-  public bundle; Supabase auth; product editor with react-easy-crop → canvas webp 480/960
-  → Storage; live `ProductVisual` preview). Build-time still static: `npm run catalog:fetch`
-  → `catalog.gen.ts` (same merge — Designer Studio protected, new slugs/sections append).
+  public bundle; Supabase auth; product editor with the corner cropper → canvas webp 480/960
+  → Storage; live `ProductVisual` preview).
   `npm run catalog:seed` writes `supabase/seed.sql`. Env: root `.env` (VITE_SUPABASE_URL,
   VITE_SUPABASE_ANON_KEY = publishable key). Setup/security/webhook in `docs/admin-setup.md`.
   ⚠️ storage uploads must NOT pass `upsert:true` (hits the UPDATE policy → RLS 403; paths are
   unique uuids anyway). RLS uses `exists(admins…)`, not `auth.role()` (which can be null).
   Remaining: create the client's admin user + add to `admins`, disable public signup,
   Vercel build cmd + Supabase→Vercel deploy webhook (docs §"Auto-rebuild").
+  · ⚠️ **The storefront reads the catalogue twice, and 2026-08-30 is when the second
+  read was added.** Until then the site was a build-time snapshot only
+  (`npm run catalog:fetch` → `catalog.gen.ts` → rebuild → redeploy), and the last
+  hop — the Supabase→Vercel deploy hook — was documented and never wired up. So
+  from the client's side the admin did not work at all: they added two doors and a
+  section, re-cropped a photo, moved a door between sections, and the public site
+  went on showing the catalogue as of the 2026-08-17 fetch. `src/data/liveCatalog.ts`
+  now re-reads the published rows in the browser (plain `fetch` on PostgREST with the
+  publishable key — **not** supabase-js, which is ~30 kB and stays in the admin chunk;
+  5.7 kB gz for 40 products) and publishes them to a store in `products.ts`. The
+  snapshot still ships and still paints first; the live read only ever replaces it.
+  Entry bundle 93.8 → 95.3 kB gz.
+  · **One merge, one mapper, both directions.** `buildCatalogue(cms)` in `products.ts`
+  is the merge + the two overlays (`PLACEHOLDER_PRICES`, `leafImageFor`) and runs over
+  the snapshot *and* the live rows; `src/data/cmsMap.ts` is the row→`Product`
+  conversion and is shared with `scripts/fetch-catalog.mjs` (loaded through Vite's SSR
+  loader, the way `build-sitemap.mjs` already loads `products.ts`). A second copy of
+  either would drift on exactly the thing nobody notices — which rows count as products.
+  · ⚠️ **`PRODUCTS` is now `CATALOGUE_SNAPSHOT`, and components must not read it.**
+  It is what the bundle shipped with, not what the store is selling this morning.
+  Build-time tools do read it (sitemap, `verify:geometry`, seed) because a build can
+  only describe the catalogue it was given. Everything rendered goes through
+  `useCatalog()` / `useCatalogStatus()` (`src/data/useCatalog.ts`, a `useSyncExternalStore`
+  over the same store) or `getProduct()`/`productsIn()`, which read the live copy.
+  · ⚠️ **`/product/:id` and `/try/:id` wait before they 404.** A door added since the
+  last deploy is genuinely absent from the snapshot, so NotFound is only an answer
+  once `useCatalogStatus()` is past `'loading'`; until then they hold the page with
+  `.route-hold`. 404-ing a link the client has just sent a customer is the worst
+  possible moment to be right about a stale copy.
+  · ⚠️ **An empty live response is refused, not applied.** Every id the site sells also
+  exists locally, so a wiped or mis-permissioned table would blank the shop — and
+  "the CMS returned nothing" is indistinguishable from "the client deleted everything".
+  Same rule for a failed read: the snapshot stands, silently. Re-read is capped at once
+  a minute and re-runs on `visibilitychange`, because the owner edits in one tab and
+  checks the site in another.
+  · ⚠️ **A missing one-liner used to delete a product from the site.** `fetch-catalog`
+  required `tag` and silently dropped any row without one — a door saved in a hurry
+  vanished with nothing anywhere to say why. `mapCatalogue` now requires only what is
+  needed to render and route (slug, name, a real world, a section); the editor asks
+  for the one-liner on the way in instead.
+  · ⚠️ **Sections are added on the dashboard now** (`+ New section` per world). The
+  only way in was the Section dropdown *inside a product's editor*, which is the last
+  place anyone looks for "add a category" — the client concluded, fairly, that the
+  admin could not do it. Section order on a world page comes from the CMS
+  (`sectionsIn()`) once the live read lands, `worlds.ts` before that; a section with no
+  products in it is still not rendered.
 - **Brand logo**: the official mark is the "PP" monogram + "DOORS • PLYWOODS • BOARDS"
   lockup. Vector master: `brand/patidar-logo.pdf` (source of truth for re-exports/print).
   Web derivatives in `public/images/logo/` — full lockup `patidar-logo{,-cream}-{1200,600}.png`
@@ -777,9 +822,13 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   tap-to-zoom), redirect, the door configurator (panel-snap steps, conditional frame
   groups, breakdown sums to the headline, mobile 44px targets), full cart→wa.me flow,
   mobile. Keep it green.
-  ⚠️ Its catalogue counts are assertions about the data, not decoration: 37 products, 15
-  doors. They were 49 and 27 before the Designer Studio removal, and a count that no longer
-  matches is the first thing a bad merge shows up as.
+  ⚠️ Its catalogue counts are a **floor**, not an equality: ≥37 products, ≥15 doors.
+  They were exact (and 49/27 before the Designer Studio removal) until the catalogue
+  went live-backed on 2026-08-30 — the client can add a door in /admin and it is on
+  the page a second later, so an exact number would make their edits fail our tests.
+  The floor is still exact and permanent: `buildCatalogue` starts from the 37 local
+  products and the CMS only ever overrides one by id or appends a new slug, so fewer
+  than 37 means the merge dropped something.
   ⚠️ The **exhaustive** "every door has a leaf cut-out" check lives in `verify:geometry`,
   not here — it is a fact about the data and the browser would pay a page load per product
   to learn it. The E2E asserts one door per range instead; a single passing door is exactly

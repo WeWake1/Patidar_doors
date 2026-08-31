@@ -29,7 +29,7 @@ try {
   const { solveHomography, toMatrix3d, invert, mapPoint, isConvex, rectQuad } =
     await server.ssrLoadModule('/src/lib/homography.ts')
   const { rectifyAspect, sizeFromHeight } = await server.ssrLoadModule('/src/lib/rectify.ts')
-  const { PRODUCTS, tryState, leafOf } = await server.ssrLoadModule('/src/data/products.ts')
+  const { CATALOGUE_SNAPSHOT: PRODUCTS, tryState, leafOf } = await server.ssrLoadModule('/src/data/products.ts')
 
   /* ── the catalogue's own invariant ───────────────────── */
 
@@ -50,7 +50,12 @@ try {
 
   /* A leaf that is not the shape of a door means the corners were marked
      around the frame, or around a door plus its side panel — the crop looks
-     fine in isolation and only reads as wrong once it is in someone's hallway. */
+     fine in isolation and only reads as wrong once it is in someone's hallway.
+
+     ⚠️ Since the catalogue went live-backed (2026-08-30) this also sees crops
+     the client made in /admin, which they can change without a build. A name
+     listed here is a photo to re-crop with the four corners on the leaf
+     itself, not necessarily a bug in this repo. */
   const odd = doors
     .map((p) => ({ id: p.id, leaf: leafOf(p) }))
     .filter(({ leaf }) => leaf && !(leaf.h / leaf.w > 1.4 && leaf.h / leaf.w < 3.6))

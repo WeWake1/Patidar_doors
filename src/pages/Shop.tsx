@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { ProductCard } from '../components/ProductCard'
-import { PRODUCTS } from '../data/products'
+import { useCatalog } from '../data/useCatalog'
 import { WORLDS } from '../data/worlds'
 import { t } from '../lib/i18n'
 import { usePageMeta } from '../lib/usePageMeta'
@@ -16,7 +16,7 @@ export function Shop() {
   // an empty grid with no explanation and no way back to the full list.
   const requested = params.get('world')
   const world = WORLDS.some((w) => w.id === requested) ? (requested as string) : 'all'
-  const products = PRODUCTS.filter((p) => world === 'all' || p.world === world)
+  const products = useCatalog().filter((p) => world === 'all' || p.world === world)
 
   return (
     /* One padded block again: the door wall was a full-bleed dark band that had

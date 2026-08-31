@@ -34,7 +34,7 @@ registerHooks({
     }
   },
 })
-const { PRODUCTS } = await import('../src/data/products.ts')
+const { CATALOGUE_SNAPSHOT: PRODUCTS } = await import('../src/data/products.ts')
 const { WORLDS } = await import('../src/data/worlds.ts')
 
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')

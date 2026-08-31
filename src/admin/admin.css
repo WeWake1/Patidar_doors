@@ -40,8 +40,13 @@
 .ax-dash__head h1 { margin: 0; font-size: 26px; }
 .ax-dash__head p { margin: 4px 0 0; color: var(--ax-mut); font-size: 13px; }
 .ax-world { margin-top: 28px; }
-.ax-world > h2 { margin: 0 0 8px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ax-accent); }
-.ax-world > h2 span { color: var(--ax-mut); }
+/* The world's heading sits in a row with its "+ New section" button — adding a
+   section used to be possible only from inside a product's editor, which is a
+   strange place to look for it and the reason the client believed there was no
+   way to add one at all. */
+.ax-world__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 8px; }
+.ax-world h2 { margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ax-accent); }
+.ax-world h2 span { color: var(--ax-mut); }
 .ax-sub { background: #fff; border: 1px solid var(--ax-line); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
 .ax-sub__head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--ax-line); background: #fbfcfe; }
 .ax-sub__head h3 { margin: 0; font-size: 15px; }

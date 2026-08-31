@@ -6,7 +6,8 @@ import { HeroPortal } from '../components/HeroPortal'
 import { ProductCard } from '../components/ProductCard'
 import { Reveal } from '../components/Reveal'
 import { PAYMENT_STEPS, PROCESS } from '../data/content'
-import { FEATURED_IDS, getProduct } from '../data/products'
+import { FEATURED_IDS } from '../data/products'
+import { useCatalog } from '../data/useCatalog'
 import { usePageMeta } from '../lib/usePageMeta'
 
 const MARQUEE = 'Timbers  ✦  Doors  ✦  Ply  ✦  WPC  ✦  Our yard, our factory, our store  ✦  Made to measure  ✦  '
@@ -16,7 +17,8 @@ export function Home() {
     undefined,
     'Patidar Doors by Patidar Timbers — teak timbers, made-to-measure doors, plywood and WPC from our own yard and factory. Explore online, see it in person.',
   )
-  const featured = FEATURED_IDS.map((id) => getProduct(id)!).filter(Boolean)
+  const catalogue = useCatalog()
+  const featured = FEATURED_IDS.map((id) => catalogue.find((p) => p.id === id)).filter((p) => p !== undefined)
   const oldHero = new URLSearchParams(window.location.search).get('hero') === 'old'
 
   return (

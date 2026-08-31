@@ -2,9 +2,25 @@
 
 The client manages the catalogue in a **custom admin at `/admin`** (part of this
 site, lazy-loaded, auth-gated). It's backed by **Supabase** (Postgres + Storage +
-Auth). The public site stays static: at build time `npm run catalog:fetch` pulls
-the published catalogue into `src/data/catalog.gen.ts`, and a webhook rebuilds
-the site whenever the client saves.
+Auth).
+
+**The storefront reads that catalogue two ways, and it needs both:**
+
+1. **At build time** — `npm run catalog:fetch` bakes the published rows into
+   `src/data/catalog.gen.ts`. That snapshot is what paints instantly, what the
+   sitemap describes, and what the site falls back to when Supabase is
+   unreachable.
+2. **At run time** — `src/data/liveCatalog.ts` re-reads the same rows in the
+   browser (one 5.7 kB gzipped `fetch`, no library, started after first paint)
+   and replaces the snapshot if the CMS says something different. **This is what
+   makes a save in /admin show up on the site without a deploy.**
+
+⚠️ Until 2026-08-30 only (1) existed, and the hop from "client saves" to "site
+rebuilds" was the deploy webhook in *Auto-rebuild* below — which was never wired
+up. The result was that the admin looked broken from the client's side: doors
+added, a section added, photos re-cropped, and the public site went on showing
+the catalogue as of the last deploy. The live read closes that loop from the
+other end, so the site tells the truth even when nothing rebuilds it.
 
 Provisioned project: `yevrjgmgbguwvluemtsw` (org/project created by you; move to
 the client's account later). Schema + policies live in `supabase/schema.sql` /
@@ -20,8 +36,11 @@ the client's account later). Schema + policies live in `supabase/schema.sql` /
 - **Presentation** — each photo product is *swing* (door-opens animation, for
   clean straight-on leaf shots) or *showcase* (gentle zoom, for in-situ room
   photos). The admin's live preview shows both so the client picks what looks right.
-- **Merge** (`src/data/products.ts`) — a CMS product replaces the local one of the
-  same slug and new slugs/sections append. Nothing is carved out of this any more:
+- **Merge** (`buildCatalogue` in `src/data/products.ts`) — a CMS product replaces
+  the local one of the same slug and new slugs/sections append. One function,
+  run over the build-time snapshot *and* over the live read, so the two can't
+  disagree. The row → `Product` conversion is shared the same way
+  (`src/data/cmsMap.ts`, used by the browser and by `scripts/fetch-catalog.mjs`). Nothing is carved out of this any more:
   the 12 Designer Studio SVG doors that used to be protected were removed on
   2026-08-20, so every product is the client's to manage.
 - **Two overlays run after the merge**, both in `products.ts`, because a CMS
@@ -64,6 +83,11 @@ the client's account later). Schema + policies live in `supabase/schema.sql` /
 
 ## Auto-rebuild on save (Vercel)
 
+The site is live without this — the browser re-reads the catalogue on every
+visit. What a rebuild still buys is the *first paint* (a new door is in the
+bundle rather than arriving a moment later), the sitemap, and the offline
+fallback. Worth wiring up; no longer the difference between working and not.
+
 1. Vercel → project → Settings → Environment Variables: add `VITE_SUPABASE_URL`
    and `VITE_SUPABASE_ANON_KEY`.
 2. Settings → Build & Development → Build Command:
@@ -75,10 +99,17 @@ the client's account later). Schema + policies live in `supabase/schema.sql` /
 
 ## Day-to-day (the client)
 
-`/admin` → sign in → **+ New product** → name, world, section (or **+ New**
-section inline), one-liner, specs → **+ Add main photo** → drop a photo, frame it
-to the door shape in the cropper (live preview beside it) → pick Swing/Showcase →
-**Save**. The site updates itself.
+**A new section** (a category inside a world — "Teak Doors", "WPC Doors"):
+`/admin` → **+ New section** on the world's heading → type the name. It appears
+on the site as its own heading on that world's page as soon as a product is
+filed under it — an empty section is not shown, because a heading with nothing
+beneath it reads as a range that sold out.
+
+**A new product**: `/admin` → **+ New product** → name, world, section (or
+**+ New** in the section row), one-liner, specs → **+ Add main photo** → drop a
+photo, frame it to the door in the cropper (live preview beside it) → pick
+Swing/Showcase → **Save**. It is on the site immediately; reload the page to see
+it.
 
 ## Re-seeding / reference
 

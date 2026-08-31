@@ -29,7 +29,7 @@ const ORIGIN = 'https://patidartimbers.com'
 const STATIC = ['/', '/timbers', '/doors', '/ply', '/wpc', '/shop', '/visit', '/faq', '/policies']
 
 /*
- * The real `PRODUCTS`, evaluated — not a regex over the source.
+ * The real `CATALOGUE_SNAPSHOT`, evaluated — not a regex over the source.
  *
  * The catalogue is a *merge*: local products in products.ts, CMS products in
  * catalog.gen.ts overriding by id, plus brand-new CMS slugs appended, and then
@@ -42,11 +42,16 @@ const server = await createServer({ root, logLevel: 'error', server: { middlewar
 let ids
 try {
   const mod = await server.ssrLoadModule('/src/data/products.ts')
-  ids = mod.PRODUCTS.map((p) => p.id)
+  ids = mod.CATALOGUE_SNAPSHOT.map((p) => p.id)
 } finally {
   await server.close()
 }
 if (!ids?.length) throw new Error('no products loaded from src/data/products.ts')
+/* ⚠️ A sitemap can only describe the catalogue the build was given. The
+   storefront also reads the CMS live in the browser (src/data/liveCatalog.ts),
+   so a product added in /admin is on the site immediately but is not in here
+   until the next build — which is what the Supabase→Vercel deploy hook in
+   docs/admin-setup.md is for. */
 
 const today = new Date().toISOString().slice(0, 10)
 const urls = [

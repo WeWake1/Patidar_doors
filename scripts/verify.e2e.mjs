@@ -400,13 +400,27 @@ await step('door wall: click a tile, big viewer follows', async () => {
 await shot('04b-home-doorwall')
 
 /* ── SHOP / CATALOGUE ──────────────────────────────────── */
-/* 37, not 49: the 12 drawn "Designer Studio" doors were removed on 2026-08-20.
-   15 factory doors + 11 timbers + 8 ply + 3 WPC. */
-await step('catalogue shows all 37 products', async () => {
+/* 37 is a floor, not an equality, and that changed on 2026-08-30 when the
+   storefront started reading the CMS live (src/data/liveCatalog.ts): the client
+   can add a door in /admin and it is on this page a second later, so pinning an
+   exact number here would make their catalogue edits fail our test suite.
+
+   The floor is exact and permanent all the same. `buildCatalogue` starts from
+   the 37 local products (15 factory doors + 11 timbers + 8 ply + 3 WPC — 37,
+   not 49, since the 12 drawn "Designer Studio" doors were removed on
+   2026-08-20) and the CMS only ever *overrides* one by id or appends a new
+   slug. Fewer than 37 cards means the merge dropped something. */
+const LOCAL_COUNT = 37
+const LOCAL_DOORS = 15
+/** How many cards the catalogue actually showed, so the filter can be checked
+    against it rather than against a number that moves when the client edits. */
+let allCards = 0
+await step(`catalogue shows every product (≥${LOCAL_COUNT})`, async () => {
   await page.goto(BASE + '/shop', { waitUntil: 'networkidle' })
   await page.waitForSelector('.card')
-  const n = await page.locator('.card').count()
-  if (n !== 37) throw new Error(`expected 37 cards, got ${n}`)
+  allCards = await page.locator('.card').count()
+  const n = allCards
+  if (n < LOCAL_COUNT) throw new Error(`expected ≥${LOCAL_COUNT} cards, got ${n}`)
   // it moved to the home page — showing it twice would halve it
   if (await page.locator('.doorwall, .doorwall-hold').count()) throw new Error('door wall still on the catalogue')
 })
@@ -419,7 +433,8 @@ await step('world filter works', async () => {
   await page.getByRole('button', { name: 'Doors', exact: true }).click()
   await page.waitForTimeout(300)
   const n = await page.locator('.card').count()
-  if (n !== 15) throw new Error(`expected 15 doors, got ${n}`)
+  if (n < LOCAL_DOORS) throw new Error(`expected ≥${LOCAL_DOORS} doors, got ${n}`)
+  if (allCards && n >= allCards) throw new Error(`the world filter kept every card (${n} of ${allCards})`)
   if (!page.url().includes('world=doors')) throw new Error('url param missing')
 })
 
