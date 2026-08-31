@@ -10,7 +10,11 @@ import { FEATURED_IDS } from '../data/products'
 import { useCatalog } from '../data/useCatalog'
 import { usePageMeta } from '../lib/usePageMeta'
 
-const MARQUEE = 'Timbers  ✦  Doors  ✦  Ply  ✦  WPC  ✦  Our yard, our factory, our store  ✦  Made to measure  ✦  '
+/* The four worlds and nothing else. Each span has to be wider than the widest
+   viewport on its own — the loop is two identical spans translated -50%, so a
+   span narrower than the screen leaves a visible gap at the wrap. Repeats and
+   `marquee`'s 72s duration are a pair: change one and the ribbon changes speed. */
+const MARQUEE = 'Timbers  ✦  Doors  ✦  Ply  ✦  WPC  ✦  '.repeat(6)
 
 export function Home() {
   usePageMeta(

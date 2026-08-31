@@ -413,6 +413,46 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   It runs on `trigger="scroll"` + `fillMode="fade"`, so the draw plays once as the band
   enters and the letters settle to a cream fill — touch visitors see it too. (This note
   said `trigger="hover"` until 2026-08-11; the code had already moved.)
+  · ⚠️ **Inside the keyhole hero it runs on `trigger="mount"` instead, and it has to.**
+  The wall's landing is a 100dvh sticky pane, so the title sits mid-viewport from the
+  top of the 520vh track — `start: 'top 82%'` is satisfied the moment ScrollTrigger is
+  *created*, and the draw plays out minutes of scroll before the wall is on screen. It
+  shipped as a plain `<h2>` (`.doorwall__title--plain`) from 2026-08-23 to 2026-08-31
+  for that reason; the size was a real constraint but the trigger was the actual bug.
+  `DoorWall` now latches off the `headOpacity` the hero already hands it — the hero is
+  the only thing that knows when the head arrives — and *mounts* StrokeText on that
+  frame, so `mount` fires exactly once, on arrival. Latched, so scrubbing back and
+  forward cannot redraw a headline the visitor has already watched.
+  ⚠️ The ~46 kB gsap chunk is **pulled on the wall's own mount and merely not played**
+  (a bare `import()` in an effect, no component). Mounting the component on the reveal
+  frame would start that fetch there too and the headline would arrive plain, then snap
+  to outline part-way through its own fade-in.
+  ⚠️ `.doorwall--compact .doorwall__title .stroke-text__{stroke,fill} tspan` restate
+  gsap's own `setStart()` in CSS. gsap writes those inline — which wins — but only from
+  an effect, i.e. *after* the first paint, so without them the finished headline flashes
+  for one frame on mount. Harmless in the full band (it mounts off screen); here the
+  mount **is** the reveal. `896` there is the component's `dash`, `max(fontSize*7,200)`
+  against the `fontSize={128}` at the call site — keep the two in step.
+  ⚠️⚠️ **Those two rules go on the `<tspan>`s, never on the `<text>`.** gsap drives
+  `[data-stroke-char]`/`[data-fill-char]`, which are the tspans, so only an inline style
+  *there* can override one of these. `stroke-dashoffset` inherits, so on the parent it
+  happened to work; `opacity` does **not** inherit, it composites — `opacity: 0` on the
+  parent `<text>` is a curtain gsap cannot lift, and the headline drew its outline and
+  then stayed hollow. It shipped that way for one round on 2026-08-31.
+  ⚠️ The E2E step therefore measures the fill as the **product of every opacity from the
+  tspan up to the svg**, not the tspan's own — which read a perfectly healthy `1` while
+  the letters rendered empty, and is why the first version of that check passed the bug
+  straight through. Ask what is on screen, not what one node was told.
+  ⚠️ The compact sizes are picked so the head's *total* height matches the plain `<h2>`
+  they replaced to within a few px. The band is centred in the pane, so a taller
+  headline pushes the kicker up under the fixed nav, which it already grazes at short
+  desktop viewports (`.ktwall` has no `--nav-clear`). Bigger type costs the top of the
+  section, not the bottom.
+  · `verify:e2e`'s "phase C" step pins both ends — nothing drawn at p=0.3, drawn and
+  settled at 0.95. ⚠️ The first half checks at **0.3, not near the 0.64 reveal**:
+  `wheelTo` drives real wheel events through Lenis and its momentum overshoots, so a
+  park at 0.55 crosses the reveal on the way and latches the draw (correctly — a
+  visitor who flings the page past 0.64 has arrived).
 - **Hover-open door**: CSS on `.door-scene--hover` (SVG −26°, photos −18° + edge-shade
   `::after`). Touch devices get `door-scene--ajar` via `src/lib/useAjarInView.ts`
   (shared IntersectionObserver, mid-viewport band, `(hover: none)` only).

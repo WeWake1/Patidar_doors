@@ -855,7 +855,10 @@ button { font-family: var(--sans); }
   padding: 15px 0;
   border-top: 1px solid var(--frame);
 }
-.marquee__track { display: flex; width: max-content; animation: marquee 32s linear infinite; }
+/* 72s, not 32s: the track is one string repeated to clear the widest viewport
+   (see MARQUEE in Home.tsx) and the animation covers half of it, so the
+   duration has to scale with the string or the ribbon races. */
+.marquee__track { display: flex; width: max-content; animation: marquee 72s linear infinite; }
 .marquee__track span {
   font: var(--type-label-lg);
   letter-spacing: var(--track-wider);
@@ -2534,12 +2537,46 @@ button { font-family: var(--sans); }
 .ktwall .doorwall__head { will-change: opacity; }
 .doorwall--compact .doorwall__wall { height: min(56vh, 500px); }
 .doorwall--compact .doorwall__frame { max-height: min(56vh, 500px); }
-/* the plain headline the compact variant uses in place of the drawn one —
-   sized off the corridor's <h2>, which is the heading it replaces */
-.doorwall__title--plain {
-  min-height: 0;
-  font: var(--type-section);
-  color: var(--cream-on-dark);
+/* The drawn headline, sized for one screenful. The band's own ~104px draw does
+   not fit above min(56vh, 500px) of wall inside a 100dvh pane, which is what a
+   plain <h2> was standing in for here between 2026-08-23 and 2026-08-31 — the
+   size was the real constraint, the trigger was the real bug (see DoorWall).
+   ⚠️ The numbers are picked so the head's *total* height matches the plain <h2>
+   they replace to within a few px at every width. The band is centred in the
+   pane, so anything taller pushes the kicker up under the fixed nav — which it
+   already grazes at short desktop viewports. Bigger type here costs the top of
+   the section, not the bottom. */
+.doorwall--compact .doorwall__title { margin-top: 8px; min-height: clamp(38px, 5.2vw, 72px); }
+.doorwall--compact .doorwall__title .stroke-text__svg { height: clamp(38px, 5.2vw, 72px); }
+.doorwall--compact .doorwall__title-fb {
+  font: 800 clamp(25px, 4.2vw, 54px) / clamp(38px, 5.2vw, 72px) var(--sans);
+}
+/* ⚠️ The letterforms start hidden here, matching StrokeText's own `setStart()`.
+   gsap writes those two properties as inline styles — which win — but only from
+   an effect, i.e. after the first paint, so without this the *finished*
+   headline flashes for one frame on mount. In the full band that mount happens
+   far off screen and nobody sees it; in the sticky pane the mount IS the
+   reveal, so it lands in view. `896` is the component's own `dash`,
+   `max(fontSize * 7, 200)` against the `fontSize={128}` passed at the call
+   site — keep the two in step. Scoped to the compact variant on purpose: if
+   `getBBox()` ever measured nothing the effect would bail and leave these two
+   standing, and only the hero's headline is worth that risk.
+   ⚠️⚠️ **On the `<tspan>`s, never on the `<text>` that holds them.** gsap drives
+   `[data-stroke-char]` / `[data-fill-char]`, which are the tspans, so only an
+   inline style there can override one of these. `stroke-dashoffset` inherits,
+   so putting it on the parent happened to work — `opacity` does NOT inherit,
+   it composites, so `opacity: 0` on the parent `<text>` is a curtain gsap
+   cannot lift and the headline drew its outline and then stayed hollow. */
+.doorwall--compact .doorwall__title .stroke-text__stroke tspan {
+  stroke-dasharray: 896;
+  stroke-dashoffset: 896;
+}
+.doorwall--compact .doorwall__title .stroke-text__fill tspan { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  /* StrokeText jumps straight to `setEnd()` here, but that too is an effect —
+     and this variant has no early mount to hide the gap behind. */
+  .doorwall--compact .doorwall__title .stroke-text__stroke tspan { stroke-dashoffset: 0; }
+  .doorwall--compact .doorwall__title .stroke-text__fill tspan { opacity: 1; }
 }
 .doorwall--compact .doorwall__sub { margin-top: 6px; }
 

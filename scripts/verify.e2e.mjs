@@ -248,15 +248,58 @@ await step('?hero=old still renders the portal hero', async () => {
 })
 
 await step('the hero lands on the door wall (phase C)', async () => {
+  /* ⚠️ Two halves, and the first is the one that regresses. StrokeText's own
+     ScrollTrigger cannot drive this headline: inside a 100dvh sticky pane the
+     title sits mid-viewport from the top of the track, so `start: 'top 82%'` is
+     already satisfied when the trigger is created and the draw plays out
+     minutes of scroll before the wall is on screen. (That is why the compact
+     variant carried a plain <h2> between 2026-08-23 and 2026-08-31.) DoorWall
+     mounts the component on the hero's own head reveal instead, so this pins
+     both ends: nothing drawing while the tunnel is still flying, drawn and
+     settled once it has landed.
+  ⚠️ 0.30 for the first half, not something nearer the 0.64 reveal: `wheelTo`
+     drives real wheel events through Lenis and its momentum overshoots by a
+     good fraction of a screen, so a park at 0.55 crosses the reveal on the way
+     and latches the draw — correctly, since a visitor who flings the page past
+     0.64 has arrived. 0.30 is past the wall's own mount (p > 0.24), so the
+     landing is really in the DOM and the absence below means something. */
+  await heroTo(0.3)
+  if (!(await page.locator('.ktwall .doorwall').count()))
+    throw new Error('the landing has not mounted by p=0.3, so the check below proves nothing')
+  if (await page.locator('.ktwall .stroke-text__svg').count())
+    throw new Error('the headline is drawing while the tunnel still flies — it is over before anyone arrives')
+
   await heroTo(0.95)
   const vis = await page.evaluate(() => getComputedStyle(document.querySelector('.ktwall')).opacity)
   if (Number(vis) < 0.9) throw new Error(`landing not faded in (opacity ${vis})`)
   await page.waitForSelector('.doorwall__wall')
-  /* The drawn StrokeText headline must NOT be here: it runs on a ScrollTrigger,
-     and inside a sticky pane the band never crosses the viewport, so it would
-     either play minutes of scroll before anyone arrives or not at all. */
-  if (await page.locator('.ktwall .stroke-text__svg').count())
-    throw new Error('the drawn headline is in the sticky landing, where its scroll trigger cannot work')
+  await page.waitForSelector('.ktwall .stroke-text__svg')
+  /* The whole timeline is ~3.4s (draw 1.7 + a 0.52 stagger, then 0.3 delay and
+     a 0.85 fade), so it is waited out rather than sampled mid-flight.
+     ⚠️ The fill is measured as the product of every opacity from the <tspan> up
+     to the <svg>, NOT as the tspan's own. gsap animates the tspans, so a
+     stylesheet that parks the parent <text> at 0 leaves the tspan reading a
+     perfectly healthy 1 while the letters render hollow — which is exactly what
+     shipped on 2026-08-31 and exactly what this step failed to catch. Opacity
+     composites; it does not inherit. Ask what is on screen, not what one node
+     was told. */
+  await page
+    .waitForFunction(
+      () => {
+        const st = document.querySelector('.ktwall .stroke-text__stroke tspan')
+        const fl = document.querySelector('.ktwall .stroke-text__fill tspan')
+        if (!st || !fl) return false
+        let effective = 1
+        for (let n = fl; n && n !== document.body; n = n.parentElement) {
+          effective *= Number(getComputedStyle(n).opacity)
+        }
+        return parseFloat(getComputedStyle(st).strokeDashoffset) === 0 && effective === 1
+      },
+      { timeout: 8000 },
+    )
+    .catch(() => {
+      throw new Error('the headline never finished drawing, or drew hollow (the fill never became visible)')
+    })
 })
 await shot('02b-hero-doorwall-landing')
 

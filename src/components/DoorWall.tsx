@@ -79,6 +79,31 @@ export function DoorWall({
 
   useScrollLock(zoomed !== null)
 
+  /* ── the drawn headline inside the sticky pane ───────────────────────────
+     StrokeText's own ScrollTrigger cannot fire this one. Inside a 100dvh
+     sticky pane the title sits mid-viewport from the top of the track, so
+     `start: 'top 82%'` is already satisfied the moment the trigger is created
+     and the draw plays minutes of scroll before the wall is on screen — which
+     is why the compact variant carried a plain <h2> from 2026-08-23 until
+     2026-08-31. The hero already knows when the head arrives, because it fades
+     it in itself, so the draw is latched off `headOpacity` instead and the
+     component is mounted at that moment for `trigger="mount"` to play it.
+     ⚠️ Latched, never a bare `headOpacity > 0`: scrubbing back up and down
+     again must not redraw a headline the visitor has already watched. */
+  const [drawTitle, setDrawTitle] = useState(false)
+  useEffect(() => {
+    if (headOpacity !== undefined && headOpacity > 0) setDrawTitle(true)
+  }, [headOpacity])
+
+  /* ⚠️ Mounting on the reveal frame would start the ~46 kB gsap fetch on that
+     frame too, and the headline would arrive plain and then snap to outline
+     part-way through its own fade-in. The chunk is pulled as soon as the wall
+     mounts — p > 0.24, or at idle with the page at rest — and merely not
+     played. */
+  useEffect(() => {
+    if (compact) void import('./reactbits/StrokeText')
+  }, [compact])
+
   const closeRef = useRef<HTMLButtonElement>(null)
   /** The tile that opened the overlay, so closing puts the caret back on it. */
   const openerRef = useRef<HTMLElement | null>(null)
@@ -142,27 +167,25 @@ export function DoorWall({
           together. */}
       <div className="doorwall__head" style={headOpacity === undefined ? undefined : { opacity: headOpacity }}>
         <div className="kicker kicker--gold">Straight off the shop floor</div>
-        {/* ⚠️ The drawn headline is skipped in the compact variant, and not to
-            save the 46 kB of gsap. StrokeText runs on a ScrollTrigger, and
-            inside a 100dvh sticky pane the band never crosses the viewport —
-            the trigger either fires at the top of the track, minutes of scroll
-            before anyone sees the wall, or not at all. A headline that has
-            already played by the time you arrive is worse than a plain one. */}
-        {compact ? (
-          <h2 className="doorwall__title doorwall__title--plain" id="doorwall-title">
-            {TITLE}
-          </h2>
-        ) : (
+        {/* ⚠️ The compact variant drives the draw itself rather than leaving it
+            to StrokeText's ScrollTrigger — see `drawTitle` above for why the
+            trigger cannot work inside the sticky pane. It is `trigger="mount"`
+            + a mount held back to the head's own reveal, so the same headline
+            plays on arrival instead of at the top of the track. */}
         <h2 className="doorwall__title" id="doorwall-title">
           {/* The `-webkit-text-stroke` span holds the same box and the same
               words, so a gsap chunk that fails to load (redeploy under an open
               tab) costs the animation and nothing else — it must never cost the
-              headline, or the section loses its title. */}
+              headline, or the section loses its title. It is also what stands
+              in the compact variant's box until the hero reveals the head. */}
           <ErrorBoundary label="stroke-text" fallback={<span className="doorwall__title-fb">{TITLE}</span>}>
           <Suspense fallback={<span className="doorwall__title-fb">{TITLE}</span>}>
+            {compact && !drawTitle ? (
+              <span className="doorwall__title-fb">{TITLE}</span>
+            ) : (
             <StrokeText
               text={TITLE}
-              trigger="scroll"
+              trigger={compact ? 'mount' : 'scroll'}
               fillMode="fade"
               /* brand gold on cream, not the reactbits violet/slate */
               strokeColor="#c9a964"
@@ -177,10 +200,10 @@ export function DoorWall({
               letterSpacing={-4}
               reverse={false}
             />
+            )}
           </Suspense>
           </ErrorBoundary>
         </h2>
-        )}
         <p className="doorwall__sub">
           {split
             ? 'Every one of these is standing in the store. Click any door on the wall to bring it forward.'
