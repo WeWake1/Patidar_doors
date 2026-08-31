@@ -152,9 +152,12 @@ export type Visual =
  * How a photo card behaves on hover/scroll:
  *  - swing:    the door-open animation (clean, straight-on, isolated leaf)
  *  - showcase: a gentle zoom/lift (in-situ room photos that would look wrong swung)
+ *  - still:    the same framed photo, held still — for shots where any motion
+ *              misleads (a group of doors, a door already photographed ajar,
+ *              a busy in-situ frame the zoom crops the subject out of)
  * Absent ⇒ 'swing' (the original curated behaviour).
  */
-export type PhotoPresentation = 'swing' | 'showcase'
+export type PhotoPresentation = 'swing' | 'showcase' | 'still'
 
 export interface Product {
   id: string

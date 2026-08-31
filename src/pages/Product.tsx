@@ -94,7 +94,8 @@ function ProductStage({ product, cfg }: { product: ProductT; cfg: DoorConfig }) 
     )
   }
   if (visual.kind === 'photo') {
-    const swing = (visual.presentation ?? 'swing') === 'swing'
+    const presentation = visual.presentation ?? 'swing'
+    const swing = presentation === 'swing'
     return (
       <div className="pdp__stage">
         {swing ? (
@@ -103,7 +104,7 @@ function ProductStage({ product, cfg }: { product: ProductT; cfg: DoorConfig }) 
             <StageNote />
           </>
         ) : (
-          <PhotoShowcase photo={visual.cover} className="pdp__scene" />
+          <PhotoShowcase photo={visual.cover} className="pdp__scene" still={presentation === 'still'} />
         )}
         {visual.gallery && visual.gallery.length > 0 && (
           <div className="pdp__gallery">

@@ -10,6 +10,7 @@ import { PhotoShowcase } from './PhotoShowcase'
  *   art                 → SVG DoorScene (hover-swings)
  *   photo · swing       → DoorScene photo leaf (hover-swings open)
  *   photo · showcase    → PhotoShowcase (hover zoom/lift, for in-situ shots)
+ *   photo · still       → PhotoShowcase, motion off (same frame, no animation)
  *   material            → generated MaterialArt swatch
  */
 export function ProductVisual({ product }: { product: Product }) {
@@ -30,8 +31,9 @@ export function ProductVisual({ product }: { product: Product }) {
     )
   }
   if (visual.kind === 'photo') {
-    if ((visual.presentation ?? 'swing') === 'showcase') {
-      return <PhotoShowcase photo={visual.cover} />
+    const presentation = visual.presentation ?? 'swing'
+    if (presentation === 'showcase' || presentation === 'still') {
+      return <PhotoShowcase photo={visual.cover} still={presentation === 'still'} />
     }
     return <DoorScene photo={visual.cover} hoverOpen />
   }

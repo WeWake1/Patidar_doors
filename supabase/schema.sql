@@ -4,7 +4,7 @@
 -- Tables:
 --   subcategories (world, name, slug, sort_order) — unique(world, slug)
 --   products (slug unique, world, subcategory_id FK, tag, story, specs jsonb,
---             purchasable, price, price_unit, presentation swing|showcase,
+--             purchasable, price, price_unit, presentation swing|showcase|still,
 --             sort_order, published) + touch_updated_at trigger
 --   product_images (product_id FK cascade, role cover|gallery, src_480, src_960,
 --                   width, height, original_path, crop jsonb, sort_order)
@@ -15,6 +15,10 @@
 -- RLS: anyone reads published products + all subcategories/images; only users in
 -- `admins` may write any catalogue table or storage bucket. Policies use
 -- exists(select 1 from admins where user_id = auth.uid()) — NOT auth.role().
+--
+-- Migrations of note: widen_products_presentation_still (2026-08-31) added 'still'
+-- to products_presentation_check — the CHECK is the reason a new presentation value
+-- needs a migration, not just a TS type change.
 --
 -- Full DDL was applied as migrations; use `npm run catalog:seed` → supabase/seed.sql
 -- to (re)populate data.

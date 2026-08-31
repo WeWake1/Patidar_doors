@@ -270,14 +270,22 @@ export function ProductEditor() {
         {cover && (
           <div className="ax-field">
             <span>Card animation</span>
-            <div className="ax-row">
+            <div className="ax-radios">
               <label className="ax-radio">
-                <input type="radio" checked={p.presentation === 'swing'} onChange={() => set({ presentation: 'swing' })} />
+                <input
+                  type="radio"
+                  checked={p.presentation !== 'showcase' && p.presentation !== 'still'}
+                  onChange={() => set({ presentation: 'swing' })}
+                />
                 Swings open (clean, straight-on leaf)
               </label>
               <label className="ax-radio">
                 <input type="radio" checked={p.presentation === 'showcase'} onChange={() => set({ presentation: 'showcase' })} />
                 Zoom (in-situ / room photo)
+              </label>
+              <label className="ax-radio">
+                <input type="radio" checked={p.presentation === 'still'} onChange={() => set({ presentation: 'still' })} />
+                None (photo stays still)
               </label>
             </div>
           </div>

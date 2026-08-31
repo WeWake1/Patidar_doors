@@ -719,9 +719,13 @@ button { font-family: var(--sans); }
   transform: scale(1.001);
   transition: transform var(--dur-door) var(--ease-door);
 }
-.card:hover .photo-showcase__img,
-.photo-showcase:hover .photo-showcase__img,
+.card:hover .photo-showcase:not(.photo-showcase--still) .photo-showcase__img,
+.photo-showcase:not(.photo-showcase--still):hover .photo-showcase__img,
 .photo-showcase--ajar .photo-showcase__img { transform: scale(1.09); }
+/* Third card animation: none. Same architrave, same crop, held still — the
+   frame is what keeps a still card in the grid's rhythm, so only the motion
+   goes. (--ajar is never added: PhotoShowcase skips the observer entirely.) */
+.photo-showcase--still .photo-showcase__img { transition: none; }
 .door-scene--hover:hover .door-scene__leaf::after { opacity: 1; }
 /* Touch fallback: useAjarInView adds --ajar when the card crosses mid-viewport. */
 .door-scene--ajar .door-scene__leaf { transform: rotateY(-22deg); }

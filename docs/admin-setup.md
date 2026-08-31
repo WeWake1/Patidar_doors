@@ -34,8 +34,10 @@ the client's account later). Schema + policies live in `supabase/schema.sql` /
   `originals` (private, raw uploads kept for re-cropping).
 - **RLS** — anyone reads published products; **only allow-listed admins write**.
 - **Presentation** — each photo product is *swing* (door-opens animation, for
-  clean straight-on leaf shots) or *showcase* (gentle zoom, for in-situ room
-  photos). The admin's live preview shows both so the client picks what looks right.
+  clean straight-on leaf shots), *showcase* (gentle zoom, for in-situ room
+  photos) or *still* (no animation at all, for shots any motion misreads — a
+  group of doors, a door already photographed ajar). The admin's live preview
+  shows all three so the client picks what looks right.
 - **Merge** (`buildCatalogue` in `src/data/products.ts`) — a CMS product replaces
   the local one of the same slug and new slugs/sections append. One function,
   run over the build-time snapshot *and* over the live read, so the two can't

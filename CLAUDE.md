@@ -114,11 +114,23 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   all four sides.
 - **Data model** (`src/data/products.ts`): `Product.visual` is a union —
   `art` (SVG door + tone group), `photo` (real image; `presentation: 'swing'`
-  door-opens-animation vs `'showcase'` zoom/lift for in-situ shots), `material`
+  door-opens-animation vs `'showcase'` zoom/lift for in-situ shots vs `'still'`
+  no animation at all, added 2026-08-31 for shots any motion misreads — a group
+  of doors, a door already photographed ajar), `material`
   (generated swatch in `MaterialArt.tsx` for timber/ply/wpc). `ProductVisual.tsx` is the
   single map visual→component (cards, PDP, admin preview all use it). `PhotoShowcase.tsx`
-  = the non-swinging photo treatment. `purchasable` + `price` ⇒ size(+finish if art)
+  = the non-swinging photo treatment, and `still` is that same component with its
+  motion off (`still` prop → `.photo-showcase--still`), **not** a bare `<img>`:
+  the architrave frame is what keeps a still card in the grid's rhythm, so only
+  the zoom goes. It also skips `useAjarInView` entirely rather than ignoring it.
+  `purchasable` + `price` ⇒ size(+finish if art)
   configurator & cart; otherwise "Enquire on WhatsApp" PDP. Legacy `/door/:id` → `/product/:id`.
+  ⚠️ `presentation` is CHECK-constrained in Postgres as well as typed in TS, and the
+  DDL lives in the project (migrations applied via the Supabase MCP), not in
+  `supabase/schema.sql`, which is only a summary. `still` needed
+  `widen_products_presentation_still` (2026-08-31) — without it the storefront renders
+  the new value fine and the client's *save* fails with a bare postgres 23514. A fourth
+  value needs the same migration; `humanError()` does not map 23514.
   ⚠️ `art` survives in the union but **no product uses it** since 2026-08-20 — so
   `tonesFor()` returns `[]` for everything, and anything typed as `Tone` that came from
   `tones[0]` is actually `undefined`. That crashed `/try` on every door (`tone.id`, one

@@ -5,7 +5,8 @@
  *
  * Migrated photos keep pointing at the committed /images/doors/* files and are
  * seeded as presentation='swing' (the signature door-open hover). Flip any that
- * look wrong swung to 'showcase' in the admin (live preview shows how each looks).
+ * look wrong swung to 'showcase' — or to 'still' for no animation at all — in
+ * the admin (live preview shows how each looks).
  *
  * Writes supabase/seed.sql — run it once via the Supabase dashboard SQL editor
  * (or `supabase db execute`). Re-running is safe (idempotent upserts).

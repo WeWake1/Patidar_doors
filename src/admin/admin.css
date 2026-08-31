@@ -81,6 +81,8 @@
 .ax-field textarea { resize: vertical; }
 .ax-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .ax-row { display: flex; gap: 8px; align-items: center; }
+/* radio group: three card-animation choices don't fit one nowrap row */
+.ax-radios { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
 .ax-row > select, .ax-row > input { flex: 1; }
 .ax-checkbox, .ax-radio { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
 .ax-radio { flex-wrap: wrap; }

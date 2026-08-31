@@ -93,7 +93,11 @@ function toVisual(row: CmsProductRow, world: WorldId): Visual {
     kind: 'photo',
     cover,
     gallery,
-    presentation: (row.presentation === 'showcase' ? 'showcase' : 'swing') satisfies PhotoPresentation,
+    /* Anything the column doesn't recognise falls back to the original
+       curated behaviour rather than to nothing. */
+    presentation: (row.presentation === 'showcase' || row.presentation === 'still'
+      ? row.presentation
+      : 'swing') satisfies PhotoPresentation,
   }
 }
 
