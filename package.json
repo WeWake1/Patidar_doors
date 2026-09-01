@@ -18,7 +18,8 @@
     "fonts:build": "node scripts/fetch-fonts.mjs",
     "catalog:fetch": "node scripts/fetch-catalog.mjs",
     "catalog:seed": "node scripts/seed-supabase.mjs",
-    "leaves:build": "node scripts/build-leaves.mjs"
+    "leaves:build": "node scripts/build-leaves.mjs",
+    "logo:build": "node scripts/build-logo.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { WorldId } from '../data/products'
+import { isDoorProduct, isFullBleedVisual } from '../data/products'
 import { WORLDS } from '../data/worlds'
 import { ProductVisual } from '../components/ProductVisual'
 import { t } from '../lib/i18n'
@@ -104,6 +105,14 @@ export function ProductEditor() {
 
   const worldSubs = useMemo(() => subs.filter((s) => s.world === p.world), [subs, p.world])
   const subName = subs.find((s) => s.id === p.subcategory_id)?.name ?? ''
+  /**
+   * Everything door-shaped in this form hangs off this one answer, so a stack
+   * of teak or a sheet of ply is never asked which way its handle faces.
+   * Timbers and ply are never doors; WPC is decided by its section, which is
+   * why the hint below says so out loud — it is the only thing on the page
+   * that explains why the controls changed. See `isDoorProduct`.
+   */
+  const isDoor = isDoorProduct(p.world, subName)
   const set = (patch: Partial<DbProduct>) => {
     dirty.current = true
     setP((prev) => ({ ...prev, ...patch }))
@@ -267,7 +276,7 @@ export function ProductEditor() {
           <button type="button" className="ax-btn" onClick={() => set({ specs: [...p.specs, ''] })}>+ Add spec</button>
         </div>
 
-        {cover && (
+        {cover && isDoor && (
           <div className="ax-field">
             <span>Card animation</span>
             <div className="ax-radios">
@@ -289,6 +298,23 @@ export function ProductEditor() {
               </label>
             </div>
           </div>
+        )}
+
+        {/* The controls this form *removed* need explaining more than the ones
+            it shows, and for WPC the reason is a section name the client can
+            edit — so say which way it read the section, not just that it did. */}
+        {!isDoor && (p.world !== 'wpc' || subName) && (
+          <p className="ax-hint">
+            Not a door —{' '}
+            {p.world === 'wpc'
+              ? `“${subName}” is a WPC section that isn’t doors`
+              : `${WORLDS.find((w) => w.id === p.world)?.name} isn’t doors`}
+            , so its photo shows as a plain picture filling the card: no swinging open, no handle side, no door
+            sizes to set.{' '}
+            {p.world === 'wpc'
+              ? 'Name a section “… Doors” and everything in it is treated as a door.'
+              : 'Move it to Doors if it is one.'}
+          </p>
         )}
 
         <label className="ax-checkbox">
@@ -332,6 +358,7 @@ export function ProductEditor() {
               slug={p.slug || slugify(p.name)}
               role="cover"
               existing={recrop}
+              isDoor={isDoor}
               onDone={(img) => replaceImage(recrop, img)}
               onCancel={() => setRecrop(null)}
             />
@@ -346,9 +373,9 @@ export function ProductEditor() {
               </div>
               {/* Status, not a task. Cropping with the corner tool is what makes
                   a door usable in the doorway view, so this only reports what
-                  the crop already decided. Doors only — a timber or ply swatch
-                  has no leaf. */}
-              {p.world !== 'timbers' && p.world !== 'ply' && (
+                  the crop already decided. Doors only — timber, ply and WPC
+                  board have no leaf to stand in anybody's hallway. */}
+              {isDoor && (
                 <p className="ax-hint">
                   {isLeafCrop(cover)
                     ? 'Doorway view ✓ — customers can see this door in their own home.'
@@ -357,7 +384,7 @@ export function ProductEditor() {
               )}
             </>
           ) : adding === 'cover' ? (
-            <ImageDropCrop slug={p.slug || slugify(p.name)} role="cover" onDone={onImage} onCancel={() => setAdding(false)} />
+            <ImageDropCrop slug={p.slug || slugify(p.name)} role="cover" isDoor={isDoor} onDone={onImage} onCancel={() => setAdding(false)} />
           ) : (
             <button type="button" className="ax-btn" onClick={() => setAdding('cover')}>+ Add main photo</button>
           )}
@@ -381,12 +408,13 @@ export function ProductEditor() {
               slug={p.slug || slugify(p.name)}
               role="gallery"
               existing={recrop}
+              isDoor={isDoor}
               onDone={(img) => replaceImage(recrop, img)}
               onCancel={() => setRecrop(null)}
             />
           )}
           {adding === 'gallery' ? (
-            <ImageDropCrop slug={p.slug || slugify(p.name)} role="gallery" onDone={onImage} onCancel={() => setAdding(false)} />
+            <ImageDropCrop slug={p.slug || slugify(p.name)} role="gallery" isDoor={isDoor} onDone={onImage} onCancel={() => setAdding(false)} />
           ) : (
             <button type="button" className="ax-btn" onClick={() => setAdding('gallery')}>+ Add gallery photo</button>
           )}
@@ -403,7 +431,7 @@ export function ProductEditor() {
       <div className="ax-editor__preview">
         <div className="ax-preview-label">Live preview — hover the card</div>
         <div className="card ax-preview-card">
-          <div className={`card__stage${preview.visual.kind === 'material' ? ' card__stage--material' : ''}`}>
+          <div className={`card__stage${isFullBleedVisual(preview.visual) ? ' card__stage--material' : ''}`}>
             <ProductVisual product={preview} />
           </div>
           <div className="card__body">

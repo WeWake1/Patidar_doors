@@ -7,7 +7,7 @@ export function Footer() {
       <div className="footer__grid">
         <div>
           <div className="footer__brand">
-            <img className="footer__mark" src="/images/logo/patidar-mark-cream.png" alt="" aria-hidden="true" width="30" height="27" />
+            <img className="footer__mark" src="/images/logo/patidar-mark-cream.png" alt="" aria-hidden="true" width="19" height="27" />
             <span>PATIDAR DOORS</span>
           </div>
           <p className="footer__blurb">

@@ -105,6 +105,20 @@ for (const [w, h, label, near] of [
       }),
     )
 
+    /* ⚠️⚠️ No door may ever reach the perspective origin. `PERSPECTIVE / (PERSPECTIVE
+       − z)` inverts at z = 900 and goes negative past it, so a door out there is
+       drawn through a degenerate projection. The field used to run to z ≈ 5060 by
+       the end of the track and sat past the camera for the whole dwell — which is
+       what tore the hero apart on Android when you scrolled back up, and what
+       `doorZ`'s clamp now prevents. It is asserted here rather than left to the
+       arithmetic because it is the failure with the worst symptom and the least
+       obvious cause: it renders perfectly on the way in. */
+    read.forEach((got, i) => {
+      if (got.z >= T.PERSPECTIVE) {
+        fails.push(`${label} p=${p.toFixed(4)} door${i}: z ${got.z.toFixed(0)} is at/past the camera (${T.PERSPECTIVE})`)
+      }
+    })
+
     read.forEach((got, i) => {
       const at = `${label} p=${p.toFixed(4)} door${i}`
       const z = T.doorZ(i, p, near)

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Product } from '../data/products'
+import { isFullBleedVisual } from '../data/products'
 import { getWorld } from '../data/worlds'
 import { fmtINR } from '../lib/format'
 import { ProductVisual } from './ProductVisual'
@@ -9,7 +10,7 @@ export function ProductCard({ product }: { product: Product }) {
   const visual = product.visual
   return (
     <Link to={`/product/${product.id}`} className="card">
-      {visual.kind === 'material' ? (
+      {isFullBleedVisual(visual) ? (
         <div className="card__stage card__stage--material">
           <ProductVisual product={product} />
         </div>

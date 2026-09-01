@@ -12,7 +12,7 @@
  * `build-sitemap.mjs` already loads `products.ts`.
  */
 
-import type { PhotoPresentation, Product, ProductImage, Visual, WorldId } from './products'
+import type { Product, ProductImage, StoredPresentation, Visual, WorldId } from './products'
 
 /** The PostgREST `select=` both readers use. One shape, one mapper. */
 export const CMS_SELECT =
@@ -97,7 +97,7 @@ function toVisual(row: CmsProductRow, world: WorldId): Visual {
        curated behaviour rather than to nothing. */
     presentation: (row.presentation === 'showcase' || row.presentation === 'still'
       ? row.presentation
-      : 'swing') satisfies PhotoPresentation,
+      : 'swing') satisfies StoredPresentation,
   }
 }
 

@@ -11,9 +11,8 @@ import {
   OFFSET_SCALE_MOBILE,
   OPEN_DEG,
   PERSPECTIVE,
-  SPACING,
-  TUNNEL,
   TUNNEL_IDS,
+  doorZ,
   WALL_FULL,
   WALL_IN,
 } from '../lib/heroTunnel'
@@ -298,7 +297,12 @@ function TunnelDoor({
                   : `translate(-50%, -50%) translate3d(${dx}px, ${dy}px, ${z.toFixed(0)}px)`,
                 opacity,
               }),
-          visibility: hidden ? 'hidden' : 'visible',
+          /* ⚠️ Only on the React path. Toggling a main-thread visual property
+             on an element the compositor is animating is the two threads
+             writing the same box, and on Android that came back stale after a
+             scroll-out-and-in. On the compositor path the animation's own
+             opacity reaches 0 and that is the whole of the hiding. */
+          ...(scrubbed ? null : { visibility: hidden ? 'hidden' : 'visible' }),
         } as React.CSSProperties
       }
     >
@@ -493,6 +497,9 @@ export function HeroKeyhole() {
      `if (unlocking) return` guard — a second tap mid-flight merely re-aims the
      same scroll at the same target, which is harmless. */
   const [unlocking, setUnlocking] = useState(false)
+  /* plain ref, not state: it only feeds the hysteresis on the line that reads it
+     and must never cause a render of its own */
+  const tunnelParkedRef = useRef(false)
   const relockRef = useRef<number>(0)
   useEffect(() => () => window.clearTimeout(relockRef.current), [])
   useEffect(() => {
@@ -539,7 +546,6 @@ export function HeroKeyhole() {
   }
 
   const ids = TUNNEL_IDS
-  const n = ids.length
   const near = mobile ? NEAR_MOBILE : NEAR
   const offsetScale = mobile ? OFFSET_SCALE_MOBILE : 1
   const copyOpacity = 1 - seg(p, 0.1, 0.2)
@@ -561,13 +567,10 @@ export function HeroKeyhole() {
   /* The whole field slides forward together: door i starts at -(i+1)·SPACING
      and everything advances by one full field length plus BACK. That spaces
      the fly-bys evenly across the phase without each door needing its own
-     schedule — door i passes the camera at u = ((i+1)·SPACING + BACK + NEAR)/T. */
-  const u = seg(p, TUNNEL[0], TUNNEL[1])
-  /* Door i passes the camera at u = ((i+1)·SPACING + BACK + NEAR) / travel, so
-     including NEAR here is what keeps the last fly-by off the very end of the
-     phase — otherwise the run finishes after the corridor has begun. */
-  const travel = n * SPACING + GATE_DEPTH + near
-  const advance = u * travel
+     schedule — door i passes the camera at u = ((i+1)·SPACING + BACK + NEAR)/T.
+     The arithmetic itself lives in `doorZ` (heroTunnel.ts) so this path and the
+     generated CSS cannot disagree about where a door is — including about the
+     clamp that keeps one from crossing the camera plane. */
   /* 900/(900 − z) is the projection, so this is exactly how big the gate is
      drawn at rest — the lock layer repeats it to sit on the right pixels. */
   const gateScale = PERSPECTIVE / (PERSPECTIVE + GATE_DEPTH)
@@ -579,8 +582,28 @@ export function HeroKeyhole() {
   /* rounded, and read by all five doors — an unrounded value re-renders every
      door on every frame for a light level nobody can see change */
   const glow = Math.round((0.28 + 0.72 * hallOpacity) * 50) / 50
+  /* ⚠️ Once the last door has gone past and the hall has faded there is nothing
+     left in the tunnel to draw, but its ~25 composited layers stay in the
+     compositor for the whole dwell. Parking the whole subtree hands them back in
+     one move — and it is one main-thread toggle on `.ktun`, which the compositor
+     is NOT animating (only its children are), landing at p 0.74 where every door
+     is long gone and the hall is already at zero. That last part is the rule:
+     never toggle a main-thread visual property on a box the compositor is
+     mid-animation on, and never at a moment when the animation has something to
+     show. Hysteresis so scrubbing across the edge cannot thrash it. */
+  const tunnelParked = p > (tunnelParkedRef.current ? 0.72 : 0.74)
+  tunnelParkedRef.current = tunnelParked
   const wallOpacity = seg(p, WALL_IN, WALL_FULL)
-  const wallParked = p < WALL_IN - 0.02
+  /* ⚠️ Parked well BEFORE the fade starts, not a hair before it. This flag
+     drives `content-visibility`, which is a main-thread property on an element
+     whose opacity the compositor is animating — so the one moment it must never
+     flip is the moment the animation has something to show. At WALL_IN − 0.02
+     the two were 0.02 of progress apart, i.e. the toggle and the first visible
+     pixel of wall landed in the same handful of frames. 0.12 of progress is
+     ~250px of scroll on a phone: the subtree is re-rendered and settled long
+     before anyone can see it, and the layers are still released for the whole
+     first third of the track, which is what the flag is for. */
+  const wallParked = p < WALL_IN - 0.12
   /* The head lands after the last door has gone past, not with the wall. The
      photographs want to be visible *through* the opening — that is the whole
      point of the handoff — but a headline does not: a door sweeping across
@@ -644,10 +667,11 @@ export function HeroKeyhole() {
             this hero has to be checked there too until that hero is deleted. */}
         <div
           className="portal__rays"
-          style={{
-            ...(scrubCss ? null : { opacity: raysOpacity }),
-            visibility: raysOpacity === 0 ? 'hidden' : 'visible',
-          }}
+          style={
+            scrubCss
+              ? undefined
+              : { opacity: raysOpacity, visibility: raysOpacity === 0 ? 'hidden' : 'visible' }
+          }
           aria-hidden="true"
         />
 
@@ -659,7 +683,14 @@ export function HeroKeyhole() {
         {/* perspective comes from the constant, not from the stylesheet: the
             z values above are only meaningful against it, and a stylesheet
             free to drift from them would silently rescale the whole tunnel. */}
-        <div className="ktun" style={{ perspective: `${PERSPECTIVE}px` }} aria-hidden="true">
+        <div
+          className="ktun"
+          style={{
+            perspective: `${PERSPECTIVE}px`,
+            contentVisibility: tunnelParked ? 'hidden' : 'visible',
+          }}
+          aria-hidden="true"
+        >
           {/* The hall is deliberately OUTSIDE .ktun__space. A plain child of a
               preserve-3d parent sits at z = 0, which would paint this vignette
               in front of every door still approaching from negative z.
@@ -680,7 +711,9 @@ export function HeroKeyhole() {
                 glow={glow}
                 near={near}
                 open={i === 0 ? gateOpen : undefined}
-                z={-i * SPACING - GATE_DEPTH + advance}
+                /* ⚠️ `doorZ`, not the raw expression — the clamp that keeps a door
+                   in front of the camera lives there, and both paths need it. */
+                z={doorZ(i, p, near)}
               />
             ))}
           </div>
@@ -775,9 +808,10 @@ export function HeroKeyhole() {
         <button
           type="button"
           className="hero__scrollcue hero__scrollcue--quiet"
-          style={{ opacity: copyOpacity, pointerEvents: copyOpacity > 0.3 ? 'auto' : 'none' }}
-          /* the cue is not on the generated timeline — it is a <button> outside
-             .ktun, and its fade is over by p 0.2 where nothing is flying yet */
+          style={{
+            ...(scrubCss ? null : { opacity: copyOpacity }),
+            pointerEvents: copyOpacity > 0.3 ? 'auto' : 'none',
+          }}
           onClick={peek}
           tabIndex={copyOpacity > 0.5 ? 0 : -1}
         >

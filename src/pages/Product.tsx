@@ -96,6 +96,25 @@ function ProductStage({ product, cfg }: { product: ProductT; cfg: DoorConfig }) 
   if (visual.kind === 'photo') {
     const presentation = visual.presentation ?? 'swing'
     const swing = presentation === 'swing'
+    /* A photograph of a board or a billet — not a door, so it takes the swatch
+       stage, not the door stage. `TryLink` renders nothing here anyway
+       (`tryState` is `no`), but the frame is what read as a door. */
+    if (presentation === 'plain') {
+      return (
+        <div className="pdp__stage pdp__stage--material">
+          <div className="photo-plain pdp__photo-plain">
+            <ProductPhoto photo={visual.cover} className="photo-plain__img" loading="eager" sizes="(max-width: 900px) 92vw, 46vw" />
+          </div>
+          {visual.gallery && visual.gallery.length > 0 && (
+            <div className="pdp__gallery">
+              {visual.gallery.map((g) => (
+                <ProductPhoto key={g.src} photo={g} sizes="30vw" />
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
     return (
       <div className="pdp__stage">
         {swing ? (

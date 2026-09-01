@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
-import type { PhotoPresentation, Product, ProductImage, WorldId } from '../data/products'
+import type { Product, ProductImage, StoredPresentation, WorldId } from '../data/products'
+import { isDoorProduct } from '../data/products'
 import { t } from '../lib/i18n'
 
 /**
@@ -84,7 +85,9 @@ export interface DbProduct {
   purchasable: boolean
   price: number | null
   price_unit: string | null
-  presentation: PhotoPresentation
+  /* Only the three stored values — `plain` is derived from the world and the
+     section by `buildCatalogue`, never written to this column. */
+  presentation: StoredPresentation
   sort_order: number
   published: boolean
   images?: DbImage[]
@@ -237,12 +240,16 @@ export function toPreviewProduct(p: DbProduct, subName: string): Product {
     h: im.height,
     ...(isLeafCrop(im) ? { isLeafCrop: true } : {}),
   })
+  /* The same rule `buildCatalogue` applies to the live site, applied here so
+     the preview card is the card. Without it the editor showed a stack of teak
+     logs swinging open in an architrave and the client had no way to see that
+     the site would not. */
   const visual = cover
     ? {
         kind: 'photo' as const,
         cover: toImg(cover),
         gallery: (p.images ?? []).filter((i) => i !== cover).map(toImg),
-        presentation: p.presentation,
+        presentation: isDoorProduct(p.world, subName) ? p.presentation : ('plain' as const),
       }
     : materialFor(p.world)
   return {

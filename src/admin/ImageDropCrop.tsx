@@ -33,6 +33,15 @@ import {
  * leaf, so every 4ft grand entrance had its sides silently trimmed and every
  * 6'6" utility door was stretched. Doors are not one shape; the cropper must
  * not pretend they are.
+ *
+ * ⚠️ **All of the above is about doors, and `isDoor` is what keeps it there.**
+ * Everything this component does — the four corners "on the door itself", the
+ * handle-side flip, the row of stock door sizes, the door detector that places
+ * the handles — was written when a photograph in this catalogue could only be a
+ * door. It could, right up until the client cropped a stack of teak logs into
+ * /timbers and was asked which side its handle was on. Off a door this is a
+ * plain rectangular cropper starting on the whole frame: the crop is a trim,
+ * not a cut-out. See `isDoorProduct` in products.ts for who decides.
  */
 
 const WIDTHS = [480, 960]
@@ -60,6 +69,22 @@ const START: Quad = [
   { x: 0.72, y: 0.08 },
   { x: 0.72, y: 0.95 },
   { x: 0.28, y: 0.95 },
+]
+
+/**
+ * Where the handles start on a photo that is *not* a door: the whole frame.
+ *
+ * There is no subject to find here — a stack of teak, the face of a ply sheet,
+ * a WPC board — so the honest default is "keep the picture", and the crop is
+ * a trim the owner makes if they want one. Starting inset (or worse, on a
+ * door-detector's guess) throws away the edges of a photograph nobody asked to
+ * have cropped.
+ */
+const FULL: Quad = [
+  { x: 0, y: 0 },
+  { x: 1, y: 0 },
+  { x: 1, y: 1 },
+  { x: 0, y: 1 },
 ]
 
 /**
@@ -153,6 +178,7 @@ export function ImageDropCrop({
   slug,
   role,
   existing,
+  isDoor = true,
   onDone,
   onCancel,
 }: {
@@ -160,13 +186,28 @@ export function ImageDropCrop({
   role: 'cover' | 'gallery'
   /** Re-cropping an image already on the product, rather than adding a new one. */
   existing?: DbImage
+  /**
+   * Whether this product is a door (`isDoorProduct`, decided by the editor from
+   * the world and the section).
+   *
+   * ⚠️ Everything below that is *about doors* is gated on it, and that is the
+   * whole point: this component was written when only doors were photographed,
+   * so a photo of teak logs was asked to have its four corners put "on the
+   * door itself", to say which side its handle was on, and to declare itself
+   * 6′6″ × 2′6″ or 8′ × 4′. Off, this is a plain rectangular cropper — which is
+   * all a board, a billet or a ply face ever needed.
+   */
+  isDoor?: boolean
   onDone: (img: DbImage) => void
   onCancel: () => void
 }) {
   const [src, setSrc] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
-  const [quad, setQuad] = useState<Quad>(START)
-  const [square, setSquare] = useState(false)
+  const [quad, setQuad] = useState<Quad>(isDoor ? START : FULL)
+  /* Not a door ⇒ always a plain rectangle, and the checkbox that says so is not
+     shown: there is nothing to choose. It still writes `crop.mode: 'rect'`, the
+     flag the storefront reads to keep the picture out of the doorway view. */
+  const [square, setSquare] = useState(!isDoor)
   /**
    * Mirror the door left-to-right on the way out.
    *
@@ -274,10 +315,10 @@ export function ImageDropCrop({
         // The saved quad describes the *original*; against the fallback copy it
         // would be meaningless, because that copy is already the cropped result.
         setQuad(saved && !fallback ? toQuad(saved) : START)
-        setSquare(!isLeafCrop(existing) && Boolean(existing.crop))
+        setSquare(!isDoor || (!isLeafCrop(existing) && Boolean(existing.crop)))
         // The fallback copy is the *output* of the last crop, so it is already
         // mirrored — flipping it again would undo the owner's earlier fix.
-        setFlip(!fallback && cropFlip(existing))
+        setFlip(isDoor && !fallback && cropFlip(existing))
       } catch (e) {
         if (!cancelled) setErr(humanError(e))
       } finally {
@@ -287,7 +328,7 @@ export function ImageDropCrop({
     return () => {
       cancelled = true
     }
-  }, [existing])
+  }, [existing, isDoor])
 
   const onFile = (f: File | undefined) => {
     if (!f) return
@@ -304,8 +345,10 @@ export function ImageDropCrop({
     urls.current.push(u)
     setSrc(u)
     // START is what shows if the guess declines or the image never decodes.
-    pendingGuess.current = true
-    setQuad(START)
+    // A door detector has nothing to say about a stack of logs, so it does not
+    // run at all off a door — the whole frame is the right answer there.
+    pendingGuess.current = isDoor
+    setQuad(isDoor ? START : FULL)
     setLockRatio(null)
     setFlip(false)
   }
@@ -394,15 +437,25 @@ export function ImageDropCrop({
           <input type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
           <span>Drop a photo or click to choose</span>
           <small>
-            Any angle is fine — you'll put four corners on the door next and we'll straighten it. JPEG or PNG,
-            up to {mb(MAX_BYTES)}.
+            {isDoor
+              ? `Any angle is fine — you'll put four corners on the door next and we'll straighten it. JPEG or PNG, up to ${mb(MAX_BYTES)}.`
+              : `You'll choose which part of the photo to keep next. JPEG or PNG, up to ${mb(MAX_BYTES)}.`}
           </small>
         </label>
       ) : (
         <>
           <p className="ax-hint">
-            Drag the four corners onto the <strong>door itself</strong> — the leaf, not the frame around it.
-            Everything outside them is thrown away.
+            {isDoor ? (
+              <>
+                Drag the four corners onto the <strong>door itself</strong> — the leaf, not the frame around it.
+                Everything outside them is thrown away.
+              </>
+            ) : (
+              <>
+                Drag the corners to <strong>choose the part of the photo you want to keep</strong> — the whole
+                picture, unless you want to trim it. Everything outside them is thrown away.
+              </>
+            )}
           </p>
           {lossy && (
             <div className="ax-note">
@@ -434,47 +487,57 @@ export function ImageDropCrop({
             )}
           </div>
           <div className="ax-crop__controls">
-            <label className="ax-checkbox">
-              <input type="checkbox" checked={square} onChange={(e) => setSquare(e.target.checked)} />
-              <span>Keep it a plain rectangle (for photos that aren't a door)</span>
-            </label>
+            {/* All three of these are questions about a door, and asking them of
+                a stack of teak is what made the client's timber upload behave
+                like a door: which way does its handle face, is it 6′6″ or 8′,
+                is it a leaf or "a photo that isn't a door" (it never was). Off a
+                door the crop is simply a rectangle — `square` is already forced
+                on, and `lockRatio` stays null, so the picture keeps its shape. */}
+            {isDoor && (
+              <>
+                <label className="ax-checkbox">
+                  <input type="checkbox" checked={square} onChange={(e) => setSquare(e.target.checked)} />
+                  <span>Keep it a plain rectangle (for photos that aren't a door)</span>
+                </label>
 
-            <label className="ax-checkbox">
-              <input type="checkbox" checked={flip} onChange={(e) => setFlip(e.target.checked)} />
-              <span>
-                Flip left to right — <strong>the handle should end up on the right</strong>, because
-                doors on the site swing open from their left edge
-              </span>
-            </label>
+                <label className="ax-checkbox">
+                  <input type="checkbox" checked={flip} onChange={(e) => setFlip(e.target.checked)} />
+                  <span>
+                    Flip left to right — <strong>the handle should end up on the right</strong>, because
+                    doors on the site swing open from their left edge
+                  </span>
+                </label>
 
-            <div className="ax-field">
-              <span>
-                Shape — measures about <strong>{approx.label}</strong>
-                {measured && !measured.fromPerspective && ' (shot straight on)'}
-              </span>
-              <div className="ax-chips">
-                <button
-                  type="button"
-                  className={`ax-chip${lockRatio === null ? ' is-on' : ''}`}
-                  onClick={() => setLockRatio(null)}
-                >
-                  As drawn
-                </button>
-                {COMMON_SIZES.map((s) => {
-                  const r = s.widthIn / s.heightIn
-                  return (
+                <div className="ax-field">
+                  <span>
+                    Shape — measures about <strong>{approx.label}</strong>
+                    {measured && !measured.fromPerspective && ' (shot straight on)'}
+                  </span>
+                  <div className="ax-chips">
                     <button
-                      key={s.id}
                       type="button"
-                      className={`ax-chip${lockRatio === r ? ' is-on' : ''}`}
-                      onClick={() => setLockRatio(r)}
+                      className={`ax-chip${lockRatio === null ? ' is-on' : ''}`}
+                      onClick={() => setLockRatio(null)}
                     >
-                      {s.label}
+                      As drawn
                     </button>
-                  )
-                })}
-              </div>
-            </div>
+                    {COMMON_SIZES.map((s) => {
+                      const r = s.widthIn / s.heightIn
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className={`ax-chip${lockRatio === r ? ' is-on' : ''}`}
+                          onClick={() => setLockRatio(r)}
+                        >
+                          {s.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
 
             <div className="ax-row">
               <button type="button" className="ax-btn" disabled={busy} onClick={() => setSrc(null)}>

@@ -61,10 +61,37 @@ export function travelFor(near: number): number {
   return TUNNEL_IDS.length * SPACING + GATE_DEPTH + near
 }
 
-/** Door i's z at progress p. Linear in p across the TUNNEL slice — which is
-    what lets the CSS path express the flight in two keyframes per door. */
+/**
+ * Door i's z at progress p. Linear in p across the TUNNEL slice — which is what
+ * lets the CSS path express the flight in two keyframes per door.
+ *
+ * ⚠️⚠️ **Clamped at `near`, and the clamp is not cosmetic — it keeps every door
+ * in front of the camera.** A door's projection is `PERSPECTIVE / (PERSPECTIVE −
+ * z)`, so any z at or past 900 is *behind the viewer* and the divide goes to
+ * infinity and then negative. Unclamped, the field runs to z ≈ 5060 by the end
+ * of the track and all five doors spend the entire dwell (p 0.7 → 1) sitting
+ * past the camera plane on a degenerate transform.
+ *
+ * That shipped on 2026-09-01 and it is what tore the hero apart on Android when
+ * you scrolled back UP — doors reappearing at stale sizes and positions, the
+ * lock plate detached beside a shrunken door, the nav's own layer coming back
+ * blank, and differently wrong every time. Fine on the way in, broken on the way
+ * out, and invisible on desktop and in headless (which rasterises in software).
+ *
+ * The React path never hit it because it parked a faded door at
+ * `translate3d(0, 0, -9999px)` and so never let one cross the plane; moving the
+ * transform to CSS keyframes dropped that guard silently. Clamping here restores
+ * it for BOTH paths at the source.
+ *
+ * ⚠️ `near` is the right ceiling and nothing is lost: `doorOpacity` reaches 0
+ * exactly at z = near, so a door is already fully faded when the clamp engages
+ * and the frames it removes are frames nobody can see. Never raise this toward
+ * PERSPECTIVE to "let them fly further" — there is nothing to see out there and
+ * the projection is undefined.
+ */
 export function doorZ(i: number, p: number, near: number): number {
-  return -i * SPACING - GATE_DEPTH + seg(p, TUNNEL[0], TUNNEL[1]) * travelFor(near)
+  const z = -i * SPACING - GATE_DEPTH + seg(p, TUNNEL[0], TUNNEL[1]) * travelFor(near)
+  return Math.min(z, near)
 }
 
 /** Emerging from the dark, then cut as it reaches the camera. */

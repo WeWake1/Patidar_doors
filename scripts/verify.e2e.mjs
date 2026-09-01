@@ -299,11 +299,20 @@ await step('the tunnel is real door photographs, flying at the camera', async ()
   const near = await biggest()
   if (!(near > far * 1.8)) throw new Error(`door did not fly at the camera (${Math.round(far)}px → ${Math.round(near)}px)`)
 
-  /* …and off the other side: the first door is parked once it has passed, so
-     nothing keeps writing a transform for a leaf nobody can see. */
+  /* …and off the other side: the first door is gone once it has passed.
+     ⚠️ Asserted on what is on SCREEN — the effective opacity — not on React's
+     inline `style.visibility`. That property only exists on the JS fallback
+     path; where the browser has scroll-driven animations the compositor owns
+     the door's opacity and React deliberately writes nothing, so testing the
+     inline style was testing which code path was running, not whether the door
+     had left. */
   await heroTo(0.45)
-  const parked = await page.evaluate(() => document.querySelector('.ktun__door').style.visibility)
-  if (parked !== 'hidden') throw new Error('the first door never flew past the camera')
+  const goneOpacity = await page.evaluate(() => {
+    const d = document.querySelector('.ktun__door')
+    if (d.style.visibility === 'hidden' || getComputedStyle(d).visibility === 'hidden') return 0
+    return Number(getComputedStyle(d).opacity)
+  })
+  if (goneOpacity > 0.01) throw new Error(`the first door never flew past the camera (opacity ${goneOpacity})`)
 })
 await shot('02-home-hero-tunnel')
 

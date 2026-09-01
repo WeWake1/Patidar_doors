@@ -112,11 +112,62 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   · ⚠️ the ply-edge stripe is a **background strip, never `border-image`** — border-image
   repaints every edge that has width, which turned the card's 1px hairline into dashes on
   all four sides.
+- ⚠️⚠️ **"Is this a door?" is `isDoorProduct(world, sub)` — NEVER `visual.kind`**
+  (`src/data/products.ts`, 2026-09-01). It reads the *catalogue position*, which is where
+  the client already states the answer: `doors` always, `timbers`/`ply` never, and `wpc`
+  **by section** — a section whose name ends in the word "Door"/"Doors" holds doors, which
+  is what separates `wpc-cnc-door` from `wpc-sheets` inside one world. One owner, read by
+  `leafOf`/`tryState`, by `buildCatalogue`'s `plain` overlay, by the admin editor and by
+  `verify:geometry`.
+  · **It replaced `visual.kind === 'photo'`, which was never a rule about doors** — it was
+  a rule about *which products happen to have a picture*, and it held only while nothing
+  but doors had been photographed. All 20 timber/ply/WPC-board products are generated
+  swatches (`material`), so the line looked true for months. The day the client cropped a
+  photo of teak logs into `/timbers`, that product stopped being `material` and every door
+  behaviour switched on at once: the card became a 3:8 architrave that swings open, the
+  editor offered swing/zoom/still, the cropper asked for four corners "on the door itself"
+  plus a handle-side flip and a row of 6′6″–8′ stock door sizes, and the PDP started
+  promising the doorway view. For a log pile. `verify:geometry` asserts both halves now
+  (nothing outside the doors is placeable; no photograph of a non-door is *framed* as one).
+  · ⚠️ The WPC rule reads a name the client can edit, so it is deliberately narrow — the
+  **last word**, so "WPC Doors" and "Bathroom Doors" match while "WPC Sheets" and "Door
+  Frames" do not. Renaming a section out of the pattern turns its cards into plain pictures
+  and withdraws the doorway view, which is why `/admin` prints one line saying which way it
+  read the section and how to change it. That line is the whole safety net for a
+  name-driven rule; don't drop it.
+  · **`presentation: 'plain'` is the fourth card treatment and is DERIVED, never stored.**
+  `buildCatalogue` forces it onto every photograph of a non-door (overlay 3, alongside the
+  price table and the leaf cut-outs), so both the snapshot and the live read get it.
+  ⚠️ It is not a fourth CMS value on purpose: `products.presentation` is CHECK-constrained
+  in Postgres, so a stored fourth value fails the client's *save* with a bare 23514 (see
+  `widen_products_presentation_still`) — and it is not a choice anyone should have to make,
+  since timber is not a door whoever is filling the form in. `StoredPresentation` (the
+  three the column holds) and `PhotoPresentation` (those plus `plain`) are separate types
+  so the admin cannot write it by accident.
+  ⚠️ **The other three treatments all keep the architrave**, `still` included — that frame
+  is the point of `still`. So "no animation" was never the fix for a log pile; `plain` is
+  the swatch treatment instead: full-bleed 4:3, no frame, no motion, pixel-identical to the
+  `MaterialArt` card beside it on `/timbers`. `isFullBleedVisual()` is what the card, the
+  PDP and the admin preview pick their stage class from.
+  ⚠️ `.photo-plain` puts the ratio on a **wrapper** and sizes the `<img>` 100%/100% inside
+  it. `ProductPhoto` renders the CMS's real `width`/`height` attributes to reserve against
+  CLS, and those are presentational hints on *both* properties — an explicit height beats
+  `aspect-ratio`, which is how PDP thumbnails once rendered 1920px tall. The pair is the
+  rule.
+  · **In `/admin`, `ImageDropCrop` takes `isDoor`** and everything door-shaped hangs off
+  it: the "corners on the door itself" copy, the handle-side flip, the stock-size chips,
+  the "keep it a plain rectangle" tick (forced on, so it still writes `crop.mode: 'rect'`)
+  and `guessDoorQuad`, which has nothing to say about a stack of logs and so does not run —
+  the handles start on the **whole frame**, because off a door the crop is a trim, not a
+  cut-out. The editor also hides the Card animation radios and the doorway-view status line.
+
 - **Data model** (`src/data/products.ts`): `Product.visual` is a union —
   `art` (SVG door + tone group), `photo` (real image; `presentation: 'swing'`
   door-opens-animation vs `'showcase'` zoom/lift for in-situ shots vs `'still'`
   no animation at all, added 2026-08-31 for shots any motion misreads — a group
-  of doors, a door already photographed ajar), `material`
+  of doors, a door already photographed ajar — vs `'plain'`, full-bleed and
+  frameless for a photograph that isn't a door at all, derived not stored, see
+  the doorness bullet above), `material`
   (generated swatch in `MaterialArt.tsx` for timber/ply/wpc). `ProductVisual.tsx` is the
   single map visual→component (cards, PDP, admin preview all use it). `PhotoShowcase.tsx`
   = the non-swinging photo treatment, and `still` is that same component with its
@@ -171,7 +222,8 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   snapshot still ships and still paints first; the live read only ever replaces it.
   Entry bundle 93.8 → 95.3 kB gz.
   · **One merge, one mapper, both directions.** `buildCatalogue(cms)` in `products.ts`
-  is the merge + the two overlays (`PLACEHOLDER_PRICES`, `leafImageFor`) and runs over
+  is the merge + the three overlays (`PLACEHOLDER_PRICES`, `leafImageFor`, and the
+  `plain` presentation forced onto a non-door's photograph) and runs over
   the snapshot *and* the live rows; `src/data/cmsMap.ts` is the row→`Product`
   conversion and is shared with `scripts/fetch-catalog.mjs` (loaded through Vite's SSR
   loader, the way `build-sitemap.mjs` already loads `products.ts`). A second copy of
@@ -213,6 +265,32 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   favicon `public/favicon-32.png` + `apple-touch-icon.png` (cream monogram on `--deep`
   rounded square); social `public/images/logo/og-image.png` (1200×630, wired in index.html
   og:image/twitter:image). Replaced the old hand-drawn `favicon.svg`.
+  · ⚠️ **The four derivatives that contain the monogram alone are generated** —
+  `npm run logo:build` (`scripts/build-logo.mjs`, sharp + poppler's `pdftoppm`, run only
+  when the mark itself changes) cuts `patidar-mark{,-cream}.png`, `favicon-32.png` and
+  `apple-touch-icon.png` out of the PDF. The two full lockups and `og-image.png` are
+  hand exports and it does not touch them.
+  ⚠️ **The monogram is not a separate artwork in the PDF, and cropping it to a
+  rectangle is the trap.** The "PP" stem descends all the way to the wordmark's baseline,
+  so "DOORS • PLYWOODS • BOARDS" sits *inside* the monogram's own bounding box — any
+  rectangle either swallows the wordmark or cuts the stem. It shipped cut: from 2026-08-01
+  to 2026-09-01 `patidar-mark.png` was 471×418, a bowl with no leg, and the favicon and
+  the apple-touch icon were made from the same chopped crop. The script crops to the
+  stem's full height and **erases the wordmark quadrant** instead; both cuts land in the
+  empty gaps (stem→first letter, inner hook→cap line) and are measured off the render,
+  not hardcoded, with an assertion that the two never overlap.
+  ⚠️ The fix changed the mark's aspect **1.127 → 0.698** — it is tall and narrow now,
+  not square-ish. `.nav__mark`/`.footer__mark` are sized by `height` in CSS, but the
+  `<img>` `width`/`height` **attributes** are what reserve the box against CLS, so they
+  are restated in `Nav.tsx` (21×30) and `Footer.tsx` (19×27). Re-derive them from the
+  aspect the script prints if the mark is ever regenerated.
+  · The favicon fills 78% of its tile against the apple-touch icon's 68%: height-fitting
+  a narrow mark leaves wide side margins either way, and at 32px the three parallel
+  strokes need the pixels to stay apart.
+  · `brand/patidar-logo-lockup.png` is a client-supplied 11692×8267 raster of the same
+  lockup, kept beside the PDF as a second reference. It arrived in
+  `public/images/logo/` — where Vite would have shipped all 2 MB of it to every
+  visitor, unreferenced. Source art goes in `brand/`.
 - **Photo pipeline**: raw photos live in gitignored `Main Doors/` + `Room Doors/`;
   `npm run images:build` (sharp) emits 480/960 webp to `public/images/doors/` + manifest
   `src/data/images.gen.ts`. Curation lives in `src/data/photoMap.ts`; `/dev/gallery`
@@ -318,11 +396,37 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   bright, i.e. lit up before anything had moved. Anything linear in p is emitted at its
   breakpoints *exactly* rather than sampled, which is also what keeps the file at 6.7 kB
   gz instead of 62 kB raw.
-  · ⚠️ Only **motion** moved to CSS. State — `wallMounted`/`wallRunning`, `inert`,
-  `pointer-events`, the lock's mount, the doors' `visibility` park — stays in React,
-  where being a frame late is harmless. `.ktwall`'s `visibility`/`content-visibility` now
-  key off `wallParked` (`p < WALL_IN − 0.02`) rather than `wallOpacity === 0`, because a
-  lagging `p` must never hide a wall the compositor is already fading up.
+  · ⚠️⚠️ **`doorZ` CLAMPS AT `near`, and that clamp is what keeps the hero from tearing
+  itself apart when you scroll back UP.** A door projects as `PERSPECTIVE / (PERSPECTIVE
+  − z)`, so any z at or past 900 is *behind the viewer* and the divide inverts. Unclamped
+  the field runs to z ≈ 5060 by the end of the track, so all five doors spend the whole
+  dwell (p 0.7 → 1) past the camera on a degenerate transform — and on Android they came
+  back stale: doors at the wrong size, the lock plate detached beside a shrunken door, the
+  nav's own layer blank, differently wrong every time. Perfect on the way in, broken on the
+  way out. **The React path never hit it** because it parked a faded door at
+  `translate3d(0,0,-9999px)`; moving the transform into CSS keyframes dropped that guard
+  silently, and neither `verify:e2e` nor the desktop nor headless (software raster) showed
+  it. `near` costs nothing — `doorOpacity` is already 0 there.
+  ⚠️ The clamp makes z piecewise-linear rather than linear, so the generator MUST emit
+  `pAtZ(i, near, near)` as a transform breakpoint; without that corner the two end stops
+  interpolate straight through it and every door sits hundreds of px off mid-flight.
+  ⚠️ `verify:scrub` now asserts no door ever reaches `PERSPECTIVE` — 58 failures without
+  the clamp. `verify.e2e`'s "flew past the camera" step had to stop reading React's inline
+  `style.visibility` (which only the fallback path writes) and read the effective opacity
+  instead; it was testing which code path was running, not whether the door had left.
+  · ⚠️ **Never toggle a main-thread visual property on a box the compositor is animating.**
+  That is the second half of the same bug. React was still writing `visibility` on the
+  doors and on `.portal__rays` while the compositor animated their opacity — two threads
+  writing one box. On the compositor path it writes neither now.
+  · Only **motion** moved to CSS. State — `wallMounted`/`wallRunning`, `inert`,
+  `pointer-events`, the lock's mount — stays in React, where being a frame late is
+  harmless. The two `content-visibility` parks that remain are both on boxes the compositor
+  is *not* animating and both land far from any transition: `.ktwall` at `p < WALL_IN −
+  0.12` (it was −0.02, i.e. the toggle and the wall's first visible pixel in the same
+  handful of frames), and `.ktun` at p > 0.74 with hysteresis, which hands back the
+  tunnel's ~25 layers for the whole dwell — verified that nothing inside it paints from
+  p 0.70 on, measuring **effective** opacity (the product up the tree; a gap at 0.28
+  inside a door at 0 is invisible, and reading the two separately says otherwise).
   · ⚠️ **Change `heroTunnel.ts` and re-run `scrub:build`.** `npm run build` runs it, so a
   deploy cannot ship the CSS and the fallback out of step — a dev server can.
   · ⚠️ **This hero is still ~3× the portal hero's cost on a phone**, and an earlier pass on
@@ -634,9 +738,9 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   doors** (WPC is what the leaf is made of, not a different kind of product; it has its own
   world only because it's sold and finished differently), so `wpc-cnc-door` and
   `wpc-digital-veneer-door` are in. **Timber and ply are not doors** and are out — as is
-  `wpc-sheets`, which is 6–18mm board. The rule reads `visual.kind` because the catalogue
-  already draws the line: a door is `art` (drawn) or `photo` (photographed), while
-  `material` is a swatch of stock. **All 17 doors in the catalogue render** since
+  `wpc-sheets`, which is 6–18mm board. The rule is `isDoorProduct(world, sub)` — see the
+  doorness bullet below; it read `visual.kind` until 2026-09-01, which was only ever a
+  proxy for "has a photograph". **All 17 doors in the catalogue render** since
   2026-08-20 — see the leaf-crop bullet below. An earlier draft of this plan had "surface"
   and "volume" modes for ply/timber — dropped 2026-08-16, there is no "see this plywood in
   your hallway".

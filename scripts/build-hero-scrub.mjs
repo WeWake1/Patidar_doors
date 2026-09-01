@@ -127,16 +127,21 @@ function fieldFor(near, offsetScale, suffix) {
     ]
 
     /* ⚠️ Transform and opacity are separate animations on purpose. The z advance
-       is LINEAR in p, so the transform collapses to two stops; the opacity is a
-       pair of clamped ramps and needs its own. Emitted as one keyframe set they
-       could only collapse where *both* were flat, which produced 60 stops per
-       door and a 62 kB stylesheet for a hero that needs 12. */
+       is piecewise-LINEAR in p, so the transform is a handful of stops; the
+       opacity is a pair of clamped ramps and needs its own. Emitted as one
+       keyframe set they could only collapse where *both* were flat, which
+       produced 60 stops per door and a 62 kB stylesheet for a hero that needs 12.
+       ⚠️ `pAtZ(i, near, near)` is a REQUIRED breakpoint, not a nicety: `doorZ`
+       clamps at `near` so the door stops before the camera plane, which means z
+       is linear *up to* that point and flat after it. Without the corner the two
+       end stops interpolate straight through it and every door mid-flight sits
+       hundreds of px off — `verify:scrub` catches exactly this. */
     out.push(
       keyframes(
         `kt-door-${i}${suffix}`,
         (p) => num(z(p)),
         (v) => `transform: translate(-50%, -50%) translate3d(${num(dx)}px, ${num(dy)}px, ${v}px);`,
-        [T.TUNNEL[0], T.TUNNEL[1]],
+        [T.TUNNEL[0], T.TUNNEL[1], pAtZ(i, near, near)],
       ),
       keyframes(
         `kt-fog-${i}${suffix}`,
@@ -227,6 +232,10 @@ const chromeBindings = [
   bind('.portal--keyhole .ktun__hall', 'kt-hall'),
   bind('.portal--keyhole .portal__rays', 'kt-rays'),
   bind('.portal--keyhole .ktun__copy', 'kt-copy'),
+  /* the cue fades on exactly the copy's curve; leaving it on the React path
+     made it the one thing on screen still stepping while everything else was
+     being interpolated by the compositor */
+  bind('.portal--keyhole .hero__scrollcue', 'kt-copy'),
   bind('.portal--keyhole .ktwall', 'kt-wall'),
   bind('.portal--keyhole .kgate', 'kt-lock'),
 ].join('\n')

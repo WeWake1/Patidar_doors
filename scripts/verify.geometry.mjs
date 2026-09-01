@@ -29,7 +29,8 @@ try {
   const { solveHomography, toMatrix3d, invert, mapPoint, isConvex, rectQuad } =
     await server.ssrLoadModule('/src/lib/homography.ts')
   const { rectifyAspect, sizeFromHeight } = await server.ssrLoadModule('/src/lib/rectify.ts')
-  const { CATALOGUE_SNAPSHOT: PRODUCTS, tryState, leafOf } = await server.ssrLoadModule('/src/data/products.ts')
+  const { CATALOGUE_SNAPSHOT: PRODUCTS, tryState, leafOf, isDoorProduct } =
+    await server.ssrLoadModule('/src/data/products.ts')
 
   /* ── the catalogue's own invariant ───────────────────── */
 
@@ -42,7 +43,12 @@ try {
 
      Checked here rather than in the browser test because it is a fact about
      the data, and the browser would pay a page load per product to learn it. */
-  const doors = PRODUCTS.filter((p) => p.visual.kind === 'photo')
+  /* ⚠️ `visual.kind === 'photo'` used to stand in for "is a door" here and in
+     four other places, and it was only ever true because nothing but doors had
+     been photographed. The day a stack of teak logs was cropped into /timbers
+     that product became a swinging, placeable, handle-flipped door. Doorness is
+     asked of the world and the section now — see isDoorProduct(). */
+  const doors = PRODUCTS.filter((p) => isDoorProduct(p.world, p.sub) && p.visual.kind === 'photo')
   ok('every photographed door is a door the catalogue can place', doors.length >= 17, `only ${doors.length}`)
 
   const missing = doors.filter((p) => tryState(p) !== 'ready').map((p) => p.id)
@@ -65,11 +71,32 @@ try {
   /* Nothing that is not a door may be placeable, which is the other half of
      the rule and the half that would embarrass us: a cubic foot of teak or a
      sheet of ply standing in a customer's doorway. */
-  const notDoors = PRODUCTS.filter((p) => p.visual.kind === 'material')
+  const notDoors = PRODUCTS.filter((p) => !isDoorProduct(p.world, p.sub))
   ok(
-    'no material swatch is placeable',
+    'nothing outside the doors is placeable',
     notDoors.every((p) => tryState(p) === 'no'),
     notDoors.filter((p) => tryState(p) !== 'no').map((p) => p.id).join(', '),
+  )
+
+  /* And the other half of the same fix: a photograph of something that is not
+     a door must not be *framed* as one either. `plain` is the swatch treatment
+     — full bleed, no architrave, no motion — and `buildCatalogue` is what puts
+     it there, so a client uploading a photo of teak into /timbers cannot end up
+     with a card that swings open. */
+  const framedAsDoors = notDoors
+    .filter((p) => p.visual.kind === 'photo' && p.visual.presentation !== 'plain')
+    .map((p) => `${p.id} (${p.visual.presentation})`)
+  ok('no photograph of a non-door is framed as a door', framedAsDoors.length === 0, framedAsDoors.join(', '))
+
+  /* A WPC door and a WPC sheet share a world and must still get opposite
+     answers — the section is the only thing that separates them. */
+  ok(
+    'the WPC world is split by section, not by world',
+    isDoorProduct('wpc', 'WPC Doors') &&
+      !isDoorProduct('wpc', 'WPC Sheets') &&
+      isDoorProduct('doors', 'Teak Doors') &&
+      !isDoorProduct('timbers', 'Teak') &&
+      !isDoorProduct('ply', 'Plywood'),
   )
 
 
