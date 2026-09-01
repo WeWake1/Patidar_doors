@@ -1,12 +1,55 @@
 import { Suspense, lazy, memo, useEffect, useRef, useState } from 'react'
 import { LEAF_IMAGES } from '../data/leaves.gen'
+import {
+  FOG_FULL,
+  FOG_IN,
+  GATE_DEPTH,
+  GATE_OPEN,
+  NEAR,
+  NEAR_MOBILE,
+  OFFSETS,
+  OFFSET_SCALE_MOBILE,
+  OPEN_DEG,
+  PERSPECTIVE,
+  SPACING,
+  TUNNEL,
+  TUNNEL_IDS,
+  WALL_FULL,
+  WALL_IN,
+} from '../lib/heroTunnel'
 import { smoothScrollTo } from '../lib/smoothScroll'
 import { useIdleAfterLoad } from '../lib/useIdleAfterLoad'
 import { useNearViewport } from '../lib/useNearViewport'
 import { clamp01, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
+import '../styles/hero-scrub.gen.css'
 import { ErrorBoundary } from './ErrorBoundary'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
 import { HeroKicker, WORLD_ARTS, WorldCard } from './heroWorlds'
+
+/**
+ * ⚠️ **Is the scrub running on the compositor?** Where the browser has
+ * scroll-driven animations, `hero-scrub.gen.css` drives every moving thing in
+ * this hero off a view timeline and React must stop writing the same values as
+ * per-frame inline styles.
+ *
+ * That split is the fix for the one bug this hero could never solve by getting
+ * faster. On a desktop Lenis owns wheel scrolling and drives the page from a
+ * main-thread rAF, so the scroll offset and the door positions land in the same
+ * frame; on a phone Lenis is off by design and touch scrolling runs on the
+ * compositor, so the page moved while the doors — repositioned from a main
+ * thread the scroller does not wait for — stood still. Measured with a real
+ * touch gesture on a mobile profile: the doors froze on **66% of the frames the
+ * page moved**, and identically so with and without a 4× CPU throttle, which is
+ * what rules out throughput as the cause. On the scroll timeline it is 6%.
+ *
+ * ⚠️ Read once, at module scope: it cannot change for the life of the document
+ * and asking per render would be its own small waste. Anything driven from
+ * `p` below has to be checked against this — if a value moves every frame, it
+ * belongs in the generated CSS; if it is state (mounted, inert, interactive) it
+ * belongs here and is fine a frame late.
+ */
+const scrubCss =
+  typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('animation-timeline', 'view()')
 
 /* The wall is the hero's landing, so unlike the standalone band it cannot be
    gated on `useNearViewport` — inside a sticky pane it is on screen for the
@@ -74,8 +117,6 @@ const DoorWall = lazy(() => import('./DoorWall').then((m) => ({ default: m.DoorW
    forward is a separate beat after it. Overlapping the two by a couple of
    points is deliberate: the door is ~90% open as it starts to move, which is
    what makes it read as being pushed through rather than watched. */
-const GATE_OPEN = [0.02, 0.15] as const
-const TUNNEL = [0.13, 0.7] as const
 /* ⚠️ The corridor has to start BEFORE the last door has finished passing, or
    there is a dead frame between them. The first cut ran the tunnel to 0.76 and
    opened the corridor at 0.72, and because the corridor's own fade takes a
@@ -87,8 +128,6 @@ const TUNNEL = [0.13, 0.7] as const
    the final leaf opens onto a wall that is already lit — the arrival is one
    move, not a cut. Everything after WALL_FULL is dwell: the pane holds, the
    wall drifts, and you read it at your own pace before the sticky releases. */
-const WALL_IN = 0.46
-const WALL_FULL = 0.66
 
 /* ── the tunnel, in world px in front of a CSS `perspective` of 900 ─────────
    A door's on-screen size is 900/(900 - z), so z = 0 is life-size and z
@@ -98,8 +137,6 @@ const WALL_FULL = 0.66
    SPACING sets how far apart the doors stand, and therefore the rhythm — the
    whole run of them is paced by exactly one number. BACK just holds the field
    further away at u=0 so the first door has somewhere to come *from*. */
-const PERSPECTIVE = 900
-const SPACING = 900
 /* How far in front the *first* door stands at rest — the one with the lock on
    it. 900/(900-(-120)) is 0.88, so it is very nearly life-size in the frame
    and reads as a door you are standing at rather than one down the hall.
@@ -110,38 +147,25 @@ const SPACING = 900
    thing on screen anything slower than the field behind it lets door 2
    overtake and fly *through* it. One field, one advance, no parallax to get
    wrong. */
-const GATE_DEPTH = 120
 /* NEAR is where a door is cut, and it is the single number that decides
    whether this reads as flying *through* doors or watching them from a seat.
    900/(900 − 700) is 4.5×, so a leaf ends up around three screens tall and
    genuinely engulfs the camera on the way past. The first cut of this was 380
    (1.7×), and every door politely faded out at about the size it had been all
    along — five near-identical frames instead of five fly-bys. */
-const NEAR = 700
 /* ⚠️ A phone cuts the pass much earlier. A door is about 0.42 as wide as it is
    tall, so on a portrait screen it reaches the full width long after it has
    overflowed top and bottom — at 4.5× all that is left on a 390px viewport is
    the inside of the jamb, an empty brown box with the leaf swung off-screen.
    2.6× is as close as a phone can come and still be looking at a door. */
-const NEAR_MOBILE = 560
 /* fog: a door emerges from the dark rather than popping in at full strength */
-const FOG_IN = -5200
-const FOG_FULL = -3000
 
 /* Doors do not all fly through the exact centre of the screen. World-px
    offsets, so they foreshorten with distance like everything else: far enough
    off-axis to feel like travel, near enough that the corridor still reads as
    one you are walking straight down. */
-const OFFSETS: [number, number][] = [
-  [0, 0],
-  [-54, 12],
-  [46, -16],
-  [-40, -8],
-  [58, 18],
-]
 /* A phone has no width to spare: the same offsets walk a door that is already
    wider than the viewport clean off the side of it. */
-const OFFSET_SCALE_MOBILE = 0.35
 
 /**
  * Real doors, in the order you fly through them — solid Burma teak first,
@@ -168,13 +192,6 @@ const OFFSET_SCALE_MOBILE = 0.35
    2026-08-31 and cannot: its crop still carries a slice of jamb down the left,
    which is invisible at 0.4 scale mid-tunnel and unmissable at 0.88 with a
    headline over it. */
-const TUNNEL_IDS = [
-  'architect-teak-door',
-  'burma-teak-door',
-  'veneer-cng-door',
-  'microcoat-door',
-  'wpc-cnc-door',
-]
 /* ⚠️ **A phone gets the same five**, and that is a deliberate purchase, not an
    oversight. It ran a three-door subset (teak → painted → WPC, 59 kB against
    the full run's 131 kB) until 2026-08-31, chosen on weight: these are
@@ -257,20 +274,36 @@ function TunnelDoor({
      here first if the hero ever gets slow again. */
   const open = hidden ? 0 : (openProp ?? easeOutCubic(clamp01((z + 1000) / 1100)))
   const opacity = hidden ? 0 : Math.round(fog * gone * 100) / 100
+  /* ⚠️ On the compositor path the generated CSS owns transform and opacity for
+     all four of these boxes, so writing them here would be styling elements
+     that something else is already driving — main-thread work for pixels it
+     cannot affect (animations outrank inline styles in the cascade).
+     `visibility` deliberately stays: it is the parking optimisation that keeps
+     a door nobody can see out of the compositor entirely, it is a boolean
+     rather than a motion, and it flips at `fog * gone <= 0.002` — so being a
+     couple of frames late with it is a door appearing at two-thousandths of
+     full opacity, which is not a thing anyone can see. */
+  const scrubbed = scrubCss
   return (
     <div
       className="ktun__door"
-      style={{
-        '--kt-ar': leaf.w / leaf.h,
-        transform: hidden
-          ? 'translate(-50%, -50%) translate3d(0px, 0px, -9999px)'
-          : `translate(-50%, -50%) translate3d(${dx}px, ${dy}px, ${z.toFixed(0)}px)`,
-        opacity,
-        visibility: hidden ? 'hidden' : 'visible',
-      } as React.CSSProperties}
+      style={
+        {
+          '--kt-ar': leaf.w / leaf.h,
+          ...(scrubbed
+            ? null
+            : {
+                transform: hidden
+                  ? 'translate(-50%, -50%) translate3d(0px, 0px, -9999px)'
+                  : `translate(-50%, -50%) translate3d(${dx}px, ${dy}px, ${z.toFixed(0)}px)`,
+                opacity,
+              }),
+          visibility: hidden ? 'hidden' : 'visible',
+        } as React.CSSProperties
+      }
     >
       {/* the lit room the leaf swings away from */}
-      <span className="ktun__gap" style={{ opacity: Math.round(open * glow * 50) / 50 }} />
+      <span className="ktun__gap" style={scrubbed ? undefined : { opacity: Math.round(open * glow * 50) / 50 }} />
       {/* ⚠️ The jamb is behind the leaf, and that ordering is the same scar
           .door-scene__frame carries: its inset + equal border occupy exactly
           the ring outside the opening, so closed it abuts the leaf either way —
@@ -278,12 +311,15 @@ function TunnelDoor({
           edge overhang the opening. In front, the architrave paints over that
           overhang and an open door reads as tucked behind its own frame. */}
       <span className="ktun__jamb" />
-      <div className="ktun__leaf" style={{ transform: `rotateY(${(-open * 72).toFixed(1)}deg)` }}>
+      <div
+        className="ktun__leaf"
+        style={scrubbed ? undefined : { transform: `rotateY(${(-open * OPEN_DEG).toFixed(1)}deg)` }}
+      >
         {/* The first door is what you see through the keyhole before anything
             has moved, so it is the one that must not arrive late. */}
         {first ? <FirstLeaf id={id} /> : <TunnelLeaf id={id} />}
         {/* edge shade as it turns away from the light, exactly as .pdoor__shade */}
-        <span className="ktun__shade" style={{ opacity: Math.round(open * 40) / 50 }} />
+        <span className="ktun__shade" style={scrubbed ? undefined : { opacity: Math.round(open * 40) / 50 }} />
       </div>
     </div>
   )
@@ -544,6 +580,7 @@ export function HeroKeyhole() {
      door on every frame for a light level nobody can see change */
   const glow = Math.round((0.28 + 0.72 * hallOpacity) * 50) / 50
   const wallOpacity = seg(p, WALL_IN, WALL_FULL)
+  const wallParked = p < WALL_IN - 0.02
   /* The head lands after the last door has gone past, not with the wall. The
      photographs want to be visible *through* the opening — that is the whole
      point of the handoff — but a headline does not: a door sweeping across
@@ -607,7 +644,10 @@ export function HeroKeyhole() {
             this hero has to be checked there too until that hero is deleted. */}
         <div
           className="portal__rays"
-          style={{ opacity: raysOpacity, visibility: raysOpacity === 0 ? 'hidden' : 'visible' }}
+          style={{
+            ...(scrubCss ? null : { opacity: raysOpacity }),
+            visibility: raysOpacity === 0 ? 'hidden' : 'visible',
+          }}
           aria-hidden="true"
         />
 
@@ -628,7 +668,7 @@ export function HeroKeyhole() {
               corridor: the doors take themselves off screen as they pass, but
               this vignette would otherwise keep dimming the corridor for the
               whole rest of the page. */}
-          <div className="ktun__hall" style={{ opacity: hallOpacity }} />
+          <div className="ktun__hall" style={scrubCss ? undefined : { opacity: hallOpacity }} />
           <div className="ktun__space">
             {ids.map((id, i) => (
               <TunnelDoor
@@ -656,7 +696,7 @@ export function HeroKeyhole() {
             className="kgate"
             style={
               {
-                opacity: lockOpacity,
+                ...(scrubCss ? null : { opacity: lockOpacity }),
                 '--kg-scale': gateScale.toFixed(3),
                 '--kt-ar': LEAF_IMAGES[ids[0]].w / LEAF_IMAGES[ids[0]].h,
               } as React.CSSProperties
@@ -666,7 +706,13 @@ export function HeroKeyhole() {
           </div>
         )}
 
-        <div className="ktun__copy" style={{ opacity: copyOpacity, pointerEvents: copyOpacity > 0.3 ? 'auto' : 'none' }}>
+        <div
+          className="ktun__copy"
+          style={{
+            ...(scrubCss ? null : { opacity: copyOpacity }),
+            pointerEvents: copyOpacity > 0.3 ? 'auto' : 'none',
+          }}
+        >
           <HeroCopy />
         </div>
 
@@ -677,8 +723,14 @@ export function HeroKeyhole() {
         <div
           className="ktwall"
           style={{
-            opacity: Math.round(wallOpacity * 100) / 100,
-            visibility: wallOpacity === 0 ? 'hidden' : 'visible',
+            ...(scrubCss ? null : { opacity: Math.round(wallOpacity * 100) / 100 }),
+            /* ⚠️ `wallParked`, not `wallOpacity === 0`. On the compositor path
+               the fade is driven from the scroll timeline while this flag is
+               computed from a `p` that can be a frame or two behind it, and the
+               two disagreeing at the threshold would hide a wall that is
+               already fading up. It releases 0.02 of progress early, which is
+               off-screen either way. */
+            visibility: wallParked ? 'hidden' : 'visible',
             /* ⚠️ `visibility: hidden` hides the wall but does NOT release its
                composited layers — the 56 drift tiles stay in the compositor and
                `Layerize` keeps walking them once a frame for the whole first
@@ -696,7 +748,7 @@ export function HeroKeyhole() {
                if that ever becomes content-sized, this line starts costing a
                re-layout at p 0.46, mid-flight, which is the worst place for
                one. */
-            contentVisibility: wallOpacity === 0 ? 'hidden' : 'visible',
+            contentVisibility: wallParked ? 'hidden' : 'visible',
             pointerEvents: wallInteractive ? 'auto' : 'none',
           }}
           /* `inert` rather than a tabIndex sweep: the wall is a whole
@@ -724,6 +776,8 @@ export function HeroKeyhole() {
           type="button"
           className="hero__scrollcue hero__scrollcue--quiet"
           style={{ opacity: copyOpacity, pointerEvents: copyOpacity > 0.3 ? 'auto' : 'none' }}
+          /* the cue is not on the generated timeline — it is a <button> outside
+             .ktun, and its fade is over by p 0.2 where nothing is flying yet */
           onClick={peek}
           tabIndex={copyOpacity > 0.5 ? 0 : -1}
         >
