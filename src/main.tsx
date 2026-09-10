@@ -7,6 +7,15 @@ import App from './App'
 import './styles/fonts.css'
 import './styles/global.css'
 import './styles/worlds.css'
+/* ⚠️ The hero's scroll-timeline sheet is imported HERE, after global.css, and
+   not from HeroKeyhole — because it overrides the static sheet on purpose and
+   has to come after it in the bundle to win a tie. Imported from the component
+   it was emitted FIRST (App is imported above the stylesheets, so anything the
+   component graph reaches lands ahead of them), and `.portal .hero__scrollcue
+   { animation: none }` — same specificity, later in the file — reset the cue's
+   `animation-timeline` and left "Scroll — look inside" at full opacity through
+   the whole flight. `verify:scrub` checks the chrome fades for exactly this. */
+import './styles/hero-scrub.gen.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

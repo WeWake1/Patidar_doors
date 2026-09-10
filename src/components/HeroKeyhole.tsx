@@ -12,6 +12,7 @@ import {
   OPEN_DEG,
   PERSPECTIVE,
   TUNNEL_IDS,
+  TUNNEL_IDS_MOBILE,
   doorZ,
   WALL_FULL,
   WALL_IN,
@@ -20,7 +21,9 @@ import { smoothScrollTo } from '../lib/smoothScroll'
 import { useIdleAfterLoad } from '../lib/useIdleAfterLoad'
 import { useNearViewport } from '../lib/useNearViewport'
 import { clamp01, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
-import '../styles/hero-scrub.gen.css'
+/* `hero-scrub.gen.css` is deliberately NOT imported here — it is imported from
+   main.tsx after global.css, so its bindings win ties against the static sheet.
+   See the note there. */
 import { ErrorBoundary } from './ErrorBoundary'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
 import { HeroKicker, WORLD_ARTS, WorldCard } from './heroWorlds'
@@ -308,13 +311,14 @@ function TunnelDoor({
     >
       {/* the lit room the leaf swings away from */}
       <span className="ktun__gap" style={scrubbed ? undefined : { opacity: Math.round(open * glow * 50) / 50 }} />
-      {/* ⚠️ The jamb is behind the leaf, and that ordering is the same scar
-          .door-scene__frame carries: its inset + equal border occupy exactly
-          the ring outside the opening, so closed it abuts the leaf either way —
-          but the leaf swings toward the camera and perspective makes its near
-          edge overhang the opening. In front, the architrave paints over that
-          overhang and an open door reads as tucked behind its own frame. */}
-      <span className="ktun__jamb" />
+      {/* ⚠️ There is no `.ktun__jamb` element any more — the opening is drawn
+          as box-shadows on `.ktun__door` itself, which is a layer-count fix
+          (see the rule in global.css). It still paints BEHIND the leaf, which
+          is the ordering that matters: the leaf swings toward the camera and
+          perspective makes its near edge overhang the opening, and an
+          architrave painted in front of that overhang reads as a door tucked
+          behind its own frame. An outer box-shadow paints behind the element's
+          children, so that ordering is now free rather than a z-index. */}
       <div
         className="ktun__leaf"
         style={scrubbed ? undefined : { transform: `rotateY(${(-open * OPEN_DEG).toFixed(1)}deg)` }}
@@ -545,7 +549,12 @@ export function HeroKeyhole() {
     )
   }
 
-  const ids = TUNNEL_IDS
+  /* ⚠️ A phone gets a three-door field, and it is a different field rather than
+     the same one with two doors hidden — see TUNNEL_IDS_MOBILE for why, and for
+     the measurements. The generated CSS emits matching keyframes per
+     breakpoint, so the two must stay in step: change one and re-run
+     `npm run scrub:build`. */
+  const ids = mobile ? TUNNEL_IDS_MOBILE : TUNNEL_IDS
   const near = mobile ? NEAR_MOBILE : NEAR
   const offsetScale = mobile ? OFFSET_SCALE_MOBILE : 1
   const copyOpacity = 1 - seg(p, 0.1, 0.2)
@@ -713,7 +722,7 @@ export function HeroKeyhole() {
                 open={i === 0 ? gateOpen : undefined}
                 /* ⚠️ `doorZ`, not the raw expression — the clamp that keeps a door
                    in front of the camera lives there, and both paths need it. */
-                z={doorZ(i, p, near)}
+                z={doorZ(i, p, near, ids.length)}
               />
             ))}
           </div>

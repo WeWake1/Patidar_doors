@@ -799,13 +799,16 @@ await step('mobile home + burger menu', async () => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(BASE + '/', { waitUntil: 'networkidle' })
   await page.waitForTimeout(500)
-  /* ⚠️ A phone gets the same five doors as a desktop. It ran a three-door
-     subset until 2026-08-31, chosen on weight — these are hero-critical images
-     so the run is the payload — and showing the whole floor won the argument.
-     Asserted here because a weight-saving pass is exactly the kind of change
-     that would quietly put the subset back. */
+  /* ⚠️⚠️ A phone gets THREE doors, and this assertion used to say five. Five is
+     over Chrome Android's compositor budget: scroll out to the wall and back and
+     the hero returns as stale tiles — a chopped nav, blocks of old background,
+     doors at sizes they were never drawn at. Measured on a GPU-constrained Chrome,
+     3 doors = clean on every run, 4 and 5 = corrupt (see TUNNEL_IDS_MOBILE). It
+     is asserted here because "show the whole floor" is exactly the argument that
+     put five back on 2026-08-31, and it will be made again. Desktop keeps five —
+     asserted by the hero steps above at 1440. */
   const leaves = await page.locator('.ktun__leaf img').count()
-  if (leaves !== 5) throw new Error(`the phone got ${leaves} tunnel doors, not 5`)
+  if (leaves !== 3) throw new Error(`the phone got ${leaves} tunnel doors, not 3`)
   await shot('13-mobile-home')
   await page.locator('.nav__burger').click()
   await page.waitForSelector('.nav__menu')

@@ -46,9 +46,9 @@ function check(label, got, want, tol) {
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 
-for (const [w, h, label, near] of [
-  [390, 844, 'phone', T.NEAR_MOBILE],
-  [1440, 900, 'desktop', T.NEAR],
+for (const [w, h, label, near, ids] of [
+  [390, 844, 'phone', T.NEAR_MOBILE, T.TUNNEL_IDS_MOBILE],
+  [1440, 900, 'desktop', T.NEAR, T.TUNNEL_IDS],
 ]) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: w < 500, hasTouch: w < 500 })
   const page = await ctx.newPage()
@@ -121,7 +121,7 @@ for (const [w, h, label, near] of [
 
     read.forEach((got, i) => {
       const at = `${label} p=${p.toFixed(4)} door${i}`
-      const z = T.doorZ(i, p, near)
+      const z = T.doorZ(i, p, near, ids.length)
       const open = i === 0 ? T.gateOpen(p) : T.doorOpen(z)
       check(`${at} z`, got.z, z, TOL.z)
       check(`${at} leaf`, got.deg, -open * T.OPEN_DEG, TOL.deg)
@@ -134,6 +134,43 @@ for (const [w, h, label, near] of [
         check(`${at} shade`, got.shade, T.shadeOpacity(open), TOL.opacity)
       }
     })
+
+    /* ⚠️ The chrome fades — hall, rays, copy, cue, wall, lock — ride the same
+       timeline and were unverified until 2026-09-10, which is how the scroll
+       cue shipped stuck at full opacity for a round: `.portal .hero__scrollcue`
+       sets `animation: none` to switch off the cue's entrance fade, that
+       shorthand also resets `animation-timeline`, and it landed AFTER the
+       generated binding in the bundle (main.tsx imported App above the
+       stylesheets). Every door check passed the whole time. Anything bound in
+       the generator's `chromeBindings` gets a line here. */
+    const chrome = await page.evaluate(() => {
+      const op = (s) => {
+        const e = document.querySelector(s)
+        return e ? Number(getComputedStyle(e).opacity) : null
+      }
+      return {
+        hall: op('.ktun__hall'),
+        rays: op('.portal__rays'),
+        copy: op('.ktun__copy'),
+        cue: op('.hero__scrollcue'),
+        wall: op('.ktwall'),
+        lock: op('.kgate'),
+      }
+    })
+    const at = `${label} p=${p.toFixed(4)}`
+    check(`${at} hall`, chrome.hall, T.hallOpacity(p), TOL.opacity)
+    check(`${at} rays`, chrome.rays, T.raysOpacity(p), TOL.opacity)
+    check(`${at} copy`, chrome.copy, T.copyOpacity(p), TOL.opacity)
+    check(`${at} cue`, chrome.cue, T.copyOpacity(p), TOL.opacity)
+    check(`${at} wall`, chrome.wall, T.wallOpacity(p), TOL.opacity)
+    /* the lock is unmounted by React once it has faded, so absent is correct
+       wherever the arithmetic says 0 — and a fault anywhere else */
+    if (chrome.lock === null) {
+      if (T.lockOpacity(p) > 0.01) fails.push(`${at} lock: unmounted while the arithmetic says ${T.lockOpacity(p).toFixed(2)}`)
+      else oks.push(`${at} lock`)
+    } else {
+      check(`${at} lock`, chrome.lock, T.lockOpacity(p), TOL.opacity)
+    }
   }
   await ctx.close()
 }

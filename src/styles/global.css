@@ -2896,11 +2896,26 @@ button { font-family: var(--sans); }
   height: var(--kt-h);
   width: calc(var(--kt-h) * var(--kt-ar));
   transform-style: preserve-3d;
+  /* ⚠️ **This IS the jamb** — the opening the door sits in, drawn as shadows on
+     the door's own box rather than as a `.ktun__jamb` child, and that is a
+     memory fix, not a tidy-up. Every child of this preserve-3d box gets its own
+     composited layer, so a jamb element cost five more layers inside the 3D
+     subtree — and the tunnel's layer count is what decides whether the
+     compositor can hold the field at all. Measured on a GPU-memory-constrained
+     Chrome doing a scroll-out-and-back: 25 tunnel layers corrupts ~9% of the
+     returning frame, 20 corrupts ~3%. Same ring, same shadows, one fewer layer
+     per door. Keep it here; do not reintroduce a child element for it.
+     The ring is `0 0 0 18px`, exactly the 18px border the element carried, and
+     the inset vignette lands on the same box the element's padding box was. */
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 18px var(--night),
+    inset 0 0 18px rgba(0, 0, 0, 0.85),
+    0 18px 34px 18px rgba(0, 0, 0, 0.6);
 }
-/* The opening the door sits in. Without it the leaves are slabs swinging in
-   mid-air: a door needs a wall to be a door, and this is the cheapest thing
-   that reads as one. The inset and the border width are equal, so the ring
-   lands exactly outside the leaf and nothing overlaps it when closed. */
+/* The opening the door sits in — now drawn as box-shadows on `.ktun__door`
+   itself (see there). It was a `.ktun__jamb` child until 2026-09-01 and cost a
+   composited layer per door for it. */
 /* ⚠️ **Keep these blur radii small.** A door's projected scale runs 0.08 → 2.6×
    (phone) across the flight and changes EVERY frame, so Chrome re-rasterises
    the door's layers every frame — and a blurred box-shadow is the most
@@ -2913,15 +2928,6 @@ button { font-family: var(--sans); }
    also the item a real phone feels most: headless Chrome rasterises in
    software, so the GPU cost of re-rastering ~60MB of layer texture at DPR 3 is
    invisible to the verifier and very much not to the visitor. */
-.ktun__jamb {
-  position: absolute;
-  inset: -18px;
-  border: 18px solid var(--night);
-  border-radius: 3px;
-  box-shadow:
-    inset 0 0 18px rgba(0, 0, 0, 0.85),
-    0 18px 34px rgba(0, 0, 0, 0.6);
-}
 /* hinge left, handle side sweeping toward the camera — the same swing as every
    other door on the site (.door-scene__leaf, .pdoor__leaf) */
 /* no `will-change` — see the note on .ktun__door */

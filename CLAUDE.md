@@ -382,13 +382,25 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   CSS costs more. Use `Input.synthesizeScrollGesture` with `gestureSourceType: 'touch'`.
   · ⚠️ **`npm run verify:scrub` is what keeps the two paths honest** — it parks the real
   page at a grid of progress values on phone and desktop and compares every door's
-  computed z, swing angle and three opacities against `heroTunnel.ts`'s own arithmetic
-  (417 checks, tolerance 1px / 0.15° / 0.012). It exists because the failure that shipped
+  computed z, swing angle and three opacities against `heroTunnel.ts`'s own arithmetic,
+  plus the six chrome fades — hall, rays, copy, cue, wall, lock — against theirs (624
+  checks, tolerance 1px / 0.15° / 0.012). It exists because the failure that shipped
   in the first cut was invisible to `verify:e2e`: the `animation` shorthand resolved
   `animation-duration` to `0s`, so every animation was instantly `finished` and
   `fill: both` pinned the whole field at its END transform — a hero that still rendered
   five doors, just all of them parked past the camera. **Use the longhands** (see `bind()`
   in the generator) and never the shorthand.
+  ⚠️ **The generated sheet is imported from `main.tsx` AFTER `global.css`, never from the
+  component.** It overrides the static sheet by design and has to come after it to win a
+  tie. Imported from `HeroKeyhole` it was emitted *first* — `main.tsx` imports `App`
+  above its stylesheets, so anything the component graph reaches lands ahead of them —
+  and `.portal .hero__scrollcue { animation: none }` (there to switch off the cue's
+  entrance `fadein`; same specificity; later in the bundle) reset the cue's
+  `animation-timeline` and left "Scroll — look inside" at full opacity through the whole
+  flight. The door checks passed throughout, which is why the chrome fades are in
+  `verify:scrub` now: anything bound in the generator's `chromeBindings` gets a line
+  there. Check with `grep -o '\.portal[^{]*\.hero__scrollcue{[^}]*}' dist/assets/index-*.css`
+  — the `--keyhole` rule must be the later of the two.
   · ⚠️ Keyframe stops land on the **phase edges**, not on a uniform grid. These curves are
   smooth within a phase and kinked at its edges (z is flat until the field starts moving
   at `TUNNEL[0]`), and a uniform grid interpolates straight across a corner — without
@@ -407,13 +419,55 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   `translate3d(0,0,-9999px)`; moving the transform into CSS keyframes dropped that guard
   silently, and neither `verify:e2e` nor the desktop nor headless (software raster) showed
   it. `near` costs nothing — `doorOpacity` is already 0 there.
-  ⚠️ The clamp makes z piecewise-linear rather than linear, so the generator MUST emit
-  `pAtZ(i, near, near)` as a transform breakpoint; without that corner the two end stops
-  interpolate straight through it and every door sits hundreds of px off mid-flight.
+  ⚠️ **It parks FAR (−9000), not at `near`.** The first cut returned
+  `Math.min(z, near)`, which pins a spent door at its LARGEST projected scale for the rest
+  of the track — five doors' worth of maximum-size composited layers at once. Parking far
+  in front makes it project at ~0.09 and cost almost nothing, and it is what the React
+  path always did. Invisible either way; `doorOpacity` is 0 from z = near.
+  ⚠️ The clamp and the park make z piecewise-linear with a STEP, so the generator MUST emit
+  `pAtZ(i, near, near)` ± 0.0005 as transform breakpoints — one either side. A stop landing
+  exactly on the step evaluates to the parked value (floats put z a hair over `near`) and
+  the door then interpolates from its rest depth straight back to −9000, sailing away from
+  the camera instead of at it. Every curve derived from z (swing, gap, shade) needs the
+  same pair in its knots.
+  · ⚠️⚠️ **A PHONE GETS THREE DOORS (`TUNNEL_IDS_MOBILE`), DESKTOP KEEPS FIVE. Five is
+  over Chrome Android's compositor budget, and that is the cause of the scroll-back
+  corruption** — a chopped nav, blocks of stale background, doors at sizes they were never
+  drawn at, differently wrong every time. Reproduced 2026-09-01 with
+  `--enable-low-end-device-mode --force-gpu-mem-available-mb=96` and a real touch gesture,
+  scoring the returning frame against the outgoing one at the same scroll position:
+  **3 doors = 0.1% (clean, every run), 4 doors = ~8%, 5 doors = 3–14%.** Clean again at a
+  192 MB budget, so it is purely how much the compositor will hold. It is the tunnel and
+  nothing else: hiding `.ktun` is always clean, while removing the Door Wall's 62 layers
+  changes nothing. It is **not** the scroll-timeline scrub — the React fallback corrupts
+  the same or worse at every budget.
+  ⚠️ **Three doors costs no smoothness, and the confusion on the way here is worth
+  keeping.** The mobile hero ran a 3-door subset until 2026-08-31 and was stuttery *then*
+  too, which made three doors look like no help at all — so five went in. That lag was the
+  JS scroll listener, a different bug, since fixed by the scroll timeline. Measured over a
+  window where a door is mid-flight in both fields, 3 and 5 doors are **both 0% frozen**.
+  Three doors on the timeline is the first configuration that is smooth AND clean; before
+  it the site only ever had three-with-lag or five-with-corruption.
+  ⚠️ It is a genuinely different field, not the 5-door field with two hidden: `travelFor`
+  and `doorZ` take the field's `count`. Hiding two would leave the 5-door spacing, so the
+  remaining three would all fly past in the first half and the hero would sit empty for
+  the rest — which is also what makes a CSS-hidden "3 doors" benchmark read as frozen.
+  ⚠️ Things that were tried and do NOT fix it: halving the peak zoom (`NEAR_MOBILE`
+  560→380, 8.9%→6.8%), shrinking the gap's bleed, dropping the shadows, flattening
+  `.ktun__door` (the children stay composited anyway — layer count is unmoved at 63).
+  The lever is the number of doors near the camera at once, which is what the door count
+  buys. Still not clean at a 48 MB budget (~20%, against ~28% with five); 96 MB is clean
+  on every run. If a device ever reports this again, the count is the lever.
   ⚠️ `verify:scrub` now asserts no door ever reaches `PERSPECTIVE` — 58 failures without
   the clamp. `verify.e2e`'s "flew past the camera" step had to stop reading React's inline
   `style.visibility` (which only the fallback path writes) and read the effective opacity
   instead; it was testing which code path was running, not whether the door had left.
+  · ⚠️ **The jamb is box-shadows on `.ktun__door`, never a child element.** It was a
+  `.ktun__jamb` span until 2026-09-01; every child of that preserve-3d box gets its own
+  composited layer, so the element cost five more layers inside the 3D subtree for a ring
+  and two shadows. `0 0 0 18px` is exactly the border it carried and an outer shadow paints
+  behind the element's children, so the leaf still overhangs it correctly — the ordering
+  that used to need a z-index is now free. Measured 9.1% → 3.0% on the corruption score.
   · ⚠️ **Never toggle a main-thread visual property on a box the compositor is animating.**
   That is the second half of the same bug. React was still writing `visibility` on the
   doors and on `.portal__rays` while the compositor animated their opacity — two threads
@@ -472,16 +526,17 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   first thing anyone tries. Latched, the key stayed at −96° and the button refused every
   further tap. Don't reintroduce an `if (unlocking) return` guard — a second tap mid-flight
   only re-aims the same scroll at the same target.
-  ⚠️ **A phone gets the same five doors**, and the track is 340vh rather than the
-  desktop's 380 to carry them. It ran a three-door subset (59 kB against 131 kB) until
-  2026-08-31 — these are hero-critical images so the run *is* the payload on a phone —
-  and showing the whole floor won the argument; the extra 72 kB is two
-  `fetchPriority="low"` fetches nothing waits for. The track had to grow with it: fly-bys
-  are spaced in track *progress*, so five doors where three used to be packs the same
-  stretch tighter, and at 280vh each pass fell from 229px of scroll to 150 (340vh gives
-  200, desktop 249). If the weight ever has to come back down, drop `veneer-cng-door`
-  then `burma-teak-door` — the two heaviest, and the two the run can lose without
-  changing what it demonstrates. `verify:e2e` asserts all five at 390px.
+  ⚠️ **A phone gets three doors** (`TUNNEL_IDS_MOBILE`: architect teak → microcoat →
+  WPC, the tour of the floor with `burma-teak-door` and `veneer-cng-door` dropped), and
+  the reason is the compositor-budget bullet above, not weight. It was five from
+  2026-08-31 to 2026-09-01 — "show the whole floor" won an argument that had been about
+  payload (59 kB against 131 kB) — and five is what corrupted the hero on the way back
+  out. The track stays at 340vh: fly-bys are spaced in track *progress*, so three doors
+  on the track that was grown for five simply get more scroll per pass (~310px against
+  the 200 five had — the pass is 900 of a 3380 travel over 0.57 of a 2026px span), which
+  is room, not waste. `verify:e2e` asserts exactly three at
+  390px and exactly five at 1440, and both assertions are load-bearing in opposite
+  directions.
   · The brass escutcheon sits **on** the leaf's own black lock strip (90–98% across,
   41–58% down), not on the bare stile below it — two locks on one door is what that read
   as. A second key hint (`?key=insert`, the key sliding in and turning) was built beside

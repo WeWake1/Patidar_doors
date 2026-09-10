@@ -96,18 +96,18 @@ function keyframes(name, fn, decl, breaks, knots) {
 
 /** Invert `doorZ` — at what p does door i pass through depth `zz`? Used to put
     an opacity breakpoint exactly where a clamp engages rather than near it. */
-function pAtZ(i, zz, near) {
-  const u = (zz + i * T.SPACING + T.GATE_DEPTH) / T.travelFor(near)
+function pAtZ(i, zz, near, count) {
+  const u = (zz + i * T.SPACING + T.GATE_DEPTH) / T.travelFor(near, count)
   return Math.min(1, Math.max(0, T.TUNNEL[0] + u * (T.TUNNEL[1] - T.TUNNEL[0])))
 }
 
-function fieldFor(near, offsetScale, suffix) {
+function fieldFor(near, offsetScale, suffix, ids) {
   const out = []
-  const n = T.TUNNEL_IDS.length
+  const n = ids.length
   for (let i = 0; i < n; i++) {
     const dx = T.OFFSETS[i][0] * offsetScale
     const dy = T.OFFSETS[i][1] * offsetScale
-    const z = (p) => T.doorZ(i, p, near)
+    const z = (p) => T.doorZ(i, p, near, n)
     /* the gate opens on progress, everything behind it on its own approach */
     const open = (p) => (i === 0 ? T.gateOpen(p) : T.doorOpen(z(p)))
     /* Every corner these curves have: the field's start and end, the gate's own
@@ -122,8 +122,14 @@ function fieldFor(near, offsetScale, suffix) {
          to 0.76° off mid-swing. Subdividing the window is a handful of extra
          stops; a cubic is steepest at its start, so 16 even subdivisions of the
          z window is what gets the whole swing inside 0.15°. */
-      ...Array.from({ length: 17 }, (_, k) => pAtZ(i, -1000 + (k * 1100) / 16, near)),
+      ...Array.from({ length: 17 }, (_, k) => pAtZ(i, -1000 + (k * 1100) / 16, near, n)),
       T.WALL_IN + 0.04, 0.7,
+      /* ⚠️ The park is a STEP in z, so every curve derived from z — the swing,
+         the gap, the shade — steps with it and needs a stop on each side. The
+         uniform grid lands up to 1/60 away, which let a spent door's shade and
+         gap ramp down over a sixtieth of the track instead of going out with it;
+         `verify:scrub` reads that as a door still half-open after it has gone. */
+      pAtZ(i, near, near, n) - 0.0005, pAtZ(i, near, near, n) + 0.0005,
     ]
 
     /* ⚠️ Transform and opacity are separate animations on purpose. The z advance
@@ -141,13 +147,22 @@ function fieldFor(near, offsetScale, suffix) {
         `kt-door-${i}${suffix}`,
         (p) => num(z(p)),
         (v) => `transform: translate(-50%, -50%) translate3d(${num(dx)}px, ${num(dy)}px, ${v}px);`,
-        [T.TUNNEL[0], T.TUNNEL[1], pAtZ(i, near, near)],
+        /* ⚠️ Two stops around the park, not one. `doorZ` steps from `near` to
+           PARK_Z the instant a door has passed, and a keyframe list can only
+           express a step as two stops a hair apart — one just BEFORE the step and
+           one just after. Both offsets matter: a stop landing exactly ON it
+           evaluates to the parked value (floating point puts z a hair over
+           `near`), so the door's whole flight then interpolates from its rest
+           depth straight back to −9000 — it sails away from the camera instead
+           of at it. The step itself lands where opacity is already 0, so nothing
+           is on screen for it. */
+        [T.TUNNEL[0], T.TUNNEL[1], pAtZ(i, near, near, n) - 0.0005, pAtZ(i, near, near, n) + 0.0005],
       ),
       keyframes(
         `kt-fog-${i}${suffix}`,
         (p) => num(T.doorOpacity(z(p), near)),
         (v) => `opacity: ${v};`,
-        [T.TUNNEL[0], T.TUNNEL[1], ...[T.FOG_IN, T.FOG_FULL, near - 220, near].map((zz) => pAtZ(i, zz, near))],
+        [T.TUNNEL[0], T.TUNNEL[1], ...[T.FOG_IN, T.FOG_FULL, near - 220, near].map((zz) => pAtZ(i, zz, near, n))],
       ),
       keyframes(
         `kt-leaf-${i}${suffix}`,
@@ -203,9 +218,9 @@ function bind(sel, names) {
   )
 }
 
-function bindingsFor(suffix) {
+function bindingsFor(suffix, ids) {
   const out = []
-  for (let i = 0; i < T.TUNNEL_IDS.length; i++) {
+  for (let i = 0; i < ids.length; i++) {
     const d = `.ktun__space > .ktun__door:nth-child(${i + 1})`
     out.push(
       bind(d, [`kt-door-${i}${suffix}`, `kt-fog-${i}${suffix}`]),
@@ -234,7 +249,13 @@ const chromeBindings = [
   bind('.portal--keyhole .ktun__copy', 'kt-copy'),
   /* the cue fades on exactly the copy's curve; leaving it on the React path
      made it the one thing on screen still stepping while everything else was
-     being interpolated by the compositor */
+     being interpolated by the compositor.
+     ⚠️ This binding competes with `.portal .hero__scrollcue { animation: none }`
+     in global.css — same specificity, and that shorthand resets
+     `animation-timeline`. It wins only because the generated sheet is imported
+     from main.tsx AFTER global.css. Imported from the component instead it was
+     emitted first and lost, and the cue sat at full opacity through the whole
+     flight; `verify:scrub`'s chrome checks are what catch that now. */
   bind('.portal--keyhole .hero__scrollcue', 'kt-copy'),
   bind('.portal--keyhole .ktwall', 'kt-wall'),
   bind('.portal--keyhole .kgate', 'kt-lock'),
@@ -264,18 +285,18 @@ ${chrome}
 ${chromeBindings}
 
   /* ── the field: desktop ──────────────────────────────────────────────── */
-${fieldFor(T.NEAR, 1, '')}
+${fieldFor(T.NEAR, 1, '', T.TUNNEL_IDS)}
 
-${bindingsFor('')}
+${bindingsFor('', T.TUNNEL_IDS)}
 
   /* ── the field: phone. A door is cut much earlier (NEAR_MOBILE) and the
      off-axis offsets are scaled in, so the whole field needs its own stops.
      ⚠️ 720px, and it must stay in step with \`useMediaQuery('(max-width: 720px)')\`
      in HeroKeyhole — the fallback path reads that one. ── */
   @media (max-width: 720px) {
-${fieldFor(T.NEAR_MOBILE, T.OFFSET_SCALE_MOBILE, '-m')}
+${fieldFor(T.NEAR_MOBILE, T.OFFSET_SCALE_MOBILE, '-m', T.TUNNEL_IDS_MOBILE)}
 
-${bindingsFor('-m')}
+${bindingsFor('-m', T.TUNNEL_IDS_MOBILE)}
   }
 
   /* Nothing scrubs when the visitor has asked for less motion — the hero
