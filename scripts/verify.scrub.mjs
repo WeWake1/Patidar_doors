@@ -90,17 +90,29 @@ for (const [w, h, label, near, ids] of [
     const read = await page.evaluate(() =>
       [...document.querySelectorAll('.ktun__door')].map((d) => {
         const m = new DOMMatrixReadOnly(getComputedStyle(d).transform)
-        const leaf = d.querySelector('.ktun__leaf')
+        const leaf = d.querySelector(':scope > .ktun__leaf')
         const lm = new DOMMatrixReadOnly(getComputedStyle(leaf).transform)
+        const sm = new DOMMatrixReadOnly(getComputedStyle(d.querySelector(':scope > .ktun__shade')).transform)
         const cs = getComputedStyle(d)
         return {
           z: m.m43,
           hidden: cs.visibility === 'hidden',
-          opacity: Number(cs.opacity),
-          // rotateY(θ) is m11 = cos θ, m31 = sin θ in DOMMatrix's column-major naming
-          deg: (Math.atan2(lm.m31, lm.m11) * 180) / Math.PI,
-          gap: Number(getComputedStyle(d.querySelector('.ktun__gap')).opacity),
-          shade: Number(getComputedStyle(leaf.querySelector('.ktun__shade')).opacity),
+          /* ⚠️ The door box carries NO opacity any more (a group opacity is a
+             render surface — see global.css); the fog is on the leaf and the
+             jamb, and folded into the gap's and the shade's own curves. */
+          doorOpacity: Number(cs.opacity),
+          opacity: Number(getComputedStyle(leaf).opacity),
+          jamb: Number(getComputedStyle(d.querySelector(':scope > .ktun__jamb')).opacity),
+          /* rotateY(θ) is m31 = sin θ, m33 = cos θ in DOMMatrix's column-major
+             naming. ⚠️ Read the THIRD column, not m11: the leaf's transform is
+             `rotateY(θ) scale(0.1)` (global.css, `.ktun__jamb`), and the 2D
+             scale multiplies the first two columns — atan2(m31, m11) read a
+             fully open door as −88° instead of −72°. The third column is the
+             rotated z axis and the scale never touches it. */
+          deg: (Math.atan2(lm.m31, lm.m33) * 180) / Math.PI,
+          shadeDeg: (Math.atan2(sm.m31, sm.m33) * 180) / Math.PI,
+          gap: Number(getComputedStyle(d.querySelector(':scope > .ktun__gap')).opacity),
+          shade: Number(getComputedStyle(d.querySelector(':scope > .ktun__shade')).opacity),
         }
       }),
     )
@@ -123,15 +135,19 @@ for (const [w, h, label, near, ids] of [
       const at = `${label} p=${p.toFixed(4)} door${i}`
       const z = T.doorZ(i, p, near, ids.length)
       const open = i === 0 ? T.gateOpen(p) : T.doorOpen(z)
+      const fog = T.doorOpacity(z, near)
       check(`${at} z`, got.z, z, TOL.z)
       check(`${at} leaf`, got.deg, -open * T.OPEN_DEG, TOL.deg)
+      check(`${at} shade-swing`, got.shadeDeg, -open * T.OPEN_DEG, TOL.deg)
+      if (got.doorOpacity !== 1) fails.push(`${at}: the door box has opacity ${got.doorOpacity} — that is a render surface per door (global.css)`)
       /* A door parked by `visibility: hidden` is not being composited and its
          opacity is not what is on screen — the React path owns that flag and it
          is only ever set where the fade has already reached ~0. */
       if (!got.hidden) {
-        check(`${at} fog`, got.opacity, T.doorOpacity(z, near), TOL.opacity)
-        check(`${at} gap`, got.gap, open * T.glowAt(p), TOL.opacity)
-        check(`${at} shade`, got.shade, T.shadeOpacity(open), TOL.opacity)
+        check(`${at} fog`, got.opacity, fog, TOL.opacity)
+        check(`${at} jamb`, got.jamb, fog, TOL.opacity)
+        check(`${at} gap`, got.gap, fog * open * T.glowAt(p), TOL.opacity)
+        check(`${at} shade`, got.shade, fog * T.shadeOpacity(open), TOL.opacity)
       }
     })
 

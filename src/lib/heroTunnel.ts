@@ -54,43 +54,27 @@ export const TUNNEL_IDS = [
 ]
 
 /**
- * ⚠️⚠️ **A phone gets THREE, and this is a hard compositor limit, not a taste
- * call.** Five full-screen door photographs flying through a CSS 3D perspective
- * at DPR 3 is more than Chrome Android will hold: past the fourth door the
- * compositor starts evicting tiles it cannot re-raster, and scrolling out to the
- * wall and back brings the hero back as garbage — a chopped nav, blocks of stale
- * background, doors at sizes they were never drawn at, differently wrong every
- * time. Measured on a GPU-constrained Chrome, scoring the returning frame
- * against the outgoing one at the same scroll position: **3 doors = 0.1% (clean
- * on every run), 4 = ~8%, 5 = 3–14%.**
- *
- * ⚠️ **It costs no smoothness, and that is the part that was confusing.** The
- * mobile hero ran a 3-door subset until 2026-08-31 and was *also* stuttery then,
- * which made it look as though three doors were not enough to fix anything — but
- * that lag was the JS scroll listener failing to track a compositor-driven
- * touch scroll (see `scrubCss` in HeroKeyhole), an unrelated bug that the scroll
- * timeline has since fixed. Measured over a window where a door is mid-flight in
- * both fields, 3 doors and 5 doors are **both 0% frozen**. Three doors on the
- * scroll timeline is the first configuration that is smooth AND clean; before
- * this it was only ever one or the other.
- *
- * The three are chosen to keep the tour of the floor — teak → painted → WPC —
- * so the run still says "we make all of this". `burma-teak-door` and
- * `veneer-cng-door` are the two dropped: the heaviest of the set, and the two
- * CLAUDE.md already named as the ones the run can lose without changing what it
- * demonstrates. Desktop is unchanged and still flies all five.
+ * ⚠️ **A phone flies the same five.** It ran a three-door subset from
+ * 2026-09-01 to 2026-09-10 as a compositor-memory measure, and the measure was
+ * aimed at the wrong thing: every measurement behind it was taken in a browser
+ * whose emulated device scale never reached the compositor, so the tunnel was
+ * costing 12× what the numbers said and three doors were nowhere near enough
+ * on a real 1440px phone (see the note on `.ktun__door` in global.css for the
+ * real figures). The doors are directly composited images now — a texture
+ * each, no tiles, no raster at any scale — and five of them cost about 16 MB
+ * on that phone against the ~500 MB the old three did mid-flight. Still a
+ * separate constant, because `NEAR_MOBILE` and `OFFSET_SCALE_MOBILE` make the
+ * phone field a different schedule even with the same doors in it.
  */
-export const TUNNEL_IDS_MOBILE = ['architect-teak-door', 'microcoat-door', 'wpc-cnc-door']
+export const TUNNEL_IDS_MOBILE = TUNNEL_IDS
 
 /** How far a leaf swings, in degrees. Every door in the field, gate included. */
 export const OPEN_DEG = 72
 
 /** The whole field advances together; door i sits one SPACING behind door i−1.
-    ⚠️ `count` is the size of the field being drawn — 5 on desktop, 3 on a phone
-    — and it changes the travel, so the two fields are genuinely different
-    schedules rather than the same one with doors hidden. Hiding doors instead
-    would leave the 5-door spacing, so the remaining three would all fly past in
-    the first half and the hero would sit empty for the rest. */
+    ⚠️ `count` is the size of the field being drawn — five on both breakpoints
+    since 2026-09-10 — and it sets the travel, so a field of a different size
+    is a different schedule rather than the same one with doors hidden. */
 export function travelFor(near: number, count: number): number {
   return count * SPACING + GATE_DEPTH + near
 }

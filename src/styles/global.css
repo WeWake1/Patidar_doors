@@ -2862,125 +2862,145 @@ button { font-family: var(--sans); }
     radial-gradient(80% 38% at 50% 100%, rgba(201, 169, 100, 0.09), transparent 74%),
     linear-gradient(90deg, rgba(10, 7, 3, 0.7) 0%, transparent 30%, transparent 70%, rgba(10, 7, 3, 0.7) 100%);
 }
+/* ⚠️⚠️ **THERE IS NO `preserve-3d` IN THE TUNNEL, AND EVERYTHING A DOOR SHOWS
+   IS AN `<img>`.** Both are the fix for the hero coming back corrupted and
+   stuttering on a phone when you scroll out of it and back, and both were
+   found by measuring the compositor at a REAL device scale factor — every
+   figure taken before 2026-09-10 was from a browser whose emulated DPR never
+   reached the compositor, so the tunnel cost 12× what the notes said.
+
+   Measured on a 412×915 viewport at 3.5× (a 1440px flagship), the old tunnel:
+   · 159 MB of tiles at rest, 470–510 MB mid-flight, 475 MB at rest again after
+     scrolling back — against Chrome Android's hard tile budget of 256 MB (96 MB
+     on a low-end device). Over budget the tile manager evicts, and an evicted
+     tile is drawn as a flat rectangle of the page background: the cream
+     blocks, the blank nav, the leaf missing a strip down one side.
+   · one door mid-flight was 350 MB on its own: the leaf 148 MB across three
+     tilings at once, the glow 85, the jamb box 78, the shade 41. A CSS gradient
+     or shadow on a box that grows 30× is rasterised into tiles at device
+     resolution at every new scale.
+   · and on the way BACK it never came down: Chrome pins the raster scale of a
+     layer whose transform is animating and only ever bumps it upward, so a door
+     rastered at 2.4× while passing the camera kept that raster at rest, ideal
+     0.32. Hence 475 MB at p = 0 and a hero that stayed broken until reload.
+   · 18–23 render surfaces, six of them full-screen: every animated opacity
+     inside a 3D sorting context is an offscreen texture, filled and composited
+     again every frame at 3.5× — that was the stutter.
+
+   What replaced it, and why each part is load-bearing:
+   · **The four things in a door are `<img>`s with `will-change: transform`.**
+     Chrome composites such a layer as a *directly composited image*: its
+     texture is the decoded image at the image's own resolution, the GPU
+     scales it to wherever the door is, and no raster ever happens — 3 MB for a
+     leaf, a few KB for the glow, the shade and the jamb, at every scale. The
+     three non-photographic ones are PNGs from `npm run art:build`. A picture
+     layer needs exactly one image draw covering its whole box to qualify, so
+     **no border-radius, box-shadow, background or object-fit on any of them**,
+     and `max-width: none` against the sheet's global `img` rule.
+   · **No opacity on any box with children.** A group opacity is a render
+     surface; a single quad takes opacity for free. The fog is multiplied into
+     each image's own opacity by the generator instead of set on `.ktun__door`.
+   · **No `preserve-3d`.** A 3D sorting context turns every animated-opacity
+     participant into a render surface as well. The doors are ordered by
+     `z-index` (nearest last; the field never overtakes itself), each door is a
+     flat box the scene's `perspective` projects, and each door carries its OWN
+     `perspective` so the leaf's rotateY still reads in 3D — the swing is
+     projected against the door's centre rather than the scene's vanishing
+     point, which nobody can tell apart at 130ms a door.
+   · The jamb is a solid --night image under the leaf, of which the 18px around
+     the leaf is what shows; the glow sits over it and under the leaf, so the
+     opening lights up as the leaf swings. The inset vignette and the outer
+     drop shadow the box-shadow ring carried are gone with it.
+   Result on the same phone profile: ~16 MB for all five doors at any point of
+   the track, going in or coming back, and zero render surfaces from the
+   tunnel. `verify:e2e` asserts the shape (images carry the hint, the boxes do
+   not); the numbers are in CLAUDE.md. */
 .ktun__space {
   position: absolute;
   inset: 0;
-  transform-style: preserve-3d;
+  /* perspective comes inline from HeroKeyhole's PERSPECTIVE constant */
 }
 
 /* one door, mid-flight. Height is the only size given: the width comes off the
    leaf's own aspect (--kt-ar, from leaves.gen.ts), because these are real doors
    and real doors are not one shape — the same reason the admin cropper stopped
-   forcing every photo into a 3:8 box. */
-/* ⚠️ **No `will-change` here, and none on `.ktun__leaf` either.** It was on
-   both until 2026-08-31 and it tore the hero apart in Chrome: fly to the wall,
-   scroll back to the top, and the door up front came back rasterised in
-   horizontal bands with the doors behind it showing through the gaps. Safari
-   was fine throughout.
-   A door's composited scale runs from 0.08 to 4.5 across the flight, and
-   `will-change: transform` is a promise to Chrome that the transform will
-   change — which makes it pin a raster and reuse it rather than re-rastering
-   at each new scale. Over a 50× swing that leaves stale tiles behind, and
-   nothing invalidates them on the way back.
-   Removing it costs **nothing**, which is the part worth knowing: measured on
-   the real GPU, the layer count is identical (72 either way) because
-   `translate3d` with a non-zero z already promotes every one of these — the
-   hint was redundant. Mean frame 8.5ms and one frame over 20ms in 195, both
-   before and after. Bisected: removing it from only one of the two still tore
-   (25% of the gate's pixels wrong with the leaf's kept, 78% with the door's
-   kept, 66% with both). Both have to go. */
+   forcing every photo into a 3:8 box. Paints nothing itself; see above. */
 .ktun__door {
   position: absolute;
   left: 50%;
   top: 50%;
   height: var(--kt-h);
   width: calc(var(--kt-h) * var(--kt-ar));
-  transform-style: preserve-3d;
-  /* ⚠️ **This IS the jamb** — the opening the door sits in, drawn as shadows on
-     the door's own box rather than as a `.ktun__jamb` child, and that is a
-     memory fix, not a tidy-up. Every child of this preserve-3d box gets its own
-     composited layer, so a jamb element cost five more layers inside the 3D
-     subtree — and the tunnel's layer count is what decides whether the
-     compositor can hold the field at all. Measured on a GPU-memory-constrained
-     Chrome doing a scroll-out-and-back: 25 tunnel layers corrupts ~9% of the
-     returning frame, 20 corrupts ~3%. Same ring, same shadows, one fewer layer
-     per door. Keep it here; do not reintroduce a child element for it.
-     The ring is `0 0 0 18px`, exactly the 18px border the element carried, and
-     the inset vignette lands on the same box the element's padding box was. */
-  border-radius: 3px;
-  box-shadow:
-    0 0 0 18px var(--night),
-    inset 0 0 18px rgba(0, 0, 0, 0.85),
-    0 18px 34px 18px rgba(0, 0, 0, 0.6);
 }
-/* The opening the door sits in — now drawn as box-shadows on `.ktun__door`
-   itself (see there). It was a `.ktun__jamb` child until 2026-09-01 and cost a
-   composited layer per door for it. */
-/* ⚠️ **Keep these blur radii small.** A door's projected scale runs 0.08 → 2.6×
-   (phone) across the flight and changes EVERY frame, so Chrome re-rasterises
-   the door's layers every frame — and a blurred box-shadow is the most
-   expensive thing in that raster. These two shadows shipped at `0 40px 90px` /
-   `inset 0 0 34px` / `0 30px 70px` until 2026-08-31 and were, measured, 54% of
-   all raster work in the hero: 698 raster tasks over a 2.5s scrub against 323
-   with them off. Halving the radii recovers essentially all of that and the
-   shadows still read — the doors are seen for ~130ms each in passing, which is
-   not long enough for a 90px penumbra to be the thing anyone notices. This is
-   also the item a real phone feels most: headless Chrome rasterises in
-   software, so the GPU cost of re-rastering ~60MB of layer texture at DPR 3 is
-   invisible to the verifier and very much not to the visitor. */
-/* hinge left, handle side sweeping toward the camera — the same swing as every
-   other door on the site (.door-scene__leaf, .pdoor__leaf) */
-/* no `will-change` — see the note on .ktun__door */
-/* ⚠️ **Flat, NOT preserve-3d**, and the difference is 2 composited layers per
-   door. Every child of a preserve-3d box is promoted into its own layer, so
-   with it here each door cost 6–7 layers (`.ktun__door` + jamb + gap + leaf +
-   img + shade) and five doors cost 33 — on top of the Door Wall's 56. Layer
-   count is what `Layerize` walks once per frame, and Layerize was the single
-   biggest main-thread item in the hero's profile (1010ms of 3650ms self time).
-   Nothing inside the leaf needs a 3D rendering context: `.ktun__shade` is a
-   flat `inset: 0` overlay and the img is flat. `.ktun__door` above must KEEP
-   preserve-3d — `.ktun__gap` sits at `translateZ(-40px)` and is the light
-   behind the leaf.
-   ⚠️ Flattening a box that magnifies is normally a blur risk — the subtree
-   rasterises once and is then stretched by the outer 3D transform. It is safe
-   *here* because the img is `inset: 0`, i.e. exactly the leaf's own size, so
-   there is no magnification inside the flattened box; the scale all comes from
-   the door's transform, which Chrome rasters against. Verified: the rendered
-   leaf is unchanged. The same trick on `.drift-wall__col`/`__track` halves the
-   wall's layer count and DOES visibly blur it — 20 tiles merge into one very
-   tall layer that is then perspective-stretched. Don't. */
-.ktun__leaf {
-  position: absolute;
-  inset: 0;
-  transform-origin: left center;
-}
-.ktun__leaf img {
-  display: block;
-  /* the width/height PAIR, always: ProductPhoto's scar is that a bare CMS
-     height attribute is a presentational hint nothing in the sheet outranked */
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  border-radius: 2px;
-  /* radius kept small on purpose — see the note above .ktun__jamb */
-  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.55);
-}
+.ktun__jamb,
+.ktun__gap,
+.ktun__leaf,
 .ktun__shade {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(8, 5, 2, 0.03), rgba(8, 5, 2, 0.5));
+  display: block;
+  /* ⚠️ the sheet's `img { max-width: 100% }` would cap the jamb and the glow,
+     which are wider than the door on purpose */
+  max-width: none;
+  /* ⚠️ this hint is what makes each of them a directly composited image; it
+     is the opposite of the old rule for `.ktun__door`/`.ktun__leaf`, which
+     were picture layers where the hint pinned a raster at the wrong scale */
+  will-change: transform;
+  pointer-events: none;
 }
-/* The light the leaf swings away from. Parked just behind it in the door's own
-   3D space, and bled well past the leaf's own box on every side: at `inset: 0`
-   with an opaque last stop this was a hard-edged lit rectangle the same size as
-   the door, which read as a light-box standing in the dark rather than as light
-   coming through an opening. It ends on `transparent`, never on a colour — an
-   opaque stop is what draws the edge. */
+/* ⚠️⚠️ **Every one of the four is laid out at TEN TIMES its size and drawn at
+   `scale(0.1)`, and that is what makes them directly composited images
+   reliably rather than by luck.** Chrome only takes the texture path when
+   (a) the image is under a tenth of its box in pixels, or (b) the box scaled
+   to the image's own resolution rounds to within a pixel of itself — and (b)
+   depends on the fractional part of the door's size in device pixels, i.e. on
+   the viewport, so a leaf that was a 3 MB texture on one phone was a 150 MB
+   picture layer on the next. (a) is under our control: a 10× box puts every
+   texture at 0.08 of its bounds whatever the screen, and the compositor
+   applies the 0.1 on the same GPU pass that projects the door. Layout of an
+   oversized <img> costs nothing; `.ktun` clips the overflow.
+   Replaced elements also do not stretch between `left`/`right` — an absolutely
+   positioned <img> with `width: auto` is its intrinsic width — so each box is
+   sized explicitly, the width/height PAIR always (ProductPhoto's scar), and
+   the scale is about the box's own top-left so it lands where a 1× box would. */
+.ktun__jamb,
+.ktun__gap,
+.ktun__leaf,
+.ktun__shade {
+  transform-origin: 0 0;
+}
+.ktun__jamb {
+  left: -18px;
+  top: -18px;
+  width: calc(1000% + 360px);
+  height: calc(1000% + 360px);
+  transform: scale(0.1);
+}
+/* The light the leaf swings away from. Bled well past the leaf's own box on
+   every side: at the leaf's size with an opaque last stop this was a
+   hard-edged lit rectangle the same size as the door, which read as a
+   light-box standing in the dark rather than as light coming through an
+   opening. The image ends on transparent, never on a colour. */
 .ktun__gap {
-  position: absolute;
-  inset: -15%;
-  transform: translateZ(-40px);
-  background: radial-gradient(48% 44% at 50% 46%, rgba(246, 223, 172, 0.54), rgba(176, 130, 64, 0.16) 46%, transparent 76%);
+  left: -15%;
+  top: -15%;
+  width: 1300%;
+  height: 1300%;
+  transform: scale(0.1);
+}
+/* hinge left, handle side sweeping toward the camera — the same swing as every
+   other door on the site (.door-scene__leaf, .pdoor__leaf). The shade rides
+   the same hinge with the same animation, so it is always exactly on the leaf.
+   ⚠️ rotateY about a vertical axis does not care where along that axis the
+   origin sits, so `0 0` is the left-centre hinge for the swing AND the corner
+   the 0.1 scale needs; the generated keyframes carry `scale(0.1)` after the
+   rotation — see bind() in scripts/build-hero-scrub.mjs. */
+.ktun__leaf,
+.ktun__shade {
+  left: 0;
+  top: 0;
+  width: 1000%;
+  height: 1000%;
+  transform: scale(0.1);
 }
 
 /* copy keeps the top of the screen, above the lock and the tunnel both.

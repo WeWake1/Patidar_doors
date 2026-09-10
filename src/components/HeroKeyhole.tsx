@@ -206,21 +206,28 @@ const DoorWall = lazy(() => import('./DoorWall').then((m) => ({ default: m.DoorW
    `burma-teak-door` in that order — they are the two heaviest and the two the
    run can lose without changing what it demonstrates. */
 
-/**
- * One door in the tunnel. The <img> never changes, so it is memoised away from
- * the per-frame transform on its wrapper — same reason WorldCardInner is
- * memoised in the corridor.
- */
-const TunnelLeaf = memo(function TunnelLeaf({ id }: { id: string }) {
-  const leaf = LEAF_IMAGES[id]
-  /* Low, deliberately: none of these is needed until the tunnel is moving, and
-     on a saturated link every byte fetched now is a byte the headline and the
-     first door are waiting behind. */
-  return (
-    <img src={leaf.src} alt="" width={leaf.w} height={leaf.h} draggable={false} fetchPriority="low" decoding="async" />
-  )
-})
+/* The three textures every door shares — see scripts/build-hero-art.mjs.
+   ⚠️ Images, not CSS gradients, and the reason is the whole of this hero's
+   phone performance: see the note on `.ktun__door` in global.css. */
+const JAMB_SRC = '/images/hero/kt-jamb.png'
+const GAP_SRC = '/images/hero/kt-gap.webp'
+const SHADE_SRC = '/images/hero/kt-shade.png'
 
+/**
+ * One door, mid-flight: a jamb, the lit opening behind the leaf, the leaf
+ * itself and the edge shade it takes as it turns — four `<img>`s, each its
+ * own directly composited layer, inside a box that only moves.
+ *
+ * ⚠️ **Nothing in here may paint anything that is not an `<img>`, and no
+ * element in here may carry an opacity of its own except the four images.**
+ * That is the shape Chrome's compositor wants (global.css, `.ktun__door`):
+ * a directly composited image is a texture the GPU scales for free, where a
+ * box with a gradient or a shadow on it is a picture layer that is
+ * re-rasterised at every new size — and a group opacity on a box with
+ * children is a render surface the size of the door on screen, filled and
+ * composited again every frame. The fade is therefore multiplied into each
+ * image's own opacity rather than set once on the door.
+ */
 function TunnelDoor({
   id,
   z,
@@ -229,6 +236,7 @@ function TunnelDoor({
   dy,
   glow,
   near,
+  layer,
   open: openProp,
 }: {
   id: string
@@ -241,6 +249,11 @@ function TunnelDoor({
   /** how bright the room behind the leaf is — dimmed as the corridor takes
       over, so the last doors open onto the four worlds and not onto a blob */
   glow: number
+  /** paint order: the door nearest the camera goes last. There is no 3D
+      sorting context any more (see global.css), so this is what keeps a far
+      door behind a near one — and the field never overtakes itself, so a
+      fixed order is always the right one. */
+  layer: number
   /** 0–1, and only the door up front passes it. Every other door in the field
       opens on its own z (below), which is the right rule for a door you are
       catching up with — but the gate is already near at rest and that formula
@@ -263,82 +276,86 @@ function TunnelDoor({
   const gone = 1 - clamp01((z - (near - 220)) / 220)
   const hidden = fog * gone <= 0.002
 
-  /* A door that cannot be seen is parked rather than merely made transparent,
-     and the values that can be are rounded. React diffs inline styles and skips
-     a property whose value has not changed, so a constant style for an
-     invisible door writes nothing, and a shade whose opacity is quantised to
-     1/50 writes on a handful of frames instead of all of them.
-     ⚠️ Worth being honest about: measured at 4× CPU throttle, this pair bought
-     nothing detectable on its own. The hero's style-recalc cost turned out to
-     be almost entirely one custom property set on the wall's wrapper — see the
-     note at `headOpacity`'s call site in DoorWall. Keep this anyway (writing
-     styles for elements nobody can see is still wrong), but do not go hunting
-     here first if the hero ever gets slow again. */
+  /* ⚠️ Everything below `hidden` is the React FALLBACK path only. Where the
+     browser has scroll-driven animations the generated CSS owns every
+     transform and opacity in this door and React writes none of them —
+     styling elements the compositor is already driving is main-thread work
+     for pixels it cannot affect (animations outrank inline styles). */
+  const scrubbed = scrubCss
   const open = hidden ? 0 : (openProp ?? easeOutCubic(clamp01((z + 1000) / 1100)))
   const opacity = hidden ? 0 : Math.round(fog * gone * 100) / 100
-  /* ⚠️ On the compositor path the generated CSS owns transform and opacity for
-     all four of these boxes, so writing them here would be styling elements
-     that something else is already driving — main-thread work for pixels it
-     cannot affect (animations outrank inline styles in the cascade).
-     `visibility` deliberately stays: it is the parking optimisation that keeps
-     a door nobody can see out of the compositor entirely, it is a boolean
-     rather than a motion, and it flips at `fog * gone <= 0.002` — so being a
-     couple of frames late with it is a door appearing at two-thousandths of
-     full opacity, which is not a thing anyone can see. */
-  const scrubbed = scrubCss
+  /* `scale(0.1)` after the swing, always — the images are laid out at ten
+     times their size (global.css, `.ktun__jamb`) */
+  const swing = `rotateY(${(-open * OPEN_DEG).toFixed(1)}deg) scale(0.1)`
   return (
     <div
       className="ktun__door"
       style={
         {
           '--kt-ar': leaf.w / leaf.h,
+          zIndex: layer,
+          /* the leaf's own swing is projected against this, not against the
+             scene's perspective — see global.css for why there is no
+             preserve-3d anywhere in the tunnel any more */
+          perspective: `${PERSPECTIVE}px`,
           ...(scrubbed
             ? null
             : {
                 transform: hidden
                   ? 'translate(-50%, -50%) translate3d(0px, 0px, -9999px)'
                   : `translate(-50%, -50%) translate3d(${dx}px, ${dy}px, ${z.toFixed(0)}px)`,
-                opacity,
+                /* ⚠️ Only on the React path. Toggling a main-thread visual
+                   property on an element the compositor is animating is two
+                   threads writing one box, and on Android that came back
+                   stale after a scroll-out-and-in. */
+                visibility: hidden ? 'hidden' : 'visible',
               }),
-          /* ⚠️ Only on the React path. Toggling a main-thread visual property
-             on an element the compositor is animating is the two threads
-             writing the same box, and on Android that came back stale after a
-             scroll-out-and-in. On the compositor path the animation's own
-             opacity reaches 0 and that is the whole of the hiding. */
-          ...(scrubbed ? null : { visibility: hidden ? 'hidden' : 'visible' }),
         } as React.CSSProperties
       }
     >
+      {/* the opening the door hangs in: solid --night, of which the 18px
+          around the leaf is all that shows while the leaf is closed */}
+      <img className="ktun__jamb" src={JAMB_SRC} alt="" width={8} height={8} draggable={false} style={scrubbed ? undefined : { opacity }} />
       {/* the lit room the leaf swings away from */}
-      <span className="ktun__gap" style={scrubbed ? undefined : { opacity: Math.round(open * glow * 50) / 50 }} />
-      {/* ⚠️ There is no `.ktun__jamb` element any more — the opening is drawn
-          as box-shadows on `.ktun__door` itself, which is a layer-count fix
-          (see the rule in global.css). It still paints BEHIND the leaf, which
-          is the ordering that matters: the leaf swings toward the camera and
-          perspective makes its near edge overhang the opening, and an
-          architrave painted in front of that overhang reads as a door tucked
-          behind its own frame. An outer box-shadow paints behind the element's
-          children, so that ordering is now free rather than a z-index. */}
-      <div
+      <img
+        className="ktun__gap"
+        src={GAP_SRC}
+        alt=""
+        width={256}
+        height={342}
+        draggable={false}
+        style={scrubbed ? undefined : { opacity: Math.round(opacity * open * glow * 50) / 50 }}
+      />
+      {/* The first door is what you see through the keyhole before anything
+          has moved, so it is the one that must not arrive late. The rest are
+          low, deliberately: none is needed until the tunnel is moving, and on
+          a saturated link every byte fetched now is a byte the headline and
+          the first door are waiting behind. */}
+      <img
         className="ktun__leaf"
-        style={scrubbed ? undefined : { transform: `rotateY(${(-open * OPEN_DEG).toFixed(1)}deg)` }}
-      >
-        {/* The first door is what you see through the keyhole before anything
-            has moved, so it is the one that must not arrive late. */}
-        {first ? <FirstLeaf id={id} /> : <TunnelLeaf id={id} />}
-        {/* edge shade as it turns away from the light, exactly as .pdoor__shade */}
-        <span className="ktun__shade" style={scrubbed ? undefined : { opacity: Math.round(open * 40) / 50 }} />
-      </div>
+        src={leaf.src}
+        alt=""
+        width={leaf.w}
+        height={leaf.h}
+        draggable={false}
+        fetchPriority={first ? 'high' : 'low'}
+        decoding="async"
+        style={scrubbed ? undefined : { transform: swing, opacity }}
+      />
+      {/* edge shade as it turns away from the light, exactly as .pdoor__shade —
+          it swings with the leaf, on the same hinge */}
+      <img
+        className="ktun__shade"
+        src={SHADE_SRC}
+        alt=""
+        width={256}
+        height={8}
+        draggable={false}
+        style={scrubbed ? undefined : { transform: swing, opacity: Math.round(opacity * open * 40) / 50 }}
+      />
     </div>
   )
 }
-
-const FirstLeaf = memo(function FirstLeaf({ id }: { id: string }) {
-  const leaf = LEAF_IMAGES[id]
-  return (
-    <img src={leaf.src} alt="" width={leaf.w} height={leaf.h} draggable={false} fetchPriority="high" decoding="async" />
-  )
-})
 
 /* ── the lock on the door up front ─────────────────────────────────────────
    The keyhole is drawn, not photographed, and it has to be. No leaf in the
@@ -501,9 +518,6 @@ export function HeroKeyhole() {
      `if (unlocking) return` guard — a second tap mid-flight merely re-aims the
      same scroll at the same target, which is harmless. */
   const [unlocking, setUnlocking] = useState(false)
-  /* plain ref, not state: it only feeds the hysteresis on the line that reads it
-     and must never cause a render of its own */
-  const tunnelParkedRef = useRef(false)
   const relockRef = useRef<number>(0)
   useEffect(() => () => window.clearTimeout(relockRef.current), [])
   useEffect(() => {
@@ -549,11 +563,10 @@ export function HeroKeyhole() {
     )
   }
 
-  /* ⚠️ A phone gets a three-door field, and it is a different field rather than
-     the same one with two doors hidden — see TUNNEL_IDS_MOBILE for why, and for
-     the measurements. The generated CSS emits matching keyframes per
-     breakpoint, so the two must stay in step: change one and re-run
-     `npm run scrub:build`. */
+  /* A phone flies the same five doors on a shorter cut (NEAR_MOBILE) with the
+     off-axis offsets scaled in — see TUNNEL_IDS_MOBILE. The generated CSS
+     emits matching keyframes per breakpoint, so the two must stay in step:
+     change one and re-run `npm run scrub:build`. */
   const ids = mobile ? TUNNEL_IDS_MOBILE : TUNNEL_IDS
   const near = mobile ? NEAR_MOBILE : NEAR
   const offsetScale = mobile ? OFFSET_SCALE_MOBILE : 1
@@ -591,17 +604,6 @@ export function HeroKeyhole() {
   /* rounded, and read by all five doors — an unrounded value re-renders every
      door on every frame for a light level nobody can see change */
   const glow = Math.round((0.28 + 0.72 * hallOpacity) * 50) / 50
-  /* ⚠️ Once the last door has gone past and the hall has faded there is nothing
-     left in the tunnel to draw, but its ~25 composited layers stay in the
-     compositor for the whole dwell. Parking the whole subtree hands them back in
-     one move — and it is one main-thread toggle on `.ktun`, which the compositor
-     is NOT animating (only its children are), landing at p 0.74 where every door
-     is long gone and the hall is already at zero. That last part is the rule:
-     never toggle a main-thread visual property on a box the compositor is
-     mid-animation on, and never at a moment when the animation has something to
-     show. Hysteresis so scrubbing across the edge cannot thrash it. */
-  const tunnelParked = p > (tunnelParkedRef.current ? 0.72 : 0.74)
-  tunnelParkedRef.current = tunnelParked
   const wallOpacity = seg(p, WALL_IN, WALL_FULL)
   /* ⚠️ Parked well BEFORE the fade starts, not a hair before it. This flag
      drives `content-visibility`, which is a main-thread property on an element
@@ -689,17 +691,17 @@ export function HeroKeyhole() {
             /try scars. Nothing in here is interactive and the whole layer is
             pointer-events: none, which is what keeps that safe. Do not put a
             link or a button inside the tunnel. */}
-        {/* perspective comes from the constant, not from the stylesheet: the
-            z values above are only meaningful against it, and a stylesheet
-            free to drift from them would silently rescale the whole tunnel. */}
-        <div
-          className="ktun"
-          style={{
-            perspective: `${PERSPECTIVE}px`,
-            contentVisibility: tunnelParked ? 'hidden' : 'visible',
-          }}
-          aria-hidden="true"
-        >
+        {/* ⚠️ Never parked. Until 2026-09-10 this box took `content-visibility:
+            hidden` once the last door had passed, to hand its layers back for
+            the dwell — and every scroll back up rebuilt the whole tunnel from
+            scratch at p 0.72: five photographs decoded again, every layer
+            re-created at a tenth of its size and then, because Chrome pins a
+            compositor-animated layer's raster scale to the size it was
+            created at, dragged up to full screen from a raster made for a
+            thumbnail. That was the "corruption" on the way back. A parked door
+            is now four tiny textures at −9000px; there is nothing to hand
+            back. */}
+        <div className="ktun" aria-hidden="true">
           {/* The hall is deliberately OUTSIDE .ktun__space. A plain child of a
               preserve-3d parent sits at z = 0, which would paint this vignette
               in front of every door still approaching from negative z.
@@ -709,7 +711,12 @@ export function HeroKeyhole() {
               this vignette would otherwise keep dimming the corridor for the
               whole rest of the page. */}
           <div className="ktun__hall" style={scrubCss ? undefined : { opacity: hallOpacity }} />
-          <div className="ktun__space">
+          {/* perspective comes from the constant, not from the stylesheet: the
+              z values the doors are given are only meaningful against it, and
+              a stylesheet free to drift from them would silently rescale the
+              whole tunnel. It is on the doors' own parent — there is no
+              preserve-3d passing it down any more. */}
+          <div className="ktun__space" style={{ perspective: `${PERSPECTIVE}px` }}>
             {ids.map((id, i) => (
               <TunnelDoor
                 key={id}
@@ -719,6 +726,7 @@ export function HeroKeyhole() {
                 dy={OFFSETS[i][1] * offsetScale}
                 glow={glow}
                 near={near}
+                layer={ids.length - i}
                 open={i === 0 ? gateOpen : undefined}
                 /* ⚠️ `doorZ`, not the raw expression — the clamp that keeps a door
                    in front of the camera lives there, and both paths need it. */

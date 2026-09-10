@@ -13,12 +13,14 @@
     "verify:e2e": "node scripts/verify.e2e.mjs",
     "verify:geometry": "node scripts/verify.geometry.mjs",
     "verify:scrub": "node scripts/verify.scrub.mjs",
+    "profile:hero": "node scripts/profile.hero.mjs",
     "contrast": "node scripts/contrast.mjs",
     "images:build": "node scripts/import-images.mjs",
     "fonts:build": "node scripts/fetch-fonts.mjs",
     "catalog:fetch": "node scripts/fetch-catalog.mjs",
     "catalog:seed": "node scripts/seed-supabase.mjs",
     "leaves:build": "node scripts/build-leaves.mjs",
+    "art:build": "node scripts/build-hero-art.mjs",
     "logo:build": "node scripts/build-logo.mjs"
   },
   "dependencies": {

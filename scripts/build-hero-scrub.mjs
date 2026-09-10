@@ -132,11 +132,18 @@ function fieldFor(near, offsetScale, suffix, ids) {
       pAtZ(i, near, near, n) - 0.0005, pAtZ(i, near, near, n) + 0.0005,
     ]
 
-    /* ⚠️ Transform and opacity are separate animations on purpose. The z advance
-       is piecewise-LINEAR in p, so the transform is a handful of stops; the
-       opacity is a pair of clamped ramps and needs its own. Emitted as one
-       keyframe set they could only collapse where *both* were flat, which
-       produced 60 stops per door and a 62 kB stylesheet for a hero that needs 12.
+    /* Where this door fades in out of the fog and out again at the camera —
+       every opacity below multiplies by it, so every one of them kinks here. */
+    const fogKnots = [T.FOG_IN, T.FOG_FULL, near - 220, near].map((zz) => pAtZ(i, zz, near, n))
+    const fog = (p) => T.doorOpacity(z(p), near)
+
+    /* ⚠️ The door element carries the TRANSFORM and nothing else. Its opacity
+       used to be animated too, and a group opacity on a box with children is a
+       render surface: an offscreen texture the size of the door on screen,
+       filled and composited again every frame — six of them full-screen on a
+       phone mid-flight. The fade is multiplied into each child's own opacity
+       instead; a single-quad layer takes opacity for free. The z advance is
+       piecewise-LINEAR in p, so the transform is a handful of exact stops.
        ⚠️ `pAtZ(i, near, near)` is a REQUIRED breakpoint, not a nicety: `doorZ`
        clamps at `near` so the door stops before the camera plane, which means z
        is linear *up to* that point and flat after it. Without the corner the two
@@ -158,32 +165,38 @@ function fieldFor(near, offsetScale, suffix, ids) {
            is on screen for it. */
         [T.TUNNEL[0], T.TUNNEL[1], pAtZ(i, near, near, n) - 0.0005, pAtZ(i, near, near, n) + 0.0005],
       ),
+      /* the leaf and the jamb: the fog alone */
       keyframes(
         `kt-fog-${i}${suffix}`,
-        (p) => num(T.doorOpacity(z(p), near)),
+        (p) => num(fog(p)),
         (v) => `opacity: ${v};`,
-        [T.TUNNEL[0], T.TUNNEL[1], ...[T.FOG_IN, T.FOG_FULL, near - 220, near].map((zz) => pAtZ(i, zz, near, n))],
+        [T.TUNNEL[0], T.TUNNEL[1], ...fogKnots],
       ),
+      /* ⚠️ `scale(0.1)` after the rotation, always: the leaf and the shade are
+         laid out at ten times their size so that they are directly composited
+         images on every screen (see `.ktun__jamb` in global.css). A keyframe
+         that dropped it would draw a leaf ten storeys tall. */
       keyframes(
         `kt-leaf-${i}${suffix}`,
         (p) => num(-open(p) * T.OPEN_DEG),
-        (v) => `transform: rotateY(${v}deg);`,
+        (v) => `transform: rotateY(${v}deg) scale(0.1);`,
         undefined,
         knots,
       ),
+      /* the lit opening and the edge shade: their own curve × the fog */
       keyframes(
         `kt-gap-${i}${suffix}`,
-        (p) => num(open(p) * T.glowAt(p)),
+        (p) => num(fog(p) * open(p) * T.glowAt(p)),
         (v) => `opacity: ${v};`,
         undefined,
-        knots,
+        [...knots, ...fogKnots],
       ),
       keyframes(
         `kt-shade-${i}${suffix}`,
-        (p) => num(T.shadeOpacity(open(p))),
+        (p) => num(fog(p) * T.shadeOpacity(open(p))),
         (v) => `opacity: ${v};`,
         undefined,
-        knots,
+        [...knots, ...fogKnots],
       ),
     )
   }
@@ -222,11 +235,16 @@ function bindingsFor(suffix, ids) {
   const out = []
   for (let i = 0; i < ids.length; i++) {
     const d = `.ktun__space > .ktun__door:nth-child(${i + 1})`
+    /* Four images per door, each its own single-quad layer (see the note on
+       `.ktun__door` in global.css): the jamb and the leaf take the fog, the
+       leaf and the shade swing together, the gap and the shade carry their own
+       curve with the fog folded in. The door itself only moves. */
     out.push(
-      bind(d, [`kt-door-${i}${suffix}`, `kt-fog-${i}${suffix}`]),
-      bind(`${d} > .ktun__leaf`, `kt-leaf-${i}${suffix}`),
+      bind(d, `kt-door-${i}${suffix}`),
+      bind(`${d} > .ktun__jamb`, `kt-fog-${i}${suffix}`),
       bind(`${d} > .ktun__gap`, `kt-gap-${i}${suffix}`),
-      bind(`${d} > .ktun__leaf > .ktun__shade`, `kt-shade-${i}${suffix}`),
+      bind(`${d} > .ktun__leaf`, [`kt-leaf-${i}${suffix}`, `kt-fog-${i}${suffix}`]),
+      bind(`${d} > .ktun__shade`, [`kt-leaf-${i}${suffix}`, `kt-shade-${i}${suffix}`]),
     )
   }
   return out.join('\n')
@@ -289,8 +307,9 @@ ${fieldFor(T.NEAR, 1, '', T.TUNNEL_IDS)}
 
 ${bindingsFor('', T.TUNNEL_IDS)}
 
-  /* ── the field: phone. A door is cut much earlier (NEAR_MOBILE) and the
-     off-axis offsets are scaled in, so the whole field needs its own stops.
+  /* ── the field: phone. The same five doors, but a door is cut much earlier
+     (NEAR_MOBILE) and the off-axis offsets are scaled in, so the whole field
+     needs its own stops.
      ⚠️ 720px, and it must stay in step with \`useMediaQuery('(max-width: 720px)')\`
      in HeroKeyhole — the fallback path reads that one. ── */
   @media (max-width: 720px) {

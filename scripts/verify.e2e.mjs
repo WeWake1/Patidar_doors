@@ -243,31 +243,46 @@ await step('the door up front is locked, and the key flies you to the wall', asy
   await page.waitForSelector('.kgate__lock')
 })
 
-await step('the tunnel doors carry no will-change', async () => {
-  /* ⚠️ A guard for a bug this browser cannot see. Headless Chrome rasterises
-     in software; on a real GPU, `will-change` on a door pins its raster and
-     Chrome reuses it instead of re-rastering — and a door's composited scale
-     runs 0.08 → 4.5 across the flight. Fly to the wall, scroll back, and the
-     door up front returned in horizontal bands with the doors behind showing
-     through the gaps. Safari was fine throughout, which is what made it look
-     like someone else's problem.
-     Removing the hint costs nothing (measured: identical layer count, 72
-     either way, because `translate3d` already promotes), so this asserts the
-     declaration is simply absent rather than trying to photograph the tear. */
-  const hinted = await page.evaluate(() =>
-    ['.ktun__door', '.ktun__leaf']
-      .filter((sel) => {
-        const el = document.querySelector(sel)
-        const wc = el && getComputedStyle(el).willChange
-        return wc && wc !== 'auto'
-      })
-      .join(', '),
-  )
-  if (hinted) throw new Error(`will-change is back on ${hinted} — this tears the hero in Chrome`)
+await step('the tunnel is four directly composited images per door, and nothing else', async () => {
+  /* ⚠️ A guard for a bug this browser cannot see. Headless Chrome ignores the
+     emulated device scale factor when it rasterises, so the cost of the tunnel
+     on a real 1440px phone — 500 MB of tiles mid-flight, 475 MB left behind at
+     rest after a scroll back, against a 256 MB budget — is invisible here. The
+     fix is a SHAPE (see the note on `.ktun__door` in global.css): everything a
+     door shows is an `<img>` carrying `will-change: transform`, which Chrome
+     composites as a directly composited image (a texture, no tiles, no raster
+     at any scale); the boxes around them paint nothing, carry no opacity and
+     no `will-change`; and there is no preserve-3d anywhere in the tunnel. Each
+     half of that is asserted, because each half is exactly what the next
+     "tidy-up" would undo. */
+  const shape = await page.evaluate(() => {
+    const out = []
+    const door = document.querySelector('.ktun__door')
+    const cs = getComputedStyle(door)
+    if (cs.willChange !== 'auto') out.push(`.ktun__door carries will-change: ${cs.willChange}`)
+    if (cs.opacity !== '1') out.push(`.ktun__door carries opacity ${cs.opacity}`)
+    if (cs.transformStyle !== 'flat') out.push(`.ktun__door is transform-style: ${cs.transformStyle}`)
+    if (cs.boxShadow !== 'none' || cs.backgroundImage !== 'none') out.push('.ktun__door paints something of its own')
+    const space = getComputedStyle(document.querySelector('.ktun__space'))
+    if (space.transformStyle !== 'flat') out.push(`.ktun__space is transform-style: ${space.transformStyle}`)
+    if (space.perspective === 'none') out.push('.ktun__space has no perspective')
+    const kids = [...door.children]
+    if (kids.length !== 4 || kids.some((k) => k.tagName !== 'IMG'))
+      out.push(`a door holds ${kids.map((k) => k.tagName.toLowerCase() + '.' + k.className).join(' ')}, not four <img>s`)
+    for (const k of kids) {
+      const ks = getComputedStyle(k)
+      if (ks.willChange !== 'transform') out.push(`${k.className} has will-change: ${ks.willChange}`)
+      if (ks.borderRadius !== '0px' || ks.boxShadow !== 'none' || ks.backgroundImage !== 'none')
+        out.push(`${k.className} carries a radius/shadow/background, which disqualifies a directly composited image`)
+      if (ks.objectFit !== 'fill') out.push(`${k.className} is object-fit: ${ks.objectFit}`)
+    }
+    return out
+  })
+  if (shape.length) throw new Error(shape.join('; '))
 })
 
 await step('the tunnel is real door photographs, flying at the camera', async () => {
-  const srcs = await page.$$eval('.ktun__leaf img', (els) => els.map((e) => new URL(e.src).pathname))
+  const srcs = await page.$$eval('.ktun__leaf', (els) => els.map((e) => new URL(e.src).pathname))
   if (srcs.length !== 5) throw new Error(`expected 5 tunnel doors, got ${srcs.length}`)
   /* Leaf cut-outs, not catalogue covers: a cover brings the showroom wall and
      architrave along with it, which is the one thing a door flying past the
@@ -305,12 +320,13 @@ await step('the tunnel is real door photographs, flying at the camera', async ()
      path; where the browser has scroll-driven animations the compositor owns
      the door's opacity and React deliberately writes nothing, so testing the
      inline style was testing which code path was running, not whether the door
-     had left. */
+     had left. The fade lives on the LEAF, not the door box (a group opacity is
+     a render surface — global.css), so that is what is read. */
   await heroTo(0.45)
   const goneOpacity = await page.evaluate(() => {
     const d = document.querySelector('.ktun__door')
     if (d.style.visibility === 'hidden' || getComputedStyle(d).visibility === 'hidden') return 0
-    return Number(getComputedStyle(d).opacity)
+    return Number(getComputedStyle(d.querySelector('.ktun__leaf')).opacity)
   })
   if (goneOpacity > 0.01) throw new Error(`the first door never flew past the camera (opacity ${goneOpacity})`)
 })
@@ -799,16 +815,15 @@ await step('mobile home + burger menu', async () => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(BASE + '/', { waitUntil: 'networkidle' })
   await page.waitForTimeout(500)
-  /* ⚠️⚠️ A phone gets THREE doors, and this assertion used to say five. Five is
-     over Chrome Android's compositor budget: scroll out to the wall and back and
-     the hero returns as stale tiles — a chopped nav, blocks of old background,
-     doors at sizes they were never drawn at. Measured on a GPU-constrained Chrome,
-     3 doors = clean on every run, 4 and 5 = corrupt (see TUNNEL_IDS_MOBILE). It
-     is asserted here because "show the whole floor" is exactly the argument that
-     put five back on 2026-08-31, and it will be made again. Desktop keeps five —
-     asserted by the hero steps above at 1440. */
-  const leaves = await page.locator('.ktun__leaf img').count()
-  if (leaves !== 3) throw new Error(`the phone got ${leaves} tunnel doors, not 3`)
+  /* ⚠️ A phone flies the same five doors as the desktop. It was cut to three
+     from 2026-09-01 to 2026-09-10 as a compositor-memory measure, taken from
+     numbers this very browser produced at an emulated DPR that never reached
+     its compositor — the real cost was 12× higher and three doors did not fix
+     the phone. The doors are directly composited images now (see the shape
+     step at 1440) and five cost ~16 MB on a 1440px phone. Asserted so the
+     three-door "fix" cannot quietly come back as a reflex. */
+  const leaves = await page.locator('.ktun__leaf').count()
+  if (leaves !== 5) throw new Error(`the phone got ${leaves} tunnel doors, not 5`)
   await shot('13-mobile-home')
   await page.locator('.nav__burger').click()
   await page.waitForSelector('.nav__menu')
