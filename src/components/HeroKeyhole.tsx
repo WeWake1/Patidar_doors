@@ -4,7 +4,6 @@ import {
   FOG_FULL,
   FOG_IN,
   GATE_DEPTH,
-  GATE_OPEN,
   NEAR,
   NEAR_MOBILE,
   OFFSETS,
@@ -13,14 +12,16 @@ import {
   PERSPECTIVE,
   TUNNEL_IDS,
   TUNNEL_IDS_MOBILE,
+  doorOpen,
   doorZ,
+  gateOpen,
   WALL_FULL,
   WALL_IN,
 } from '../lib/heroTunnel'
 import { smoothScrollTo } from '../lib/smoothScroll'
 import { useIdleAfterLoad } from '../lib/useIdleAfterLoad'
 import { useNearViewport } from '../lib/useNearViewport'
-import { clamp01, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
+import { clamp01, easeInOutSine, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
 /* `hero-scrub.gen.css` is deliberately NOT imported here — it is imported from
    main.tsx after global.css, so its bindings win ties against the static sheet.
    See the note there. */
@@ -263,15 +264,12 @@ function TunnelDoor({
   open?: number
 }) {
   const leaf = LEAF_IMAGES[id]
-  /* Opens on approach, so you are always flying through an opening rather than
-     at a closed slab — but late, and only to 72°.
-     ⚠️ Both numbers matter more than they look. Opening early (from z −2600)
-     meant the door was never seen as a door: by the time it was big enough to
-     look at, it was already edge-on and reading as a plank. And past ~80° a
-     leaf hinged at its left edge presents almost nothing but its thickness to
-     the camera, so the photograph — the entire point of using real doors —
-     stops being visible exactly when it is closest. Closed and growing, then a
-     late fast swing, then gone. */
+  /* Shut while it is far, swinging through the near half of its approach, wide
+     open a beat before it fades — so you are always arriving at a door that is
+     opening for you rather than at one already open. The window and the curve
+     both live in `doorOpen` (heroTunnel.ts); read the note there before moving
+     either, because where the swing sits in the approach is the whole of
+     whether it can be seen. */
   const fog = clamp01((z - FOG_IN) / (FOG_FULL - FOG_IN))
   const gone = 1 - clamp01((z - (near - 220)) / 220)
   const hidden = fog * gone <= 0.002
@@ -282,7 +280,7 @@ function TunnelDoor({
      styling elements the compositor is already driving is main-thread work
      for pixels it cannot affect (animations outrank inline styles). */
   const scrubbed = scrubCss
-  const open = hidden ? 0 : (openProp ?? easeOutCubic(clamp01((z + 1000) / 1100)))
+  const open = hidden ? 0 : (openProp ?? doorOpen(z, near))
   const opacity = hidden ? 0 : Math.round(fog * gone * 100) / 100
   /* `scale(0.1)` after the swing, always — the images are laid out at ten
      times their size (global.css, `.ktun__jamb`) */
@@ -466,7 +464,8 @@ const LAND = 0.86
    133ms each, against the 186ms the desktop timing was tuned to. */
 const FLIGHT_S = 3
 /* Eased at both ends — the door has to be seen to swing before anything
-   rushes, and the wall has to settle rather than slam.
+   rushes, and the wall has to settle rather than slam. `easeInOutSine` is
+   shared with the leaf swing (useTrackProgress.ts).
    ⚠️ Sine, not the cubic this shipped with for an afternoon. The doors pass
    between p 0.22 and 0.60, which is the exact middle of the flight, and a
    cubic spends its time at the ends: measured, all five fly-bys landed inside
@@ -474,7 +473,6 @@ const FLIGHT_S = 3
    The same span under sine is 795ms and the ends are still eased. Whatever
    replaces this has to be judged on how long it leaves the MIDDLE, because
    that is where everything worth seeing happens. */
-const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2
 
 export function HeroKeyhole() {
   const trackRef = useRef<HTMLElement>(null)
@@ -571,12 +569,11 @@ export function HeroKeyhole() {
   const near = mobile ? NEAR_MOBILE : NEAR
   const offsetScale = mobile ? OFFSET_SCALE_MOBILE : 1
   const copyOpacity = 1 - seg(p, 0.1, 0.2)
-  /* The gate swings on progress, not on its z — see TunnelDoor's `open` prop.
-     It also opens further than the doors behind it (86° against 72°): those
-     are seen for a moment in passing and a leaf past ~80° presents nothing but
-     its own thickness, but this one is stood in front of you being opened, and
-     a door that stops at 72° with the camera still outside it reads as stuck. */
-  const gateOpen = easeOutCubic(seg(p, GATE_OPEN[0], GATE_OPEN[1]))
+  /* The gate swings on progress, not on its z — see TunnelDoor's `open` prop
+     and `gateOpen` in heroTunnel.ts. It is the door you are standing at, so it
+     opens on the same curve as the field behind it: a heavy leaf that starts
+     gently, gets going and settles. */
+  const gate = gateOpen(p)
   /* The lock is only on screen while the gate is standing still. It goes the
      moment anything moves — a brass plate pinned to a flat layer while the
      door it is drawn on rushes forward would slide straight off it. */
@@ -727,7 +724,7 @@ export function HeroKeyhole() {
                 glow={glow}
                 near={near}
                 layer={ids.length - i}
-                open={i === 0 ? gateOpen : undefined}
+                open={i === 0 ? gate : undefined}
                 /* ⚠️ `doorZ`, not the raw expression — the clamp that keeps a door
                    in front of the camera lives there, and both paths need it. */
                 z={doorZ(i, p, near, ids.length)}

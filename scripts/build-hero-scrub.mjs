@@ -43,6 +43,9 @@ await server.close()
    over the whole track puts a stop every ~0.6% of scroll, which is finer than
    a 120Hz display can resolve on a 340vh track. */
 const STEPS = 60
+/** How finely the leaf swing is subdivided inside its own window — see the
+    note at the knots that use it. */
+const SWING_STOPS = 24
 const pct = (n) => `${+(n * 100).toFixed(3)}%`
 const num = (n) => String(+n.toFixed(4))
 
@@ -109,20 +112,31 @@ function fieldFor(near, offsetScale, suffix, ids) {
     const dy = T.OFFSETS[i][1] * offsetScale
     const z = (p) => T.doorZ(i, p, near, n)
     /* the gate opens on progress, everything behind it on its own approach */
-    const open = (p) => (i === 0 ? T.gateOpen(p) : T.doorOpen(z(p)))
+    const open = (p) => (i === 0 ? T.gateOpen(p) : T.doorOpen(z(p), near))
     /* Every corner these curves have: the field's start and end, the gate's own
        swing window, where this door's swing begins and completes, and where the
        hall dims (which `glowAt` rides). */
     const knots = [
       T.TUNNEL[0], T.TUNNEL[1],
       T.GATE_OPEN[0], T.GATE_OPEN[1],
-      /* The swing is the one genuinely non-linear curve here — an easeOutCubic
-         over z −1000 → +100 — and it happens inside a p window narrow enough
-         that the uniform grid only lands in it ~7 times, which left the leaf up
-         to 0.76° off mid-swing. Subdividing the window is a handful of extra
-         stops; a cubic is steepest at its start, so 16 even subdivisions of the
-         z window is what gets the whole swing inside 0.15°. */
-      ...Array.from({ length: 17 }, (_, k) => pAtZ(i, -1000 + (k * 1100) / 16, near, n)),
+      /* ⚠️ The swing is the one genuinely non-linear curve here and it needs
+         its own subdivision — the uniform grid lands in its window only ~8
+         times, which leaves the leaf up to three quarters of a degree off
+         mid-swing. `easeInOutSine` is steepest in the MIDDLE (unlike the
+         ease-out this replaced, which was steepest at its start), so an even
+         subdivision is the right shape for it; 24 puts the whole swing inside
+         0.08°, half of `verify:scrub`'s tolerance.
+         ⚠️ The gate is subdivided over its own window in *progress* — it opens
+         on p, not on z, so the depth knots below say nothing about it and it
+         was running on the uniform grid alone. */
+      ...(i === 0
+        ? Array.from(
+            { length: SWING_STOPS + 1 },
+            (_, k) => T.GATE_OPEN[0] + (k * (T.GATE_OPEN[1] - T.GATE_OPEN[0])) / SWING_STOPS,
+          )
+        : Array.from({ length: SWING_STOPS + 1 }, (_, k) =>
+            pAtZ(i, near - T.SWING_LEAD - T.SWING_SPAN + (k * T.SWING_SPAN) / SWING_STOPS, near, n),
+          )),
       T.WALL_IN + 0.04, 0.7,
       /* ⚠️ The park is a STEP in z, so every curve derived from z — the swing,
          the gap, the shade — steps with it and needs a stop on each side. The

@@ -97,7 +97,12 @@ async function snapshot(label, attempt = 0) {
   await cdp.send('Tracing.end')
   await done
   cdp.off('Tracing.dataCollected', onData)
-  const states = events.filter((e) => e.name === 'LayerTreeHostImpl:snapshot' && e.args?.snapshot)
+  /* ⚠️ Every compositor in the browser emits one of these, the browser's own UI
+     included — take the tree that holds the page, not the last one to arrive, or
+     you profile the toolbar and read 0 MB. */
+  const states = events
+    .filter((e) => e.name === 'LayerTreeHostImpl:snapshot' && e.args?.snapshot)
+    .filter((e) => (e.args.snapshot.active_tree?.layers ?? []).some((l) => (l.layer_name ?? '').includes('LayoutView')))
   const st = states.at(-1)?.args.snapshot
   /* the snapshot is emitted on a compositor frame, and a parked page does not
      always produce one inside the trace window — nudge again, up to three times */
@@ -116,8 +121,10 @@ async function snapshot(label, attempt = 0) {
     total += mem
     const dom = domById.get(String(l.layer_id))
     const name = dom ? await nameOf(dom.backendNodeId) : '(?)'
-    const til = (l.tilings ?? []).map((t) => `${(+t.content_scale ?? 0).toFixed(2)}x${t.num_tiles ?? '?'}`).join(' ')
-    rows.push({ id: l.layer_id, name, mem, ideal: l.ideal_contents_scale, raster: l.raster_contents_scale, bounds: l.bounds, til, draws: l.draws_content })
+    /* ⚠️ `Number(x ?? 0)`, not `+x ?? 0` — the unary plus binds tighter than the
+       `??`, so the fallback is unreachable and a missing scale prints NaN. */
+    const til = (l.tilings ?? []).map((t) => `${Number(t.content_scale ?? 0).toFixed(2)}x${t.num_tiles ?? '?'}`).join(' ')
+    rows.push({ id: l.layer_id, name, mem, bounds: l.bounds, til })
   }
   rows.sort((a, b) => b.mem - a.mem)
   const byPtr = new Map(list.map((l) => [String(l.id).split('/').pop(), l]))

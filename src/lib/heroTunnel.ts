@@ -1,4 +1,4 @@
-import { clamp01, easeOutCubic, seg } from './useTrackProgress'
+import { clamp01, easeInOutSine, seg } from './useTrackProgress'
 
 /**
  * The keyhole hero's tunnel, as pure arithmetic.
@@ -68,8 +68,37 @@ export const TUNNEL_IDS = [
  */
 export const TUNNEL_IDS_MOBILE = TUNNEL_IDS
 
-/** How far a leaf swings, in degrees. Every door in the field, gate included. */
+/** How far a leaf swings, in degrees. Every door in the field, gate included.
+    ⚠️ Past ~80° a leaf hinged at its left edge presents almost nothing but its
+    own thickness to the camera, so the photograph — the entire point of using
+    real doors — stops being visible exactly when it is closest. */
 export const OPEN_DEG = 72
+
+/* ── where in the approach a leaf swings ───────────────────────────────────
+   ⚠️⚠️ **The swing is placed against `near`, so it finishes as the door reaches
+   the camera — it is not a fixed depth, and it is not an ease-out.** Until
+   2026-09-10 it was both: `easeOutCubic` over z −1000 → +100, which put the
+   entire turn between 0.53× and 1.13× on screen and 45° of it inside the first
+   200 px. The consequence is what a visitor actually reported — *"as one door
+   opens and you scroll further, the next door is already open, and you don't
+   really get the animation of the doors opening"* — and the arithmetic agrees:
+   a door reached full open at 1.13×, i.e. before the whole rush from 1.3× to
+   4.5× had even begun, and the door behind it was already 33° open at that
+   moment. Every leaf you were close enough to look at had finished moving.
+
+   Now: a leaf holds shut through the far half of its approach, swings through
+   the near half, and is wide open a beat before it starts to fade. Measured on
+   the desktop field (near 700): 0° at 0.51×, 13° at 0.69×, 55° at life size,
+   72° at 1.8× — and the door behind it is 13° at that moment, so they open one
+   at a time, each in its turn, like a hall of doors opening ahead of you. */
+
+/** How much depth the swing takes. Wide enough that the turn is a move rather
+    than a flick, narrow enough (against SPACING = 900) that no more than two
+    leaves are ever turning at once. */
+export const SWING_SPAN = 1250
+/** How far in front of the fade (`near − 220`) the leaf reaches full open, so
+    there is a beat of open door rushing at you before it dissolves. */
+export const SWING_LEAD = 300
 
 /** The whole field advances together; door i sits one SPACING behind door i−1.
     ⚠️ `count` is the size of the field being drawn — five on both breakpoints
@@ -141,14 +170,20 @@ export function doorOpacity(z: number, near: number): number {
   return fog * gone
 }
 
-/** 0–1. Every door but the gate opens on its own approach. */
-export function doorOpen(z: number): number {
-  return easeOutCubic(clamp01((z + 1000) / 1100))
+/** 0–1. Every door but the gate opens on its own approach — see SWING_SPAN.
+    ⚠️ It takes `near`, because that is what the window is anchored to: a phone
+    cuts the pass at 2.65× where a desktop runs to 4.5×, so the same fixed depth
+    would land in a different part of the two approaches. */
+export function doorOpen(z: number, near: number): number {
+  const end = near - SWING_LEAD
+  return easeInOutSine(clamp01((z - (end - SWING_SPAN)) / SWING_SPAN))
 }
 
-/** The gate opens on *progress* instead — the swing is the answer to the key. */
+/** The gate opens on *progress* instead — the swing is the answer to the key,
+    not to an approach, since it is already standing in front of you. Same
+    curve as the field behind it, so one hall of doors swings one way. */
 export function gateOpen(p: number): number {
-  return easeOutCubic(seg(p, GATE_OPEN[0], GATE_OPEN[1]))
+  return easeInOutSine(seg(p, GATE_OPEN[0], GATE_OPEN[1]))
 }
 
 export function hallOpacity(p: number): number {

@@ -446,6 +446,30 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   the door then interpolates from its rest depth straight back to −9000, sailing away from
   the camera instead of at it. Every curve derived from z (swing, gap, shade) needs the
   same pair in its knots.
+  · ⚠️⚠️ **THE SWING IS ANCHORED TO `near` AND IS AN ease-IN-OUT — `SWING_SPAN` /
+  `SWING_LEAD` / `doorOpen(z, near)` in `heroTunnel.ts`** (2026-09-10). A leaf holds shut
+  through the far half of its approach, turns through the near half, and is wide open a
+  beat (300 world px) before it starts to fade. Desktop: 0° at 0.51× on screen, 21° at
+  0.69×, 55° at life size, 72° at 1.8×.
+  ⚠️ **What it replaced looked fine in the code and was invisible on screen**:
+  `easeOutCubic` over a *fixed* z −1000 → +100. That put the whole turn between 0.53× and
+  1.13× — the far, small end of the approach — with 45° of the 72° inside the first 200 px,
+  so a door reached full open *before* the entire rush from 1.3× to 4.5× began, and the
+  door behind it was already 33° open at that moment. The client's report was exactly
+  right and exactly diagnostic: *"as one door opens and you scroll further, the next door
+  is already open, and you don't really get the animation of the doors opening."* Every
+  leaf you were close enough to look at had finished moving. It is now 13° behind a
+  fully-open door, so they open one at a time, each in its turn.
+  ⚠️ It takes `near` because a phone cuts the pass at 2.65× where a desktop runs to 4.5×:
+  the same fixed depth lands in a different part of the two approaches. And it is an
+  ease-in-out because the curve has to spend its motion in the MIDDLE — the same argument
+  as the lock's flight easing, for the same reason. `easeInOutSine` is shared from
+  `useTrackProgress.ts` by both, and by the gate, which opens on progress rather than on z
+  but must swing like the field behind it.
+  ⚠️ The generator subdivides the swing window itself (`SWING_STOPS = 24`) — the uniform
+  60-step grid lands in it only ~8 times, which leaves the leaf up to 0.75° off mid-swing.
+  The gate gets the same treatment over `GATE_OPEN` in *progress*: it opens on p, so the
+  depth knots say nothing about it and it had been running on the uniform grid alone.
   · ⚠️⚠️ **A PHONE FLIES THE SAME FIVE DOORS AS THE DESKTOP, AND THE 3-DOOR CUT OF
   2026-09-01 WAS BUILT ON A MEASUREMENT THAT NEVER REACHED THE COMPOSITOR.** Playwright's
   `deviceScaleFactor` (CDP `Emulation.setDeviceMetricsOverride`) changes

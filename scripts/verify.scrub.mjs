@@ -134,7 +134,7 @@ for (const [w, h, label, near, ids] of [
     read.forEach((got, i) => {
       const at = `${label} p=${p.toFixed(4)} door${i}`
       const z = T.doorZ(i, p, near, ids.length)
-      const open = i === 0 ? T.gateOpen(p) : T.doorOpen(z)
+      const open = i === 0 ? T.gateOpen(p) : T.doorOpen(z, near)
       const fog = T.doorOpacity(z, near)
       check(`${at} z`, got.z, z, TOL.z)
       check(`${at} leaf`, got.deg, -open * T.OPEN_DEG, TOL.deg)
