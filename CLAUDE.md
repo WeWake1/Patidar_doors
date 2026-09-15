@@ -42,8 +42,11 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   (asked for and confirmed by the client 2026-08-20 as a placeholder), like the rates in
   `pricing.ts`. It is applied **after** the CMS merge, not written into the product
   literals, because `catalog:fetch` replaces a merged product wholesale and a locally-set
-  price on an id Supabase also carries would vanish on the next fetch. Delete a door's line
-  the day a real price is typed into `/admin`.
+  price on an id Supabase also carries would vanish on the next fetch. Since 2026-09-15 the
+  overlay turns each headline into a full placeholder **rate card** (`placeholderPricing`:
+  30 mm included / 28 mm cheaper / matched back +₹1,400) and a rate card the client saves
+  in `/admin` (`products.pricing`) wins over it with no edit here — `/admin` tags such
+  doors **placeholder ₹…** so the owner knows the number is not theirs.
   · Photographed doors now get the configurator and the cart, which changed three things
   that were previously unreachable: the PDP falls back to `product.tag` where a factory
   door has no `story`; `ProductStage` takes `cfg` so the try-on link carries the size the
@@ -93,8 +96,13 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   at build; if you batch-replace values, exclude `@media` lines.
   ⚠️ Figures (prices, totals, the slider readout) are deliberately **off** the type ramp —
   each is sized against what's beside it. Don't "fix" them into a step.
-  ⚠️ `src/admin/admin.css` is out of scope by design: it declares itself "deliberately plain
-  and utilitarian, separate from the storefront's design system" and keeps its `--ax-*` tier.
+  ⚠️ `src/admin/admin.css` keeps its own `--ax-*` tier, and that tier **reads the tier-1
+  primitives** (`--cream --ink --brass --clay --slate --teak …`) rather than restating
+  hexes — rewritten 2026-09-15 from a grey-blue system-ui sheet into the storefront's
+  vocabulary (square controls, brass as an edge, ink primary, the serif for the page title
+  alone). It does not read tier-2 roles or `[data-world]` scopes: the admin is one calm
+  tool, not four sub-brands. Its type sizes are its own (14.5px body) and off the
+  storefront ramp on purpose; `npm run contrast` does not cover it.
   Vendored `reactbits/*.css` is left alone to stay re-syncable.
   · **Status = the shop floor**: clay (Ply/terracotta) = fault, teak (Timbers) = caution,
   slate (WPC) = confirmed. Every status colour is a material on the floor, so nothing
@@ -198,11 +206,23 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   world cards use `world-<id>`).
 - **CMS = Supabase + custom `/admin`** (replaced Sanity 2026-07-22 — the generic studio
   gave no crop control, so door photos looked wrong swinging). Project `yevrjgmgbguwvluemtsw`.
-  Tables `subcategories`/`products`(FK→subcategory)/`product_images`, `admins` allow-list;
-  buckets `catalog`(public)/`originals`(private); RLS = anyone reads published, only
-  allow-listed admins write. Admin app in `src/admin/` (lazy-loaded under `/admin`, off the
-  public bundle; Supabase auth; product editor with the corner cropper → canvas webp 480/960
-  → Storage; live `ProductVisual` preview).
+  Tables `subcategories`/`products`(FK→subcategory)/`product_images`, `settings` (one row
+  per key — `price_book`), `admins` allow-list; buckets `catalog`(public)/`originals`
+  (private); RLS = anyone reads published, only allow-listed admins write. Admin app in
+  `src/admin/` (lazy-loaded under `/admin`, off the public bundle; Supabase auth).
+  · **Three screens since the 2026-09-15 rebuild**, one top bar (`AdminApp.tsx`):
+  `Catalogue.tsx` — a world per tab, a section per card, every product row tagged with its
+  state (*Hidden · No photo · from ₹… / placeholder ₹… / Enquiry · Doorway view*), search
+  across worlds, section ↑↓ reorder (`sort_order` was unreachable before);
+  `ProductEditor.tsx` — titled cards (Basics · Photos · On the site · Selling online ·
+  Specs), the corner cropper → canvas webp 480/960 → Storage, a sticky preview column
+  (`ProductVisual` card + `QuotePreview`) and a fixed save bar that shows the dirty state
+  (`useDirty.ts`); `PriceBookPage.tsx` — the shop-wide numbers. Shared bits in `ui.tsx`
+  (`Card Field RupeeInput Switch Notice Tag`).
+  ⚠️ The save bar is `position: fixed`, so `:root:has(.ax-savebar)` sets
+  `scroll-padding-bottom` — without it a focused control or a validation jump scrolls
+  *behind* the bar. `+ New product` carries `?world=` so the editor opens on the tab you
+  were looking at.
   `npm run catalog:seed` writes `supabase/seed.sql`. Env: root `.env` (VITE_SUPABASE_URL,
   VITE_SUPABASE_ANON_KEY = publishable key). Setup/security/webhook in `docs/admin-setup.md`.
   ⚠️ storage uploads must NOT pass `upsert:true` (hits the UPDATE policy → RLS 403; paths are
@@ -1153,6 +1173,16 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   · every colour-changing `:hover` lives inside `@media (hover: hover)` — touch latches
   `:hover` on the last thing tapped. The `.door-scene--hover:hover` swing is the one
   exception (touch gets `--ajar` instead), as is `.pdp__stage-note--hover/--touch`.
+  · ⚠️ **A route that renders its own top bar under the fixed nav has to clear
+  it.** `/try/:id` keeps the site nav on the pick step — `has-fullscreen` (which
+  takes the nav, footer and wa-float away) is only added once a photo or the
+  camera is live — and `.try__bar` laid out at y = 0, exactly underneath it, at
+  every width: "Back to the door" and the door's name and size were invisible
+  **and untappable** (`elementFromPoint` at the link's centre returned
+  `.nav__word`), so the only way out of try-at-home before picking a photo was
+  the browser's Back button. `.try` carries `--try-nav: var(--nav-h)` as
+  `padding-top` now, zeroed by `body.has-fullscreen .try`; border-box, so it does
+  not make the page taller than its `100dvh`. Fixed 2026-09-11.
   · form controls are ≥16px or iOS zooms the page on focus and never zooms back;
   interactive targets ≥44px inside the phone breakpoints.
   · `index.html` sets `viewport-fit=cover`, so all fixed chrome (nav, drawer, toast,
@@ -1163,6 +1193,35 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   Lenis and sets `body.has-overlay` (wa-float hides, toast moves off the CTA).
   · `Nav.tsx` publishes its measured height as `--nav-h`; the menu sheet and the
   overlay toast position off it instead of hard-coded offsets.
+  · ⚠️⚠️ **A SCRUBBED TRACK'S HEIGHT IS `calc(Nvh + 100dvh)`, NEVER A PLAIN `Nvh`**
+  (`.portal`, `.portal--keyhole`, both breakpoints; fixed 2026-09-11). Progress
+  through a sticky track is measured against `trackHeight − scrollportHeight` by
+  **both** paths — `useTrackProgress`'s `rect.height - innerHeight` and the CSS
+  timeline's `contain 0% → contain 100%`. Chrome Android's URL bar resizes the
+  layout viewport (that is what `lvh` exists for), so `innerHeight` swings ~56px
+  while a plain `vh` height does not move: the span changes under the visitor and
+  p = scroll / span remaps, the error growing linearly toward the end of the track
+  — which is exactly where the doors are flying. Measured at 390×844: span
+  1744 → 1688, a **3.3% remap of the whole timeline**, Δp up to 0.023. At p
+  0.4/0.5/0.6 that carried the frontmost door — mid-fly-by, ~1000px tall — clean
+  past its exit, so **a door vanished in a single frame** the moment the bar
+  retracted and came back when an upward swipe returned the bar; the Door Wall's
+  fade jumped 0.10 with it. The `+ 100dvh` term makes the track grow by exactly
+  what the viewport grew, so the span is a constant `Nvh` and p never moves.
+  Verified: Δp 0.0000, Δdoor-height 0.0px across the track. On anything without a
+  retractable bar `dvh` is `vh` and it is the old number to the pixel.
+  ⚠️ Residual, and it is the better half of the trade: the track now grows under
+  content below it, so a bar transition while the hero's tail is on screen
+  reflows the page ~56px. Chrome's scroll anchoring absorbs it once you are well
+  clear of the hero (measured: scrollY +56, nothing moves).
+  · ⚠️ **A bare `.portal` rule in a phone breakpoint will shadow both hero
+  variants.** `.portal { height: 300vh }` sat later in the sheet than
+  `.portal--keyhole` (340vh) and `.portal--static` (auto) at equal specificity and
+  silently beat both: every phone ran the keyhole hero on a 300vh track (167px of
+  scroll per fly-by, under the 150px its own comment calls "a fly-by nobody can
+  see"), and the reduced-motion hero — ~1500px of content, no scrub at all — was
+  given a 2532px box, i.e. **1029px of dead scroll** before `.props`. It is
+  `.portal--dark:not(.portal--keyhole)` now; `--static` never carries `--dark`.
   · `.portal__sticky` is `100dvh` — it has to track the mobile URL bar in **both**
   directions. `100vh`(=lvh) hides the scroll cue under the bar while it shows; `100svh`
   leaves a strip of bare page exactly the bar's height once it retracts. `--scene-h`
@@ -1205,26 +1264,69 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   UI in `DoorConfigurator.tsx`, both driven from one `DoorConfig`. Replaced the five fixed
   size buttons 2026-08-08 (modelled on brightdoors.in's Uni CPO setup, rebuilt client-side:
   they POST to WordPress on every slider tick and it visibly lags).
+  · ⚠️⚠️ **THE NUMBERS ARE DATA, NOT CONSTANTS** (2026-09-15). Until then the admin could
+  set one integer per door and every other rate — a 27 % "fixed share", a thickness
+  factor, three frame rates, four hardware prices — was a constant in `pricing.ts` that no
+  shop owner could type. Two shapes now, both versioned (`v: 1`), both **parsed never
+  trusted** (`parsePriceBook` / `parseDoorPricing` fall back field by field, so a
+  hand-edited row degrades to a default, never to `NaN` in the WhatsApp order):
+  · **`PriceBook`** — shop-wide, one row (`settings.price_book`), edited on
+  `/admin/pricing`: frame types at ₹/running ft, the matched-design extra, hardware sets,
+  a fitting charge (its own breakdown line — the replacement for the fixed share), the
+  slider limits, the **optional** stock-board ladder (`boards.enabled`; on = the size is
+  rounded up to a board and billed on it, off = exact area) and `roundTo`.
+  `DEFAULT_PRICE_BOOK` carries the old placeholders; it is what the site quotes with until
+  the client saves the page. Store: `src/data/priceBook.ts` (`usePriceBook`/`getPriceBook`),
+  read live beside the catalogue in `liveCatalog.ts` and baked into `catalog.gen.ts` as
+  `CMS_PRICE_BOOK` by `catalog:fetch`.
+  · **`DoorPricing`** — per door, `products.pricing` jsonb, edited in the product editor's
+  "Selling online" card (`PricingCard.tsx`): a `base` rate in the owner's `unit` (`'sqft'`,
+  or `'leaf'` at a `ref` size, 8′×3′ by default), **option groups** (`groups[]`, each a
+  list of choices whose first is included and the rest carry an `extra` that is `per:
+  'door'` flat or `per: 'unit'` scaling with area — Thickness and Back side are presets,
+  anything else is "Something else"), and `frames`/`hardware`: `'all'` or the price-book
+  ids this door is offered with. `Product.price` is **derived** from it (`headlinePrice` =
+  base at the ref size with defaults) by `cmsMap` and by the admin on save, so cards and
+  the sitemap never changed.
+  · **`calcPrice(pricing, book, cfg)`** is the one quote: leaf = (base + per-unit extras)
+  × billable area, + per-door extras, + frame (rft × type rate, + design extra), +
+  hardware, + fitting; each line rounded, total = plain sum. The storefront, the cart and
+  the admin's "What a customer pays" panel (`QuotePreview.tsx`) all call it, so the owner
+  is looking at the site's number, not an estimate of it. `normalizeConfig` runs inside it
+  and at every entry point (PDP state, cart line, `/try` URL), so an option renamed in
+  `/admin` can never reach the arithmetic as `undefined`.
+  · `DoorConfig` is `{ heightIn, widthIn, choices: {groupId: choiceId}, frame, frameType,
+  frameDesign, hardware }`. Cart lines written before this carried `thickness`/`backSide`/
+  `frameSection` at the top level; `configFromLine` maps those onto the placeholder groups'
+  ids (`thickness`/`back`) so an old cart still prices the door it held.
+  · **Selling online is door-only** (`isDoorProduct`): the admin card only renders for
+  doors and the save forces `purchasable: false` on anything else. A ticked timber used to
+  render the door configurator on a stack of logs.
+  · ⚠️ `products.pricing` and `settings` were added by migration
+  `add_products_pricing_and_settings` (2026-09-15); `settings` has the same RLS shape as
+  every other table. `schema.sql` is the summary.
   · **Sliders**, not presets: height 60–96″, width 20–48″, ¼″ steps. Native
     `<input type=range>` on purpose — a slider lib would be new weight on a phone-first
     store, and native gets keyboard/AT/touch-drag right for free. ± nudges each side
     because a ¼″ is undraggable at 390px. `COMMON_SIZES` survives as the quick-pick pills
     under the sliders (`.cfg__tick`).
-  · **Price = base + rate × snapped area.** The chosen size is rounded *up* to the smallest
-    stock panel covering it (`snapToStock` over `STOCK_PANELS`, the H×W cartesian) and
-    billed on that — a leaf is cut from a board, so 79″ costs what 81″ costs. This is why
-    the price climbs in steps and holds flat between them; the `.cfg__hint` says so, and
-    the E2E asserts both halves. Leaf = a fixed share (`PRICING.fixedShare`, doesn't shrink
-    with the door) + a per-sq-ft share scaled by `thicknessFactor`.
-  · Options: thickness, back-side design, frame (none/3-side/4-side → reveals section +
-    design, priced on running feet via `frameRunningFeet`), hardware/lock. Unlike Bright
-    Doors, **the sliders always measure the leaf** — the frame is an add-on derived from it,
-    not a second size mode that hides the door sliders. Far less conditional-visibility
-    logic for the same quote.
-  · ⚠️ **Every number in `PRICING`, `STOCK_PANELS` and the option deltas is a placeholder**,
-    back-solved so a plain 30mm 8′×3′ still equals `product.price` exactly (nothing moved
-    commercially when this shipped). Confirm the whole table with the client. Prices stay
-    all-inclusive of GST + installation — no tax split anywhere.
+  · **Stock boards are a switch in the price book** (`boards.enabled`, on in the default
+    book so the shipped behaviour is unchanged): the chosen size is rounded *up* to the
+    smallest board covering it (`snapToStock`) and billed on that — a leaf is cut from a
+    board, so 79″ costs what 81″ costs. This is why the price climbs in steps and holds
+    flat between them; the `.cfg__hint` says so, and the E2E asserts both halves. Off, the
+    exact area is billed and the hint says that instead. The old 27 % fixed share is gone —
+    a flat `fitting` charge in the book is the enterable version of the same idea.
+  · Options: the door's own groups (thickness, back side, …), then frame (none/3-side/4-side
+    → reveals **frame type** from the book + design, priced on running feet via
+    `frameRunningFeet`), then hardware from the book. Unlike Bright Doors, **the sliders
+    always measure the leaf** — the frame is an add-on derived from it, not a second size
+    mode that hides the door sliders. Far less conditional-visibility logic for the same
+    quote. `verify:e2e` waits for the legend **"Frame type"** after choosing a frame.
+  · ⚠️ **Every number in `DEFAULT_PRICE_BOOK` and `placeholderPricing()` is a placeholder**,
+    kept so a plain 30 mm 8′×3′ still equals the placeholder headline exactly (nothing
+    moved commercially when the model changed). Real numbers are typed in `/admin`. Prices
+    stay all-inclusive of GST + installation — no tax split anywhere.
   · Each computed line rounds to `roundTo` and the total is their plain **sum** — never a
     second rounding, or the printed breakdown stops adding up (the E2E checks it does).
   · `PriceBreakdown` renders after the finish swatches, not inside the configurator: the
@@ -1234,7 +1336,7 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   order ids `PD-…`. `sizeId` is `height x width` in inches — the same shape the old fixed
   ids used (`'84x33'`), so **carts and orders saved before the configurator still parse and
   price**; `CartLine.opts` / `OrderLineSnapshot.optsLabel` are optional for the same reason
-  and fall back to `DEFAULT_CONFIG`. The wa.me order carries the size in feet-inches *and*
+  and fall back to the door's `defaultConfig`. The wa.me order carries the size in feet-inches *and*
   plain inches plus the spec line, because the workshop cuts from that message.
 - TS config uses `verbatimModuleSyntax` (use `import type`) and `erasableSyntaxOnly`
   (no enums), `noUnusedLocals/Parameters`.

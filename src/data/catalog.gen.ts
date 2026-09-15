@@ -1172,3 +1172,6 @@ export const CMS_PRODUCTS: Product[] = [
     "priceUnit": "leaf"
   }
 ]
+
+/** The shop-wide price book (settings.price_book), raw — parsed by priceBook.ts. */
+export const CMS_PRICE_BOOK: unknown = null

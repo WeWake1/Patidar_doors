@@ -553,7 +553,7 @@ export function ImageDropCrop({
             </div>
             {busy && (
               <div className="ax-crop__progress" aria-hidden="true">
-                <span style={{ width: `${(step / total) * 100}%` }} />
+                <span style={{ transform: `scaleX(${step / total})` }} />
               </div>
             )}
           </div>

@@ -9,9 +9,10 @@ import { ProductCard } from '../components/ProductCard'
 import { ProductPhoto } from '../components/ProductPhoto'
 import { useToast } from '../components/Toast'
 import { config, whatsappLink } from '../config'
-import { DEFAULT_CONFIG, formatSizeLabel, toSizeId, type DoorConfig } from '../data/pricing'
+import { DEFAULT_REF, defaultConfig, formatSizeLabel, normalizeConfig, toSizeId, type DoorConfig } from '../data/pricing'
+import { usePriceBook } from '../data/priceBook'
 import type { Product as ProductT } from '../data/products'
-import { defaultToneId, getTone, quoteFor, tonesFor, tryState } from '../data/products'
+import { defaultToneId, getTone, pricingOf, quoteFor, tonesFor, tryState } from '../data/products'
 import { useCatalog, useCatalogStatus } from '../data/useCatalog'
 import { getWorld } from '../data/worlds'
 import { fmtINR } from '../lib/format'
@@ -55,7 +56,7 @@ function StageNote() {
  */
 function TryLink({ product, cfg, toneId }: { product: ProductT; cfg?: DoorConfig; toneId?: string }) {
   if (tryState(product) !== 'ready') return null
-  const c = cfg ?? DEFAULT_CONFIG
+  const c = cfg ?? DEFAULT_REF
   return (
     // The size and finish travel in the URL, so /try/kyoto?h=84&w=33 is also a
     // link the store can paste into a WhatsApp reply.
@@ -76,7 +77,7 @@ function TryLink({ product, cfg, toneId }: { product: ProductT; cfg?: DoorConfig
  * sliders were set — and that number is burnt into the picture that reaches
  * our WhatsApp.
  */
-function ProductStage({ product, cfg }: { product: ProductT; cfg: DoorConfig }) {
+function ProductStage({ product, cfg }: { product: ProductT; cfg: DoorConfig | null }) {
   const visual = product.visual
   if (visual.kind === 'material') {
     return (
@@ -132,7 +133,7 @@ function ProductStage({ product, cfg }: { product: ProductT; cfg: DoorConfig }) 
             ))}
           </div>
         )}
-        <TryLink product={product} cfg={cfg} />
+        <TryLink product={product} cfg={cfg ?? undefined} />
       </div>
     )
   }
@@ -174,7 +175,9 @@ function EnquiryPanel({ product }: { product: ProductT }) {
 }
 
 function ProductInner({ product }: { product: ProductT }) {
-  const [cfg, setCfg] = useState(DEFAULT_CONFIG)
+  const book = usePriceBook()
+  const pricing = pricingOf(product)
+  const [raw, setCfg] = useState<DoorConfig | null>(null)
   const [toneId, setToneId] = useState(defaultToneId(product))
   const cart = useCart()
   const { toast } = useToast()
@@ -182,11 +185,15 @@ function ProductInner({ product }: { product: ProductT }) {
 
   const catalogue = useCatalog()
   const world = getWorld(product.world)
-  // Made-to-measure configurator for anything with a confirmed price — SVG art
-  // doors pick a finish too; CMS photo doors configure size and options only.
-  const configurable = product.purchasable && product.price !== undefined
+  // Made-to-measure configurator for anything with a rate card. The
+  // configuration is normalised against the card and the book on every
+  // render, so the live read landing with a renamed option (or a real price
+  // replacing the placeholder) can never leave a chosen id that no longer
+  // exists under the customer's hands.
+  const configurable = pricing !== undefined
+  const cfg = pricing ? (raw ? normalizeConfig(pricing, book, raw) : defaultConfig(pricing, book)) : null
   const tone = getTone(product, toneId)
-  const quote = quoteFor(product, cfg, tone.id)
+  const quote = cfg ? quoteFor(product, cfg, tone.id) : null
   const price = quote?.total ?? 0
   const related = catalogue
     .filter((p) => p.id !== product.id)
@@ -194,6 +201,7 @@ function ProductInner({ product }: { product: ProductT }) {
     .slice(0, 3)
 
   const add = () => {
+    if (!cfg) return
     cart.add(product.id, toSizeId(cfg.heightIn, cfg.widthIn), tone.id, cfg)
     toast(`${product.name} added to cart`)
   }
@@ -211,13 +219,13 @@ function ProductInner({ product }: { product: ProductT }) {
           <div className="pdp__stage">
             <DoorScene art={product.visual.art} tone={tone} hoverOpen className="pdp__scene" />
             <StageNote />
-            <TryLink product={product} cfg={cfg} toneId={tone.id} />
+            <TryLink product={product} cfg={cfg ?? undefined} toneId={tone.id} />
           </div>
         ) : (
           <ProductStage product={product} cfg={cfg} />
         )}
 
-        {configurable ? (
+        {configurable && pricing && cfg ? (
           <div className="pdp__info">
             <div className="pdp__cat">
               {world?.name} · {product.sub} · Made to measure
@@ -234,7 +242,7 @@ function ProductInner({ product }: { product: ProductT }) {
               </div>
             </div>
 
-            {quote && <DoorConfigurator config={cfg} onChange={setCfg} quote={quote} />}
+            {quote && <DoorConfigurator pricing={pricing} book={book} config={cfg} onChange={setCfg} quote={quote} />}
 
             {tonesFor(product).length > 0 && (
               <fieldset className="cfg">

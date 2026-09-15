@@ -25,8 +25,9 @@ export function Login({ onSignIn }: { onSignIn: (email: string, password: string
   return (
     <div className="ax-login">
       <form className="ax-login__box" onSubmit={submit}>
-        <div className="ax-login__brand">PATIDAR DOORS</div>
-        <h1>Admin sign in</h1>
+        <img className="ax-login__mark" src="/images/logo/patidar-mark.png" alt="" width={28} height={40} />
+        <div className="ax-login__brand">Patidar Doors</div>
+        <h1 className="ax-title">Admin sign in</h1>
         {err && (
           <div className="ax-note ax-note--fault" role="alert">
             {err}

@@ -13,15 +13,19 @@
  */
 
 import type { Product, ProductImage, StoredPresentation, Visual, WorldId } from './products'
+import { headlinePrice, parseDoorPricing } from './pricing'
 
 /** The PostgREST `select=` both readers use. One shape, one mapper. */
 export const CMS_SELECT =
-  'slug,name,world,tag,story,specs,purchasable,price,price_unit,presentation,sort_order,' +
+  'slug,name,world,tag,story,specs,purchasable,price,price_unit,pricing,presentation,sort_order,' +
   'subcategory:subcategories(name,slug,sort_order),' +
   'images:product_images(role,src_480,src_960,width,height,crop,sort_order)'
 
 /** Rows come back ordered so the site lists them the way /admin does. */
 export const CMS_ORDER = 'world.asc,sort_order.asc,name.asc'
+
+/** The settings row both readers fetch beside the products. */
+export const CMS_PRICE_BOOK_QUERY = 'settings?select=value&key=eq.price_book'
 
 export interface CmsImageRow {
   role?: string | null
@@ -43,6 +47,7 @@ export interface CmsProductRow {
   purchasable?: boolean | null
   price?: number | null
   price_unit?: string | null
+  pricing?: unknown
   presentation?: string | null
   sort_order?: number | null
   subcategory?: { name?: string | null; slug?: string | null; sort_order?: number | null } | null
@@ -126,7 +131,14 @@ export function mapCatalogue(rows: CmsProductRow[]): { products: Product[]; sect
     const sub = r.subcategory?.name
     if (!r.slug || !r.name || !isWorld(world) || !sub) continue
 
-    const price = typeof r.price === 'number' && Number.isFinite(r.price) ? r.price : undefined
+    /* The rate card is the source of truth for a priced door; the `price`
+       column is the headline it implies, kept in step for anything that reads
+       the table raw. A row with a price and no rate card is a door saved
+       before 2026-09-15 — the placeholder overlay in products.ts turns that
+       headline into a rate card, exactly as it does for the local products. */
+    const pricing = parseDoorPricing(r.pricing) ?? undefined
+    const column = typeof r.price === 'number' && Number.isFinite(r.price) ? r.price : undefined
+    const price = pricing ? headlinePrice(pricing) : column
     products.push({
       id: r.slug,
       name: r.name,
@@ -139,6 +151,7 @@ export function mapCatalogue(rows: CmsProductRow[]): { products: Product[]; sect
       purchasable: Boolean(r.purchasable && price),
       ...(price === undefined ? {} : { price }),
       ...(r.price_unit ? { priceUnit: r.price_unit as Product['priceUnit'] } : {}),
+      ...(pricing && r.purchasable ? { pricing } : {}),
     })
 
     const forWorld = order.get(world) ?? new Map<string, number>()

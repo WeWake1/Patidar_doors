@@ -28,8 +28,9 @@
 import { CMS_PRODUCTS } from './catalog.gen'
 import type { CmsSections } from './cmsMap'
 import { leafImageFor, photoVisualFor } from './photoMap'
-import type { DoorConfig, PriceResult } from './pricing'
-import { calcPrice, configFromLine, formatSizeLabel, parseSizeId } from './pricing'
+import type { DoorConfig, DoorPricing, PriceResult } from './pricing'
+import { calcPrice, configFromLine, formatSizeLabel, headlinePrice, parseSizeId, placeholderPricing } from './pricing'
+import { getPriceBook } from './priceBook'
 
 export type WorldId = 'timbers' | 'doors' | 'ply' | 'wpc'
 
@@ -192,9 +193,19 @@ export interface Product {
   visual: Visual
   /** false ⇒ no online price; card & PDP show an "Enquire" CTA instead */
   purchasable: boolean
-  /** base ₹ for the standard 8′×3′ leaf, installed (purchasable doors only) */
+  /**
+   * The headline ₹ a card shows ("from …"): the door at its reference size
+   * (8′ × 3′ unless the owner set another) with every option at its default,
+   * installed. Derived from `pricing` by `headlinePrice` wherever one exists.
+   */
   price?: number
   priceUnit?: 'leaf' | 'cft' | 'sqft' | 'sheet'
+  /**
+   * The door's own rate card — base rate + option groups + which of the
+   * price book's frames and hardware it is offered with (see pricing.ts).
+   * Present on every purchasable door; absent means "price on enquiry".
+   */
+  pricing?: DoorPricing
 }
 
 /* ═══════════════ TIMBERS — raw wood from the yard ════════════════════════ */
@@ -558,9 +569,10 @@ const LOCAL_IDS = new Set(LOCAL_PRODUCTS.map((p) => p.id))
  * It is applied **after** the CMS merge rather than written into the product
  * literals above, and that is deliberate: `npm run catalog:fetch` overwrites a
  * merged product wholesale, so a price set locally on an id the CMS also
- * carries would silently vanish on the next fetch. The day the client types a
- * real price into /admin, delete that door's line here and the CMS value
- * stands on its own.
+ * carries would silently vanish on the next fetch. A rate card saved in
+ * /admin (`products.pricing`) wins over the line here without any edit — the
+ * overlay only fills in a door that has none — so delete a door's line the day
+ * its real card is typed, or leave it; either way the CMS value stands.
  */
 const PLACEHOLDER_PRICES: Record<string, number> = {
   'burma-teak-door': 68000,
@@ -580,6 +592,14 @@ const PLACEHOLDER_PRICES: Record<string, number> = {
   'membrane-door': 16500,
   'wpc-cnc-door': 22500,
   'wpc-digital-veneer-door': 25500,
+}
+
+/**
+ * The invented headline the site quotes for a door the client has not priced
+ * yet, so /admin can say so beside the door instead of calling it "enquiry".
+ */
+export function placeholderHeadline(id: string): number | undefined {
+  return PLACEHOLDER_PRICES[id]
 }
 
 /**
@@ -614,8 +634,15 @@ export function buildCatalogue(cms: Product[]): Product[] {
     ...cms.filter((p) => !LOCAL_IDS.has(p.id)),
   ]
   return merged.map((p) => {
-    const price = PLACEHOLDER_PRICES[p.id]
     const isDoor = isDoorProduct(p.world, p.sub)
+    /* Overlay one: a rate card for every door that sells but has none — the
+       placeholder headline for the 17 seeded doors, or a bare `price` on a row
+       saved before rate cards existed. A door the client has priced in /admin
+       carries its own `pricing` and nothing here touches it. Only doors: the
+       configurator is a door configurator, and a per-cft timber price is an
+       enquiry line, not a thing to put sliders on. */
+    const headline = isDoor && !p.pricing ? (PLACEHOLDER_PRICES[p.id] ?? (p.purchasable ? p.price : undefined)) : undefined
+    const pricing = headline === undefined ? undefined : placeholderPricing(headline)
     const leaf =
       isDoor && p.visual.kind === 'photo' && !p.visual.cover.isLeafCrop
         ? leafImageFor(p.id, p.name)
@@ -627,14 +654,14 @@ export function buildCatalogue(cms: Product[]): Product[] {
        the client filed the product under. See `isDoorProduct` for the two-month
        bug this closes. */
     const plain = !isDoor && p.visual.kind === 'photo' && p.visual.presentation !== 'plain'
-    if (price === undefined && !leaf && !plain) return p
+    if (!pricing && !leaf && !plain) return p
     const visual =
       leaf || plain
         ? { ...p.visual, ...(leaf ? { leaf } : {}), ...(plain ? { presentation: 'plain' as const } : {}) }
         : undefined
     return {
       ...p,
-      ...(price === undefined ? {} : { purchasable: true, price, priceUnit: 'leaf' as const }),
+      ...(pricing ? { purchasable: true, price: headlinePrice(pricing), priceUnit: 'leaf' as const, pricing } : {}),
       ...(visual ? { visual } : {}),
     }
   })
@@ -863,20 +890,35 @@ export function getSize(sizeId: string): SizeOption {
 }
 
 /**
- * Made-to-measure price. The size and the options are the whole quote now —
- * see `src/data/pricing.ts` for the model (stock-panel snapping, fixed +
- * per-sq-ft leaf, flat add-ons, frame by running foot).
+ * A door's rate card, when it has one. This is the gate for everything
+ * configurable: the PDP configurator, the cart, the try-on estimate.
+ */
+export function pricingOf(product: Product): DoorPricing | undefined {
+  return product.purchasable ? product.pricing : undefined
+}
+
+/**
+ * Made-to-measure price for a stored cart line. The size and the options are
+ * the whole quote — see `src/data/pricing.ts` for the model. The price book
+ * is read from its live store, so a frame rate changed in /admin reprices an
+ * open cart the moment the read lands.
  */
 export function priceFor(product: Product, sizeId: string, toneId: string, opts?: Partial<DoorConfig>): number {
-  if (!product.purchasable || product.price === undefined) return 0
+  const pricing = pricingOf(product)
+  if (!pricing) return 0
+  const book = getPriceBook()
   const tone = getTone(product, toneId)
-  return calcPrice(product.price, tone.delta, configFromLine(sizeId, opts)).total
+  return calcPrice(pricing, book, configFromLine(pricing, book, sizeId, opts)).total + tone.delta
 }
 
 /** The full quote — same numbers as `priceFor`, plus the breakdown to show. */
 export function quoteFor(product: Product, config: DoorConfig, toneId: string): PriceResult | null {
-  if (!product.purchasable || product.price === undefined) return null
-  return calcPrice(product.price, getTone(product, toneId).delta, config)
+  const pricing = pricingOf(product)
+  if (!pricing) return null
+  const q = calcPrice(pricing, getPriceBook(), config)
+  const delta = getTone(product, toneId).delta
+  if (delta <= 0) return q
+  return { ...q, total: q.total + delta, breakdown: [...q.breakdown, { label: 'Finish', amount: delta }] }
 }
 
 /**

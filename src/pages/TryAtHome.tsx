@@ -34,6 +34,7 @@ import { config, whatsappLink } from '../config'
 import {
   defaultToneId,
   leafOf,
+  pricingOf,
   quoteFor,
   tonesFor,
   tryState,
@@ -42,7 +43,8 @@ import {
 } from '../data/products'
 import { useCatalog, useCatalogStatus } from '../data/useCatalog'
 import type { LeafSource } from '../components/tryathome/DoorLayer'
-import { SIZE_LIMITS, configFromLine, formatFtIn, formatSizeLabel, toSizeId } from '../data/pricing'
+import { SIZE_STEP, configFromLine, formatFtIn, formatSizeLabel, placeholderPricing, toSizeId } from '../data/pricing'
+import { usePriceBook } from '../data/priceBook'
 import { fmtINR } from '../lib/format'
 import { rectQuad, type Quad } from '../lib/homography'
 import { t } from '../lib/i18n'
@@ -101,6 +103,7 @@ export function TryAtHome() {
 
 function TryInner({ product }: { product: Product }) {
   const [params] = useSearchParams()
+  const book = usePriceBook()
   const visual = product.visual
 
   /* A hand-edited URL gets the same field-by-field validation a hand-edited
@@ -122,8 +125,12 @@ function TryInner({ product }: { product: Product }) {
     }
     const h = num('h')
     const w = num('w')
-    return configFromLine(h !== null && w !== null ? toSizeId(h, w) : '')
-  }, [params])
+    /* A door with no rate card (an enquiry-only door still gets the doorway
+       view) is sized against a stand-in card at the standard 8′ × 3′, so the
+       size limits and the default size come from one place either way. */
+    const card = pricingOf(product) ?? placeholderPricing(1)
+    return configFromLine(card, book, h !== null && w !== null ? toSizeId(h, w) : '')
+  }, [params, product, book])
 
   const tones = useMemo(() => tonesFor(product), [product])
   /* ⚠️ `Tone | undefined`, and the type is the point. `tonesFor` returns [] for
@@ -316,7 +323,7 @@ function TryInner({ product }: { product: Product }) {
      turns proportions into inches. */
   const estimate =
     result?.ratio != null && estHeight != null
-      ? sizeFromHeight(result.ratio, estHeight, SIZE_LIMITS)
+      ? sizeFromHeight(result.ratio, estHeight, { ...book.limits, step: SIZE_STEP })
       : null
   const estLabel = estimate ? formatSizeLabel(estimate.heightIn, estimate.widthIn) : null
   const estQuote = estimate ? quoteFor(product, { ...cfg, ...estimate }, toneId) : null

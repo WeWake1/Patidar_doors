@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react'
 import type { DoorConfig } from '../data/pricing'
 import { configFromLine, configKey, describeConfig, formatSizeInches } from '../data/pricing'
-import { getProduct, getSize, getTone, leafOf, priceFor, tonesFor } from '../data/products'
+import { usePriceBook } from '../data/priceBook'
+import { getProduct, getSize, getTone, leafOf, priceFor, pricingOf, tonesFor } from '../data/products'
 import type { ProductImage } from '../data/products'
+import { useCatalog } from '../data/useCatalog'
 
 export interface CartLine {
   /** productId|sizeId|toneId|configKey */
@@ -87,7 +89,9 @@ const MAX_LINES = 30
  * for an all-default door, which keeps keys stable with pre-configurator ones.
  */
 function lineKey(productId: string, sizeId: string, toneId: string, opts?: DoorConfig): string {
-  const optsPart = opts ? configKey(opts) : ''
+  const product = getProduct(productId)
+  const pricing = product ? pricingOf(product) : undefined
+  const optsPart = opts && pricing ? configKey(pricing, opts) : ''
   return `${productId}|${sizeId}|${toneId}${optsPart ? `|${optsPart}` : ''}`
 }
 
@@ -185,6 +189,8 @@ const CartContext = createContext<CartContextValue | null>(null)
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadInitial)
   const [isOpen, setOpen] = useState(false)
+  const catalogue = useCatalog()
+  const book = usePriceBook()
 
   useEffect(() => {
     try {
@@ -196,11 +202,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<CartContextValue>(() => {
     const lines: CartLineView[] = state.lines.flatMap((l) => {
-      const product = getProduct(l.productId)
+      const product = catalogue.find((p) => p.id === l.productId)
       if (!product) return []
       const size = getSize(l.sizeId)
       const tone = tonesFor(product).length > 0 ? getTone(product, l.toneId) : null
-      const cfg = configFromLine(l.sizeId, l.opts)
+      const pricing = pricingOf(product)
+      const cfg = pricing ? configFromLine(pricing, book, l.sizeId, l.opts) : null
       const unitPrice = priceFor(product, l.sizeId, l.toneId, l.opts)
       return [
         {
@@ -209,9 +216,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
           photo: leafOf(product) ?? (product.visual.kind === 'photo' ? product.visual.cover : null),
           art: product.visual.kind === 'art' ? product.visual.art : 'classic',
           sizeLabel: size.label,
-          sizeInches: formatSizeInches(cfg.heightIn, cfg.widthIn),
+          sizeInches: formatSizeInches(cfg?.heightIn ?? size.heightIn, cfg?.widthIn ?? size.widthIn),
           toneName: tone?.name ?? null,
-          optsLabel: describeConfig(cfg),
+          optsLabel: pricing && cfg ? describeConfig(pricing, book, cfg) : '',
           unitPrice,
           lineTotal: unitPrice * l.qty,
         },
@@ -229,7 +236,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       remove: (key) => dispatch({ type: 'remove', key }),
       clear: () => dispatch({ type: 'clear' }),
     }
-  }, [state, isOpen])
+    /* The catalogue and the price book are inputs too: a rate changed in
+       /admin reprices an open cart when the live read lands, and a product
+       that arrived with it can be looked up. */
+  }, [state, isOpen, catalogue, book])
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }

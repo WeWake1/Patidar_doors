@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { CMS_ORDER, CMS_SELECT, mapCatalogue, type CmsProductRow } from './cmsMap'
+import { CMS_ORDER, CMS_PRICE_BOOK_QUERY, CMS_SELECT, mapCatalogue, type CmsProductRow } from './cmsMap'
+import { publishPriceBook } from './priceBook'
 import { publishCatalogue, setCatalogueStatus } from './products'
 
 /**
@@ -38,16 +39,37 @@ const MIN_INTERVAL_MS = 60_000
 let inFlight: Promise<void> | null = null
 let lastAt = 0
 
+const HEADERS = () => ({ apikey: KEY!, Authorization: `Bearer ${KEY!}` })
+
+/**
+ * The price book, read beside the products. Its own request and its own
+ * failure: a book that will not load leaves the last one standing (the baked
+ * copy, or the defaults) and never blocks the catalogue.
+ */
+async function readPriceBook(): Promise<void> {
+  try {
+    const res = await fetch(`${URL_BASE}/rest/v1/${CMS_PRICE_BOOK_QUERY}`, { headers: HEADERS(), cache: 'no-cache' })
+    if (!res.ok) return
+    const rows = (await res.json()) as { value?: unknown }[]
+    if (Array.isArray(rows) && rows[0] && 'value' in rows[0]) publishPriceBook(rows[0].value)
+  } catch (e) {
+    if (import.meta.env.DEV) console.warn('[catalogue] price book read failed, using the built-in copy', e)
+  }
+}
+
 async function read(): Promise<void> {
   const query =
     `${URL_BASE}/rest/v1/products` +
     `?select=${encodeURIComponent(CMS_SELECT)}` +
     `&published=eq.true&order=${CMS_ORDER}`
-  const res = await fetch(query, {
-    headers: { apikey: KEY!, Authorization: `Bearer ${KEY!}` },
-    // The catalogue changes when the client saves, not when a CDN decides.
-    cache: 'no-cache',
-  })
+  const [res] = await Promise.all([
+    fetch(query, {
+      headers: HEADERS(),
+      // The catalogue changes when the client saves, not when a CDN decides.
+      cache: 'no-cache',
+    }),
+    readPriceBook(),
+  ])
   if (!res.ok) throw new Error(`catalogue read failed: ${res.status}`)
   const rows = (await res.json()) as CmsProductRow[]
   if (!Array.isArray(rows)) throw new Error('catalogue read returned a non-list')

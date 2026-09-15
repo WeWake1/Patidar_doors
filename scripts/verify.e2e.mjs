@@ -659,7 +659,7 @@ await step('product page + made-to-measure configurator', async () => {
 
   // a frame reveals its own two option groups and adds to the price
   await page.getByRole('radio', { name: /3-side frame/ }).click()
-  await page.waitForSelector('.cfg--opt legend:text-is("Frame section")')
+  await page.waitForSelector('.cfg--opt legend:text-is("Frame type")')
   const framed = await page.locator('.pdp__price').innerText()
   if (framed === thin) throw new Error('price did not change with the frame')
 

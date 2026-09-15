@@ -2153,7 +2153,34 @@ button { font-family: var(--sans); }
 
 /* ═══════════════ M5: portal hero (open → push-through → corridor) ═══════ */
 
-.portal { height: 520vh; position: relative; }
+/* ⚠️⚠️ THE TRACK'S HEIGHT CARRIES A `100dvh` TERM AND THAT IS WHAT MAKES THE
+   SCRUB IMMUNE TO CHROME'S MOBILE URL BAR. Read this before "simplifying" it
+   back to a plain `vh` multiple.
+
+   Progress through a sticky track — both paths, `useTrackProgress`'s
+   `-rect.top / (rect.height - innerHeight)` and the CSS timeline's
+   `contain 0% → contain 100%` — is measured against the *scrollable span*,
+   `trackHeight − scrollportHeight`. On Chrome Android the URL bar's hiding and
+   showing resizes the layout viewport (that is the whole reason `lvh` exists),
+   so `innerHeight` swings by the bar's ~56px while a plain `vh` track height
+   does not move at all. The span therefore changes under the visitor, and since
+   p = scroll / span the *same* scroll offset maps to a different p — with the
+   error growing linearly toward the end of the track, which is exactly where
+   the doors are flying.
+
+   Measured on the keyhole hero at 390×844 with a 56px bar: the span goes
+   1744 → 1688, a 3.3% remap of the whole timeline, p jumping by up to +0.023.
+   At p 0.4/0.5/0.6 that is enough to carry the frontmost door — mid-fly-by and
+   ~1000px tall — clean past its exit, so a door **vanishes in a single frame**
+   the instant the bar retracts, and reappears when an upward swipe brings the
+   bar back. The Door Wall's fade jumped 0.10 of opacity at the same moment.
+
+   Writing the height as `calc(Nvh + 100dvh)` makes the span exactly `Nvh`:
+   the track grows by precisely the amount the viewport grew, so the two
+   cancel. Constant span, constant p, nothing moves that the visitor did not
+   scroll. On any viewport with no retractable bar — every desktop — `dvh` is
+   `vh` and this is the old number to the pixel. */
+.portal { height: calc(420vh + 100dvh); position: relative; }
 .portal__sticky {
   position: sticky;
   top: 0;
@@ -2535,7 +2562,8 @@ button { font-family: var(--sans); }
 /* --kt-h is a door's height on screen at z = 0, and it is declared here rather
    than on .ktun__door because two things are drawn from it now: the doors in
    the 3D field, and the flat layer that puts the lock on the one up front. */
-.portal--keyhole { height: 380vh; --kt-h: min(78svh, 66vw); }
+/* 380vh, written as a span + a viewport — see the note on `.portal` above. */
+.portal--keyhole { height: calc(280vh + 100dvh); --kt-h: min(78svh, 66vw); }
 
 /* ── the plate ─────────────────────────────────────────────────────────────
    One opaque path with the keyhole punched out of it (fill-rule: evenodd, see
@@ -3033,7 +3061,14 @@ button { font-family: var(--sans); }
      to 150. At 340 it is 200px, against the desktop 380vh track's 249. A phone
      still scrolls in short swipes, which is what keeps this under desktop, but
      a fly-by nobody can see is not worth the bytes it costs. */
-  .portal--keyhole { height: 340vh; --kt-h: min(72svh, 104vw); }
+  /* ⚠️ 340vh as a span + a viewport (see `.portal`). And ⚠️ this rule was
+     dead from the day it was written: `.portal { height: 300vh }` further down
+     this same stylesheet, inside its own `@media (max-width: 720px)` block, is
+     the same specificity and comes later, so every phone ran the keyhole hero
+     on a 300vh track — 167px of scroll per fly-by, under the 150px this
+     comment calls "a fly-by nobody can see". That rule is scoped to the portal
+     hero now. */
+  .portal--keyhole { height: calc(240vh + 100dvh); --kt-h: min(72svh, 104vw); }
   /* ⚠️ The leaf is ~175px wide on a 390px screen, so a label beside the lock
      runs off the right of the viewport. It goes under the plate instead — and
      over the door, which is why it takes a scrim of its own here: micro-caps
@@ -3072,8 +3107,16 @@ button { font-family: var(--sans); }
 
 @media (max-width: 720px) {
   /* A phone scrolls in short swipes: 420vh of door-opening was four of them
-     before any content. 300vh keeps all three phases, ~two swipes apart. */
-  .portal { height: 300vh; }
+     before any content. 300vh keeps all three phases, ~two swipes apart.
+     ⚠️ Scoped to the portal hero's own track. As a bare `.portal` this sat
+     later in the sheet than both `.portal--keyhole` (340vh) and
+     `.portal--static` (auto) at equal specificity and silently won against
+     each: the keyhole hero ran a 300vh track on every phone, and the
+     reduced-motion hero — which has ~1500px of content and no scrub at all —
+     was given a 2532px box, i.e. **1029px of empty scroll** before `.props`.
+     `--dark` is what the two scrubbed heroes share and `--static` never
+     carries it, so this cannot shadow the static hero again. */
+  .portal--dark:not(.portal--keyhole) { height: calc(200vh + 100dvh); }
   /* the bottom pad reserves the scroll-cue band so the door can't sit on it */
   .portal__zoom { padding: 88px 20px 80px; }
   .portal__scene { --scene-h: min(44vh, 100vw, 380px); }

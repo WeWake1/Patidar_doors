@@ -1,16 +1,14 @@
 import { useId } from 'react'
 import type { CSSProperties } from 'react'
-import type { DoorConfig, PriceResult } from '../data/pricing'
+import type { DoorConfig, DoorPricing, PriceBook, PriceResult } from '../data/pricing'
 import {
-  BACK_SIDE_OPTIONS,
   FRAME_DESIGN_OPTIONS,
   FRAME_OPTIONS,
-  FRAME_SECTION_OPTIONS,
-  HARDWARE_OPTIONS,
-  SIZE_LIMITS,
-  THICKNESS_OPTIONS,
+  SIZE_STEP,
   formatFtIn,
   formatInches,
+  framesFor,
+  hardwareFor,
 } from '../data/pricing'
 import { COMMON_SIZES } from '../data/products'
 import { fmtINR } from '../lib/format'
@@ -36,7 +34,7 @@ interface DimSliderProps {
  */
 function DimSlider({ label, value, min, max, onChange, name }: DimSliderProps) {
   const id = useId()
-  const step = SIZE_LIMITS.step
+  const step = SIZE_STEP
   const clamp = (v: number) => Math.min(max, Math.max(min, Math.round(v / step) * step))
   const pct = ((value - min) / (max - min)) * 100
 
@@ -136,16 +134,37 @@ function ChipGroup<T extends string>({ legend, options, value, onChange, hint }:
 /* ── the configurator ──────────────────────────────────── */
 
 interface Props {
+  /** The door's own rate card — what the groups and the offered frames/hardware come from. */
+  pricing: DoorPricing
+  /** The shop-wide book — frame types, hardware sets, size limits. */
+  book: PriceBook
   config: DoorConfig
   onChange: (next: DoorConfig) => void
   quote: PriceResult
 }
 
-export function DoorConfigurator({ config, onChange, quote }: Props) {
+/**
+ * Every group of chips here is data: the door's option groups (thickness,
+ * back side, whatever the owner added) and the price book's frames and
+ * hardware. Nothing about a specific option is written into this component,
+ * so an option added in /admin is on the page the moment the live read lands.
+ */
+export function DoorConfigurator({ pricing, book, config, onChange, quote }: Props) {
   const set = <K extends keyof DoorConfig>(key: K, value: DoorConfig[K]) => onChange({ ...config, [key]: value })
+  const choose = (groupId: string, choiceId: string) =>
+    onChange({ ...config, choices: { ...config.choices, [groupId]: choiceId } })
 
-  const matchesCommon = (h: number, w: number) => COMMON_SIZES.find((s) => s.heightIn === h && s.widthIn === w)
+  const limits = book.limits
+  const ticks = COMMON_SIZES.filter(
+    (s) =>
+      s.heightIn >= limits.height.min && s.heightIn <= limits.height.max &&
+      s.widthIn >= limits.width.min && s.widthIn <= limits.width.max,
+  )
+  const matchesCommon = (h: number, w: number) => ticks.find((s) => s.heightIn === h && s.widthIn === w)
   const current = matchesCommon(config.heightIn, config.widthIn)
+  const frames = framesFor(pricing, book)
+  const hardware = hardwareFor(pricing, book)
+  const rupee = (n: number) => (n > 0 ? `+${fmtINR(n)}` : n < 0 ? `−${fmtINR(-n)}` : 'Included')
 
   return (
     <>
@@ -156,22 +175,22 @@ export function DoorConfigurator({ config, onChange, quote }: Props) {
           name="height"
           label="Height"
           value={config.heightIn}
-          min={SIZE_LIMITS.height.min}
-          max={SIZE_LIMITS.height.max}
+          min={limits.height.min}
+          max={limits.height.max}
           onChange={(v) => set('heightIn', v)}
         />
         <DimSlider
           name="width"
           label="Width"
           value={config.widthIn}
-          min={SIZE_LIMITS.width.min}
-          max={SIZE_LIMITS.width.max}
+          min={limits.width.min}
+          max={limits.width.max}
           onChange={(v) => set('widthIn', v)}
         />
 
         <div className="cfg__ticks">
           <span className="cfg__ticks-label">Common sizes</span>
-          {COMMON_SIZES.map((s) => (
+          {ticks.map((s) => (
             <button
               key={s.id}
               type="button"
@@ -186,67 +205,78 @@ export function DoorConfigurator({ config, onChange, quote }: Props) {
         </div>
 
         <div className="cfg__hint">
-          {quote.snapped ? (
-            <>
-              Cut from a {quote.panel.heightIn}″ × {quote.panel.widthIn}″ board ({quote.panel.sqft} sq ft) — that board
-              is what you pay for, so the price holds steady until your size needs the next one up.
-            </>
+          {quote.panel ? (
+            quote.snapped ? (
+              <>
+                Cut from a {quote.panel.heightIn}″ × {quote.panel.widthIn}″ board ({quote.panel.sqft} sq ft) — that
+                board is what you pay for, so the price holds steady until your size needs the next one up.
+              </>
+            ) : (
+              <>
+                A stock {quote.panel.heightIn}″ × {quote.panel.widthIn}″ board ({quote.panel.sqft} sq ft), cut with
+                nothing wasted.
+              </>
+            )
           ) : (
-            <>
-              A stock {quote.panel.heightIn}″ × {quote.panel.widthIn}″ board ({quote.panel.sqft} sq ft), cut with
-              nothing wasted.
-            </>
+            <>Priced on the exact size — {quote.area} sq ft.</>
           )}{' '}
           Exact dimensions are confirmed at the free measurement visit.
         </div>
       </fieldset>
 
-      <ChipGroup
-        legend="Thickness"
-        options={THICKNESS_OPTIONS}
-        value={config.thickness}
-        onChange={(v) => set('thickness', v)}
-      />
+      {pricing.groups
+        .filter((g) => g.choices.length > 1)
+        .map((g) => (
+          <ChipGroup
+            key={g.id}
+            legend={g.label}
+            options={g.choices.map((c) => ({
+              id: c.id,
+              label: c.label,
+              note: c.note ?? (c.per === 'unit' && c.extra ? `${rupee(c.extra)} per ${pricing.unit === 'sqft' ? 'sq ft' : 'leaf'}` : rupee(c.extra)),
+            }))}
+            value={config.choices[g.id] ?? g.choices[0].id}
+            onChange={(v) => choose(g.id, v)}
+          />
+        ))}
 
-      <ChipGroup
-        legend="Back side"
-        options={BACK_SIDE_OPTIONS}
-        value={config.backSide}
-        onChange={(v) => set('backSide', v)}
-        hint="A plain back is normal for a main door that only shows its face. Carry the design through when both sides are seen."
-      />
+      {frames.length > 0 && (
+        <ChipGroup
+          legend="Frame — chaukhat"
+          options={FRAME_OPTIONS}
+          value={config.frame}
+          onChange={(v) => set('frame', v)}
+        />
+      )}
 
-      <ChipGroup
-        legend="Frame — chaukhat"
-        options={FRAME_OPTIONS}
-        value={config.frame}
-        onChange={(v) => set('frame', v)}
-      />
-
-      {config.frame !== 'none' && (
+      {config.frame !== 'none' && frames.length > 0 && (
         <>
           <ChipGroup
-            legend="Frame section"
-            options={FRAME_SECTION_OPTIONS}
-            value={config.frameSection}
-            onChange={(v) => set('frameSection', v)}
+            legend="Frame type"
+            options={frames.map((f) => ({ id: f.id, label: f.name, note: f.note ?? `${fmtINR(f.ratePerRft)} per running ft` }))}
+            value={config.frameType}
+            onChange={(v) => set('frameType', v)}
             hint={`${quote.frameRft} running feet at this size.`}
           />
-          <ChipGroup
-            legend="Frame design"
-            options={FRAME_DESIGN_OPTIONS}
-            value={config.frameDesign}
-            onChange={(v) => set('frameDesign', v)}
-          />
+          {book.frameDesignExtra > 0 && (
+            <ChipGroup
+              legend="Frame design"
+              options={FRAME_DESIGN_OPTIONS}
+              value={config.frameDesign}
+              onChange={(v) => set('frameDesign', v)}
+            />
+          )}
         </>
       )}
 
-      <ChipGroup
-        legend="Hardware"
-        options={HARDWARE_OPTIONS}
-        value={config.hardware}
-        onChange={(v) => set('hardware', v)}
-      />
+      {hardware.length > 1 && (
+        <ChipGroup
+          legend="Hardware"
+          options={hardware.map((h) => ({ id: h.id, label: h.name, note: h.note ?? fmtINR(h.price) }))}
+          value={config.hardware}
+          onChange={(v) => set('hardware', v)}
+        />
+      )}
     </>
   )
 }

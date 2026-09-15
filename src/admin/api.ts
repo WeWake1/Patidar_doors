@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase'
+import type { DoorPricing, PriceBook } from '../data/pricing'
+import { headlinePrice, parseDoorPricing, parsePriceBook, placeholderPricing } from '../data/pricing'
 import type { Product, ProductImage, StoredPresentation, WorldId } from '../data/products'
 import { isDoorProduct } from '../data/products'
 import { t } from '../lib/i18n'
@@ -83,8 +85,11 @@ export interface DbProduct {
   story: string | null
   specs: string[]
   purchasable: boolean
+  /** The headline the rate card implies; written on save, read by nothing the admin shows. */
   price: number | null
   price_unit: string | null
+  /** The door's rate card (jsonb). Parsed on load, so the editor never holds a shape it can't render. */
+  pricing: DoorPricing | null
   /* Only the three stored values — `plain` is derived from the world and the
      section by `buildCatalogue`, never written to this column. */
   presentation: StoredPresentation
@@ -110,7 +115,23 @@ export async function listProducts(): Promise<DbProduct[]> {
     .select('*, images:product_images(*)')
     .order('sort_order')
   if (error) throw error
-  return (data as DbProduct[]).map((p) => ({ ...p, images: (p.images ?? []).slice().sort((a, b) => a.sort_order - b.sort_order) }))
+  return (data as DbProduct[]).map(fromRow)
+}
+
+/**
+ * A row as the editor holds it: images in order, the rate card parsed.
+ *
+ * A door saved before rate cards existed carries a bare `price` and no card;
+ * the site turns that into a placeholder card (`buildCatalogue`), so the
+ * editor opens on the same card rather than on "Off" for a door the site is
+ * selling. Saving writes the card out properly.
+ */
+function fromRow(p: DbProduct): DbProduct {
+  return {
+    ...p,
+    pricing: parseDoorPricing(p.pricing) ?? (p.purchasable && p.price ? placeholderPricing(p.price) : null),
+    images: (p.images ?? []).slice().sort((a, b) => a.sort_order - b.sort_order),
+  }
 }
 
 export async function getProduct(id: string): Promise<DbProduct | null> {
@@ -123,8 +144,7 @@ export async function getProduct(id: string): Promise<DbProduct | null> {
     if (error.code === 'PGRST116') return null
     throw error
   }
-  const p = data as DbProduct
-  return { ...p, images: (p.images ?? []).slice().sort((a, b) => a.sort_order - b.sort_order) }
+  return fromRow(data as DbProduct)
 }
 
 export async function createSubcategory(world: WorldId, name: string): Promise<DbSubcategory> {
@@ -156,7 +176,11 @@ export async function deleteSubcategory(id: string): Promise<void> {
 /** Upsert a product and replace its images. Returns the product id. */
 export async function saveProduct(p: DbProduct): Promise<string> {
   const { images, id, ...fields } = p
-  const row = id ? { ...fields, id } : fields
+  /* The headline `price` is derived from the rate card, never typed: it is
+     what the card's "from ₹" shows and what anything reading the table raw
+     sees, and two numbers that can disagree is one number too many. */
+  const price = fields.purchasable && fields.pricing ? headlinePrice(fields.pricing) : null
+  const row = id ? { ...fields, price, id } : { ...fields, price }
   const { data, error } = await db().from('products').upsert(row).select('id').single()
   if (error) throw error
   const productId = (data as { id: string }).id
@@ -181,8 +205,32 @@ export async function saveProduct(p: DbProduct): Promise<string> {
   return productId
 }
 
+/** Products keep their place on the site in this order — one write per moved row. */
+export async function reorderProduct(id: string, sort_order: number): Promise<void> {
+  const { error } = await db().from('products').update({ sort_order }).eq('id', id)
+  if (error) throw error
+}
+
 export async function deleteProduct(id: string): Promise<void> {
   const { error } = await db().from('products').delete().eq('id', id)
+  if (error) throw error
+}
+
+/* ── the price book ─────────────────────────────────────── */
+
+/**
+ * The shop-wide price book, or the defaults when no row has been saved yet.
+ * Parsed field by field, the way the storefront parses it: the editor opens
+ * on a book it can render whatever the row holds.
+ */
+export async function getPriceBook(): Promise<{ book: PriceBook; saved: boolean }> {
+  const { data, error } = await db().from('settings').select('value').eq('key', 'price_book').maybeSingle()
+  if (error) throw error
+  return { book: parsePriceBook(data?.value ?? null), saved: Boolean(data) }
+}
+
+export async function savePriceBook(book: PriceBook): Promise<void> {
+  const { error } = await db().from('settings').upsert({ key: 'price_book', value: book })
   if (error) throw error
 }
 
@@ -261,9 +309,10 @@ export function toPreviewProduct(p: DbProduct, subName: string): Product {
     story: p.story ?? undefined,
     specs: p.specs,
     visual,
-    purchasable: Boolean(p.purchasable && p.price),
-    price: p.price ?? undefined,
+    purchasable: Boolean(p.purchasable && p.pricing),
+    price: p.pricing ? headlinePrice(p.pricing) : undefined,
     priceUnit: (p.price_unit as Product['priceUnit']) ?? undefined,
+    ...(p.purchasable && p.pricing ? { pricing: p.pricing } : {}),
   }
 }
 

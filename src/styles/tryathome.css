@@ -22,6 +22,24 @@
   background: var(--deep);
   color: var(--cream-on-dark);
 
+  /* ⚠️ The pick step keeps the site nav. `has-fullscreen` — the class that
+     takes the nav, the footer and the WhatsApp button away — is only added
+     once a photo or the camera is live, so on the way in this route renders
+     under a `position: fixed` nav and has to clear it itself.
+
+     It shipped without this clearance: `.try__bar` laid out at y = 0 at every
+     width, exactly underneath the nav, so "Back to the door" and the door's
+     name and size were invisible AND untappable — `elementFromPoint` at the
+     back link's centre returned `.nav__word`. The only way out of try-at-home
+     before a photo was the browser's own Back button.
+
+     border-box, so this pads the top without making the page taller than the
+     `100dvh` above; `--nav-h` is measured and published by Nav.tsx and the
+     literal is its pre-hydration fallback. Once a photo is up the nav is gone
+     and the bar takes the top of the viewport itself. */
+  --try-nav: var(--nav-h, 72px);
+  padding-top: var(--try-nav);
+
   /* ⚠️ The one place this surface touches tier 2, and it has to. `.btn` is a
      role-reading component and `--action` is `--ink` — a fill designed for a
      cream page. On `--deep` that paints near-black on near-black: the pick
@@ -60,6 +78,8 @@ body.has-fullscreen .footer,
 body.has-fullscreen .wa-float {
   display: none;
 }
+/* …and the clearance those left behind goes with them. */
+body.has-fullscreen .try { --try-nav: 0px; }
 
 .try--live {
   height: 100dvh;
