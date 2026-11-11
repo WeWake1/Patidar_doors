@@ -31,12 +31,13 @@
  * Writes public/images/leaves/<id>.webp and src/data/leaves.gen.ts.
  * Run with `npm run leaves:build`. Both outputs are committed.
  */
+import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 import sharp from 'sharp'
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-const root = path.resolve(new URL('..', import.meta.url).pathname)
+const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
 const SRC_DIR = path.join(root, 'public/images/doors')
 const OUT_DIR = path.join(root, 'public/images/leaves')
 const MANIFEST = path.join(root, 'src/data/leaves.gen.ts')

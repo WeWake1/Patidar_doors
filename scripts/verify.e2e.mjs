@@ -143,13 +143,14 @@ async function heroTo(frac) {
   }
 }
 
-await step('the hero ships no WebGL backdrop', async () => {
+await step('the hero ships no three.js', async () => {
   /* The portal hero puts a three.js canvas behind its opening phase — 238 kB
-     gzipped, more than twice the rest of the site. This hero has none, and the
+     gzipped, more than twice the rest of the site. This hero draws its tunnel
+     in WebGL too, but hand-written (`tunnelCanvas.ts`, ~3 kB), and the
      assertion is on the *fetch* rather than on the markup for the same reason
-     the handheld-AR one is: a gate that regresses ships the payload to every
-     visitor long before anything looks wrong on screen. Nothing here may pull
-     `three`, so the whole hero is walked before the verdict. */
+     the handheld-AR one is: a second importer of `three` ships the payload to
+     every visitor long before anything looks wrong on screen. Nothing here may
+     pull it, so the whole hero is walked before the verdict. */
   const heavy = []
   const watch = (r) => {
     if (/Beams|three/i.test(new URL(r.url()).pathname)) heavy.push(new URL(r.url()).pathname)
@@ -186,8 +187,8 @@ await step('the door up front is locked, and the key flies you to the wall', asy
      lock left of the door's centre is a lock on the hinge — which is what a
      mirrored or reordered leaf would silently produce. */
   const doorMid = await page.evaluate(() => {
-    const r = document.querySelector('.ktun__door').getBoundingClientRect()
-    return r.left + r.width / 2
+    const c = document.querySelector('.ktun__canvas')
+    return c.getBoundingClientRect().left + c.__kt.doors[0].cx
   })
   if (!(box.x > doorMid)) throw new Error('the lock is on the hinge side of the door')
 
@@ -243,92 +244,138 @@ await step('the door up front is locked, and the key flies you to the wall', asy
   await page.waitForSelector('.kgate__lock')
 })
 
-await step('the tunnel is four directly composited images per door, and nothing else', async () => {
-  /* ⚠️ A guard for a bug this browser cannot see. Headless Chrome ignores the
-     emulated device scale factor when it rasterises, so the cost of the tunnel
-     on a real 1440px phone — 500 MB of tiles mid-flight, 475 MB left behind at
-     rest after a scroll back, against a 256 MB budget — is invisible here. The
-     fix is a SHAPE (see the note on `.ktun__door` in global.css): everything a
-     door shows is an `<img>` carrying `will-change: transform`, which Chrome
-     composites as a directly composited image (a texture, no tiles, no raster
-     at any scale); the boxes around them paint nothing, carry no opacity and
-     no `will-change`; and there is no preserve-3d anywhere in the tunnel. Each
-     half of that is asserted, because each half is exactly what the next
-     "tidy-up" would undo. */
+/* The tunnel is a canvas, so there is no door in the DOM to measure. The hero
+   hangs a small read-out on the canvas element instead (`__kt`, see
+   `TunnelProbe` in HeroKeyhole.tsx): this frame's doors as the renderer was
+   handed them, plus a way to ask how much of the drawing buffer is painted. */
+const tunnel = () =>
+  page.evaluate(() => {
+    const kt = document.querySelector('.ktun__canvas')?.__kt
+    if (!kt) return null
+    return {
+      live: kt.live(),
+      frames: kt.frames,
+      doors: kt.doors.map((d) => ({ src: d.src, scale: d.scale, opacity: d.opacity, open: d.open, h: d.h, w: d.w })),
+    }
+  })
+
+await step('the tunnel is one canvas, and nothing else', async () => {
+  /* ⚠️ A guard for a bug this browser cannot see. From 2026-08-21 to 2026-11-11
+     the tunnel was DOM — door boxes, then four `<img>`s per door laid out at ten
+     times their size — and every version measured clean here while it tore
+     itself apart on real phones (doors drawn in chunks, strips missing,
+     stutter), because how a browser's compositor tiles a layer that grows 30×
+     is nothing a headless run can observe. The fix is a SHAPE: one canvas,
+     which is one screen-sized layer whatever is drawn in it. So what is
+     asserted is that the shape has not been undone — nobody has put door
+     elements, a 3D scene or a per-frame stylesheet back "for one small thing". */
   const shape = await page.evaluate(() => {
     const out = []
-    const door = document.querySelector('.ktun__door')
-    const cs = getComputedStyle(door)
-    if (cs.willChange !== 'auto') out.push(`.ktun__door carries will-change: ${cs.willChange}`)
-    if (cs.opacity !== '1') out.push(`.ktun__door carries opacity ${cs.opacity}`)
-    if (cs.transformStyle !== 'flat') out.push(`.ktun__door is transform-style: ${cs.transformStyle}`)
-    if (cs.boxShadow !== 'none' || cs.backgroundImage !== 'none') out.push('.ktun__door paints something of its own')
-    const space = getComputedStyle(document.querySelector('.ktun__space'))
-    if (space.transformStyle !== 'flat') out.push(`.ktun__space is transform-style: ${space.transformStyle}`)
-    if (space.perspective === 'none') out.push('.ktun__space has no perspective')
-    const kids = [...door.children]
-    if (kids.length !== 4 || kids.some((k) => k.tagName !== 'IMG'))
-      out.push(`a door holds ${kids.map((k) => k.tagName.toLowerCase() + '.' + k.className).join(' ')}, not four <img>s`)
-    for (const k of kids) {
-      const ks = getComputedStyle(k)
-      if (ks.willChange !== 'transform') out.push(`${k.className} has will-change: ${ks.willChange}`)
-      if (ks.borderRadius !== '0px' || ks.boxShadow !== 'none' || ks.backgroundImage !== 'none')
-        out.push(`${k.className} carries a radius/shadow/background, which disqualifies a directly composited image`)
-      if (ks.objectFit !== 'fill') out.push(`${k.className} is object-fit: ${ks.objectFit}`)
+    const tun = document.querySelector('.ktun')
+    const canvas = tun.querySelector('canvas.ktun__canvas')
+    if (!canvas) return ['there is no .ktun__canvas']
+    if (tun.querySelectorAll('img').length) out.push('there are <img>s in the tunnel again')
+    if (document.querySelector('.ktun__door, .ktun__leaf, .ktun__space')) out.push('door elements are back in the tunnel')
+    const kids = [...tun.children].map((k) => k.className).join(' ')
+    if (kids !== 'ktun__hall ktun__canvas ktun__ruler') out.push(`.ktun holds "${kids}"`)
+    for (const el of [tun, ...tun.children]) {
+      const cs = getComputedStyle(el)
+      if (cs.transformStyle !== 'flat') out.push(`${el.className} is transform-style: ${cs.transformStyle}`)
+      if (cs.perspective !== 'none') out.push(`${el.className} has a perspective`)
+      if (cs.animationName !== 'none') out.push(`${el.className} is animated by a stylesheet (${cs.animationName})`)
     }
+    /* never more than 2 device px per CSS px — at a phone's 3.5 the buffer
+       would be three times the pixels for a difference nobody can see */
+    const r = canvas.getBoundingClientRect()
+    if (canvas.width > Math.ceil(r.width * 2) + 1) out.push(`the drawing buffer is ${canvas.width}px wide for a ${Math.round(r.width)}px canvas`)
+    if (!canvas.__kt?.live()) out.push('the canvas has no live WebGL context')
     return out
   })
   if (shape.length) throw new Error(shape.join('; '))
+
+  /* …and that it is actually painting. A canvas that initialised and then drew
+     nothing looks exactly like a healthy one to every check above. At rest the
+     door up front and its jamb cover a good part of the pane. */
+  const painted = await page.evaluate(() => document.querySelector('.ktun__canvas').__kt.coverage())
+  if (!(painted > 0.08)) throw new Error(`the canvas is blank at rest (coverage ${painted.toFixed(3)})`)
+})
+
+await step('scrolling the hero does not re-render it', async () => {
+  /* ⚠️ The other half of the phone fix. The hero used to hold scroll progress in
+     React state — a `setState` per scroll event — so the whole component, and
+     the 56-tile wall under it, was re-rendered and diffed sixty times a second
+     on the same thread that had to keep up with the finger. It is driven by a
+     plain scroll listener now and React hears about a handful of phase changes
+     per pass. Asserted on the DOM React owns: across a scrub that never leaves
+     one phase, nothing in the pane may change except the inline opacities the
+     scroll loop itself writes. */
+  await heroTo(0.012)
+  const writes = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const pane = document.querySelector('.portal__sticky')
+        let n = 0
+        /* the scroll loop writes inline opacity (a `style` mutation) on six
+           elements, by design — count anything that is NOT that */
+        const mo = new MutationObserver((list) => {
+          for (const m of list) if (!(m.type === 'attributes' && m.attributeName === 'style')) n++
+        })
+        mo.observe(pane, { subtree: true, childList: true, attributes: true, characterData: true })
+        const el = document.querySelector('.portal')
+        const span = el.offsetHeight - pane.clientHeight
+        let i = 0
+        const tick = () => {
+          /* a scrub inside one phase: 1.2% → 4% of the track, 40 frames */
+          window.scrollTo(0, el.offsetTop + span * (0.012 + 0.0007 * i))
+          if (++i < 40) requestAnimationFrame(tick)
+          else
+            setTimeout(() => {
+              mo.disconnect()
+              resolve(n)
+            }, 120)
+        }
+        tick()
+      }),
+  )
+  if (writes > 0) throw new Error(`React touched the pane ${writes} time(s) during a scrub inside one phase`)
+  const t = await tunnel()
+  if (!(t.frames > 20)) throw new Error(`the canvas drew only ${t.frames} frames across the scrub`)
+  await wheelTo(0)
 })
 
 await step('the tunnel is real door photographs, flying at the camera', async () => {
-  const srcs = await page.$$eval('.ktun__leaf', (els) => els.map((e) => new URL(e.src).pathname))
-  if (srcs.length !== 5) throw new Error(`expected 5 tunnel doors, got ${srcs.length}`)
+  const rest = await tunnel()
+  if (rest.doors.length !== 5) throw new Error(`expected 5 tunnel doors, got ${rest.doors.length}`)
   /* Leaf cut-outs, not catalogue covers: a cover brings the showroom wall and
      architrave along with it, which is the one thing a door flying past the
      camera must not have. */
-  const stray = srcs.filter((s) => !s.startsWith('/images/leaves/'))
-  if (stray.length) throw new Error(`tunnel door is not a leaf cut-out: ${stray[0]}`)
+  const stray = rest.doors.filter((d) => !d.src.startsWith('/images/leaves/'))
+  if (stray.length) throw new Error(`tunnel door is not a leaf cut-out: ${stray[0].src}`)
+  /* every door is shut and standing still until something moves */
+  if (rest.doors.some((d) => d.opacity > 0.002 && d.open > 0.001)) throw new Error('a door is ajar before anyone has scrolled')
 
   /* A door must genuinely grow on approach, and must then leave. This is the
      check that would have caught the first cut of the tunnel, where NEAR was
      small enough that every door faded out at about the size it came in at.
-
-     ⚠️ Measure the largest VISIBLE door, not `.ktun__door:first-child`. Two
-     reasons, and the second one bit. `wheelTo` lands within a dozen pixels but
-     Lenis multiplies wheel deltas, so a short hop overshoots by enough that the
-     first door may already have gone by. And a door past the camera sits at
-     z > perspective, where the projection inverts and `getBoundingClientRect`
-     hands back a nonsense number — which is how an earlier version of this
-     assertion passed while measuring a door that was behind the viewer. */
-  const biggest = () =>
-    page.evaluate(() =>
-      Math.max(
-        ...[...document.querySelectorAll('.ktun__door')]
-          .filter((el) => el.style.visibility !== 'hidden')
-          .map((el) => el.getBoundingClientRect().height),
-      ),
-    )
-  const far = await biggest()
+     ⚠️ The largest VISIBLE door, not the first: `wheelTo` lands within a dozen
+     pixels but Lenis multiplies wheel deltas, so a short hop overshoots by
+     enough that the first door may already have gone by. */
+  const biggest = (t) => Math.max(0, ...t.doors.filter((d) => d.opacity > 0.05).map((d) => d.h * d.scale))
+  const far = biggest(rest)
   await heroTo(0.3)
-  const near = await biggest()
+  const mid = await tunnel()
+  const near = biggest(mid)
   if (!(near > far * 1.8)) throw new Error(`door did not fly at the camera (${Math.round(far)}px → ${Math.round(near)}px)`)
+  /* …opening as it comes: whichever door is nearest is well into its swing */
+  const lead = mid.doors.filter((d) => d.opacity > 0.05).sort((x, y) => y.scale - x.scale)[0]
+  if (!(lead.open > 0.3)) throw new Error(`the nearest door is barely open at p 0.3 (${lead.open.toFixed(2)})`)
+  const painted = await page.evaluate(() => document.querySelector('.ktun__canvas').__kt.coverage())
+  if (!(painted > 0.08)) throw new Error(`the canvas is blank mid-flight (coverage ${painted.toFixed(3)})`)
 
-  /* …and off the other side: the first door is gone once it has passed.
-     ⚠️ Asserted on what is on SCREEN — the effective opacity — not on React's
-     inline `style.visibility`. That property only exists on the JS fallback
-     path; where the browser has scroll-driven animations the compositor owns
-     the door's opacity and React deliberately writes nothing, so testing the
-     inline style was testing which code path was running, not whether the door
-     had left. The fade lives on the LEAF, not the door box (a group opacity is
-     a render surface — global.css), so that is what is read. */
+  /* …and off the other side: the first door is gone once it has passed. */
   await heroTo(0.45)
-  const goneOpacity = await page.evaluate(() => {
-    const d = document.querySelector('.ktun__door')
-    if (d.style.visibility === 'hidden' || getComputedStyle(d).visibility === 'hidden') return 0
-    return Number(getComputedStyle(d.querySelector('.ktun__leaf')).opacity)
-  })
-  if (goneOpacity > 0.01) throw new Error(`the first door never flew past the camera (opacity ${goneOpacity})`)
+  const gone = (await tunnel()).doors[0].opacity
+  if (gone > 0.01) throw new Error(`the first door never flew past the camera (opacity ${gone})`)
 })
 await shot('02-home-hero-tunnel')
 
@@ -816,14 +863,13 @@ await step('mobile home + burger menu', async () => {
   await page.goto(BASE + '/', { waitUntil: 'networkidle' })
   await page.waitForTimeout(500)
   /* ⚠️ A phone flies the same five doors as the desktop. It was cut to three
-     from 2026-09-01 to 2026-09-10 as a compositor-memory measure, taken from
-     numbers this very browser produced at an emulated DPR that never reached
-     its compositor — the real cost was 12× higher and three doors did not fix
-     the phone. The doors are directly composited images now (see the shape
-     step at 1440) and five cost ~16 MB on a 1440px phone. Asserted so the
-     three-door "fix" cannot quietly come back as a reflex. */
-  const leaves = await page.locator('.ktun__leaf').count()
-  if (leaves !== 5) throw new Error(`the phone got ${leaves} tunnel doors, not 5`)
+     from 2026-09-01 to 2026-09-10 as a compositor-memory measure; the doors
+     are quads in one canvas now, so the count costs nothing worth saving.
+     Asserted so the three-door "fix" cannot quietly come back as a reflex. */
+  const phone = await tunnel()
+  if (!phone) throw new Error('the phone hero has no tunnel canvas')
+  if (phone.doors.length !== 5) throw new Error(`the phone got ${phone.doors.length} tunnel doors, not 5`)
+  if (!phone.live) throw new Error('the phone hero has no live WebGL context')
   await shot('13-mobile-home')
   await page.locator('.nav__burger').click()
   await page.waitForSelector('.nav__menu')

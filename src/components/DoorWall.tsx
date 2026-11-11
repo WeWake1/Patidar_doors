@@ -68,27 +68,26 @@ const ITEMS: DriftWallItem[] = WALL_PHOTOS.map((p) => ({
  * to /shop, and it must be mounted through `DoorWallSlot` rather than imported
  * directly — the reasons are in that file.
  *
- * ⚠️ **`memo`, and it is load-bearing inside the keyhero hero.** `HeroKeyhole`
- * re-renders on every scroll frame — that is what a scrubbed hero is — and this
- * subtree is 56 tiles and 28 `<img>`s, so unmemoised React re-rendered and
- * diffed the whole wall 60×/sec. It did it from the very top of the page, too,
- * because the wall mounts on the first idle callback after `load` and long
- * before it is visible: measured on a throttled phone profile, that was ~115ms
- * of script per 2.5s scrub — about half of ALL script time in the hero —
- * whether or not anything of the wall was on screen. Memoising took the hero's
- * script cost from 243ms to ~130ms over the same scrub.
- * The three props are already shaped for it: `compact` is a constant, `paused`
- * a boolean, and `headOpacity` is quantised to 1/50 by the hero (see the note
- * at its call site there) — so this re-renders ~50 times across the whole
- * track instead of ~300. ⚠️ Anything added to the prop list has to be
- * quantised or referentially stable the same way, or the memo silently stops
- * being one.
+ * ⚠️ **`memo`, and every prop is a constant or a boolean.** Inside the keyhole
+ * hero this subtree is 56 tiles and 28 `<img>`s under a parent that used to
+ * re-render on every scroll frame, and unmemoised that was half of all script
+ * time in the hero. The hero no longer re-renders per frame at all (it draws a
+ * canvas from a scroll listener), but it does re-render when a phase flag
+ * flips, and none of those flips is this component's business unless it
+ * arrives as one of these three props. ⚠️ Never add a prop that changes with
+ * scroll position — hand the hero an element to write to instead.
  */
 export const DoorWall = memo(function DoorWall({
   compact = false,
   paused = false,
-  headOpacity,
-}: { compact?: boolean; paused?: boolean; headOpacity?: number } = {}) {
+  headShown,
+}: {
+  compact?: boolean
+  paused?: boolean
+  /** Only the keyhole hero passes it: the head fades in when the hero says the
+      last door has gone past, and stays out of the way until then. */
+  headShown?: boolean
+} = {}) {
   const split = useMediaQuery(SPLIT_QUERY)
   const [chosen, setChosen] = useState(0)
   const [zoomed, setZoomed] = useState<number | null>(null)
@@ -99,17 +98,15 @@ export const DoorWall = memo(function DoorWall({
      StrokeText's own ScrollTrigger cannot fire this one. Inside a 100dvh
      sticky pane the title sits mid-viewport from the top of the track, so
      `start: 'top 82%'` is already satisfied the moment the trigger is created
-     and the draw plays minutes of scroll before the wall is on screen — which
-     is why the compact variant carried a plain <h2> from 2026-08-23 until
-     2026-08-31. The hero already knows when the head arrives, because it fades
-     it in itself, so the draw is latched off `headOpacity` instead and the
-     component is mounted at that moment for `trigger="mount"` to play it.
-     ⚠️ Latched, never a bare `headOpacity > 0`: scrubbing back up and down
-     again must not redraw a headline the visitor has already watched. */
+     and the draw plays minutes of scroll before the wall is on screen. The
+     hero knows when the head arrives, so the draw is latched off `headShown`
+     and the component is mounted at that moment for `trigger="mount"` to play.
+     ⚠️ Latched, never a bare `headShown`: scrubbing back up and down again
+     must not redraw a headline the visitor has already watched. */
   const [drawTitle, setDrawTitle] = useState(false)
   useEffect(() => {
-    if (headOpacity !== undefined && headOpacity > 0) setDrawTitle(true)
-  }, [headOpacity])
+    if (headShown) setDrawTitle(true)
+  }, [headShown])
 
   /* ⚠️ Mounting on the reveal frame would start the ~46 kB gsap fetch on that
      frame too, and the headline would arrive plain and then snap to outline
@@ -173,15 +170,13 @@ export const DoorWall = memo(function DoorWall({
 
   return (
     <section className={`doorwall${compact ? ' doorwall--compact' : ''}`} aria-labelledby="doorwall-title">
-      {/* ⚠️ `headOpacity` is applied HERE, on the head itself, and must never
-          go back to being a custom property set on an ancestor. A changing
-          custom property invalidates style for every element that inherits it,
-          and when the hero drove one on the wall's wrapper it was invalidating
-          the whole wall — 28 tiles, the viewer, the overlay — on every frame of
-          the scrub. That single declaration was 130 ms of style recalc across
-          one pass of the hero, five times everything else it does put
-          together. */}
-      <div className="doorwall__head" style={headOpacity === undefined ? undefined : { opacity: headOpacity }}>
+      {/* The head's fade inside the hero is a CSS transition on `.is-shown`
+          (global.css, `.ktwall .doorwall__head`), switched by a boolean — not
+          an opacity scrubbed from scroll. ⚠️ It must never go back to being a
+          custom property set on an ancestor: a changing custom property
+          invalidates style for every element that inherits it, which was the
+          whole wall, on every frame of the scrub. */}
+      <div className={`doorwall__head${headShown ? ' is-shown' : ''}`}>
         <div className="kicker kicker--gold">Straight off the shop floor</div>
         {/* ⚠️ The compact variant drives the draw itself rather than leaving it
             to StrokeText's ScrollTrigger — see `drawTitle` above for why the

@@ -14,9 +14,13 @@
  *
  * Run with `npm run verify:geometry`. Exits non-zero on any failure.
  */
+import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 
-const root = new URL('..', import.meta.url).pathname
+/* `fileURLToPath`, not `.pathname`: on Windows a file URL's pathname is
+   `/c:/Users/…`, which Vite then resolves against the drive again
+   (`c:\c:\Users\…`) and every module fails to load. */
+const root = fileURLToPath(new URL('..', import.meta.url))
 const server = await createServer({ root, logLevel: 'error', server: { middlewareMode: true } })
 
 let failures = 0

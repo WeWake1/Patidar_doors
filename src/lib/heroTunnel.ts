@@ -3,22 +3,22 @@ import { clamp01, easeInOutSine, seg } from './useTrackProgress'
 /**
  * The keyhole hero's tunnel, as pure arithmetic.
  *
- * ⚠️ **This file exists so the scrub has exactly one source of numbers.**
- * The hero is driven two ways and must look identical either way: by CSS
- * scroll-driven animations on the compositor (the fast path, generated into
- * `src/styles/hero-scrub.gen.css` by `npm run scrub:build`), and by
- * `HeroKeyhole`'s React render (the fallback, for engines without
- * `animation-timeline`). Both import from here. A second copy of any of these
- * constants would drift on the one thing nobody notices — where a door is —
- * and the two paths would disagree on browsers that switch between them.
+ * ⚠️ **This file is the one source of numbers for the hero.** `HeroKeyhole`
+ * reads the page's scroll position, asks this file where every door is, and
+ * hands the answer to `tunnelCanvas.ts`, which draws it into a single canvas.
+ * Nothing here knows about React, the DOM or WebGL — it is functions of
+ * progress `p` (0 at the top of the hero's track, 1 at the bottom) and nothing
+ * else, which is what lets `verify:e2e` check the hero against the same
+ * arithmetic it was drawn from.
  *
- * ⚠️ Change anything here and **re-run `npm run scrub:build`**, or the CSS
- * keeps animating the old tunnel while the fallback animates the new one.
- * `build` runs it, so a deploy cannot ship them out of step; a dev server can.
+ * (Until 2026-11-11 the hero was driven two ways at once — CSS scroll-driven
+ * animations generated from this file into a 1,900-line stylesheet, plus a
+ * React fallback writing the same values inline — and this file existed to
+ * stop those two drifting apart. Both are gone; see the note at the top of
+ * `tunnelCanvas.ts` for why. One path now, so nothing to keep in step.)
  *
  * The geometry itself is documented at the constants in `HeroKeyhole.tsx`'s
- * header — this file is deliberately only the numbers and the functions of p,
- * with no React and no DOM, so the generator can import it.
+ * header.
  */
 
 /* ── phases, as slices of track progress ─────────────────────────────────── */
@@ -55,16 +55,11 @@ export const TUNNEL_IDS = [
 
 /**
  * ⚠️ **A phone flies the same five.** It ran a three-door subset from
- * 2026-09-01 to 2026-09-10 as a compositor-memory measure, and the measure was
- * aimed at the wrong thing: every measurement behind it was taken in a browser
- * whose emulated device scale never reached the compositor, so the tunnel was
- * costing 12× what the numbers said and three doors were nowhere near enough
- * on a real 1440px phone (see the note on `.ktun__door` in global.css for the
- * real figures). The doors are directly composited images now — a texture
- * each, no tiles, no raster at any scale — and five of them cost about 16 MB
- * on that phone against the ~500 MB the old three did mid-flight. Still a
- * separate constant, because `NEAR_MOBILE` and `OFFSET_SCALE_MOBILE` make the
- * phone field a different schedule even with the same doors in it.
+ * 2026-09-01 to 2026-09-10 as a compositor-memory measure. The doors are
+ * quads in one canvas now, so the count costs a few draw calls and nothing
+ * else. Still a separate constant, because `NEAR_MOBILE` and
+ * `OFFSET_SCALE_MOBILE` make the phone field a different schedule even with
+ * the same doors in it.
  */
 export const TUNNEL_IDS_MOBILE = TUNNEL_IDS
 
@@ -109,58 +104,22 @@ export function travelFor(near: number, count: number): number {
 }
 
 /**
- * Door i's z at progress p. Linear in p across the TUNNEL slice — which is what
- * lets the CSS path express the flight in two keyframes per door.
+ * Door i's z at progress p. Linear in p across the TUNNEL slice.
  *
- * ⚠️⚠️ **Clamped at `near`, and the clamp is not cosmetic — it keeps every door
- * in front of the camera.** A door's projection is `PERSPECTIVE / (PERSPECTIVE −
- * z)`, so any z at or past 900 is *behind the viewer* and the divide goes to
- * infinity and then negative. Unclamped, the field runs to z ≈ 5060 by the end
- * of the track and all five doors spend the entire dwell (p 0.7 → 1) sitting
- * past the camera plane on a degenerate transform.
- *
- * That shipped on 2026-09-01 and it is what tore the hero apart on Android when
- * you scrolled back UP — doors reappearing at stale sizes and positions, the
- * lock plate detached beside a shrunken door, the nav's own layer coming back
- * blank, and differently wrong every time. Fine on the way in, broken on the way
- * out, and invisible on desktop and in headless (which rasterises in software).
- *
- * The React path never hit it because it parked a faded door at
- * `translate3d(0, 0, -9999px)` and so never let one cross the plane; moving the
- * transform to CSS keyframes dropped that guard silently. Clamping here restores
- * it for BOTH paths at the source.
- *
- * ⚠️ `near` is the right ceiling and nothing is lost: `doorOpacity` reaches 0
- * exactly at z = near, so a door is already fully faded when the clamp engages
- * and the frames it removes are frames nobody can see. Never raise this toward
- * PERSPECTIVE to "let them fly further" — there is nothing to see out there and
- * the projection is undefined.
+ * ⚠️ **A door that has reached `near` is parked, never left to run on.** Its
+ * projection is `PERSPECTIVE / (PERSPECTIVE − z)`, so any z at or past 900 is
+ * *behind the viewer*: the divide goes to infinity and then negative, and
+ * unclamped the field runs to z ≈ 5060 by the end of the track. `doorOpacity`
+ * reaches 0 exactly at z = near, so a parked door is one nobody could see
+ * anyway — the renderer skips it outright.
  */
 export function doorZ(i: number, p: number, near: number, count: number): number {
   const z = -i * SPACING - GATE_DEPTH + seg(p, TUNNEL[0], TUNNEL[1]) * travelFor(near, count)
   return z <= near ? z : PARK_Z
 }
 
-/**
- * Where a door goes once it has passed — far in front of the camera, so it
- * projects at 900/9900 ≈ 0.09 and its composited layer is about a thousandth of
- * the area it had on the way past.
- *
- * ⚠️ **Parking FAR is the point; parking at `near` is a memory bug.** The first
- * cut of the clamp above returned `Math.min(z, near)`, which keeps a spent door
- * pinned at `near` — i.e. at its LARGEST projected scale, 2.65× on a phone — for
- * the whole rest of the track. Five doors, five composited layers each, all held
- * at maximum size at once. Measured at p 0.45 on a 390×844 DPR-3 profile that
- * was part of 130 layers and ~288 MB of layer memory, which is far past what a
- * phone's tile budget will hold: the compositor evicts, fails to re-raster on
- * the way back, and the hero comes back as stale tiles — a chopped nav, blocks
- * of stale background, doors at sizes they were never drawn at.
- *
- * It is invisible either way (`doorOpacity` is already 0 at z = near), so this
- * costs nothing on screen and is what the React path always did — it parked a
- * faded door at `translate3d(0, 0, -9999px)`. Restoring that here restores it
- * for both paths.
- */
+/** Where a door "is" once it has passed: far away and fully fogged, so every
+    function of z below reports it shut and invisible. */
 const PARK_Z = -9000
 
 /** Emerging from the dark, then cut as it reaches the camera. */
@@ -219,4 +178,24 @@ export function headOpacityAt(p: number): number {
 /** The edge shade as a leaf turns away from the light. */
 export function shadeOpacity(open: number): number {
   return open * 0.8
+}
+
+/* ── one field per breakpoint ───────────────────────────────────────────── */
+
+/** Which doors fly, where the pass is cut, and how far off-axis they drift. */
+export interface TunnelField {
+  ids: readonly string[]
+  near: number
+  offsetScale: number
+}
+
+export function fieldFor(mobile: boolean): TunnelField {
+  return mobile
+    ? { ids: TUNNEL_IDS_MOBILE, near: NEAR_MOBILE, offsetScale: OFFSET_SCALE_MOBILE }
+    : { ids: TUNNEL_IDS, near: NEAR, offsetScale: 1 }
+}
+
+/** A door plane's size on screen as a multiple of life size. */
+export function projectedScale(z: number): number {
+  return PERSPECTIVE / (PERSPECTIVE - z)
 }

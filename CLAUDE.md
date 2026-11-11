@@ -320,298 +320,119 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   `public/images/hero/hero-{frame,leaf}.webp`; skips if the folder is absent.
   ⚠️ Several raw photos carry third-party watermarks (see photoMap.ts header) — they are
   unmapped; replace with client photography.
-- **Locked-door hero** (`src/components/HeroKeyhole.tsx`, phase A rebuilt 2026-08-31):
-  a real door stands close in a dark hall with a **drawn brass keyhole on its lock stile**
-  and a key in it that nudges itself round; turn the key — or scroll — and it swings open
-  and rushes past you, the four behind it do the same, and the last opens onto the Door
-  Wall. Phases: gate opens 0.02–0.15, the field advances 0.13–0.7, wall fades 0.46–0.66,
-  dwell after that; the lock lands you at p 0.86.
-  ⚠️ **The click animates nothing.** `unlock()` scrolls the page (Lenis `scrollTo`, 3s,
-  easeInOutSine) and every door follows because every door is already a function of
-  scroll. So there is one flight, the scrolled one — the visitor lands with a real scroll
-  position under them and can scroll back up and re-watch. Do not reimplement it as a
-  local animation with a jump at the end; `verify:e2e` asserts the scroll actually moved.
-  ⚠️ Judge any change to that easing on how much time it leaves the **middle** (p
-  0.22–0.60), where all five fly-bys happen. It shipped as easeInOutCubic for an afternoon
-  and a cubic spends its time at the ends: all five passes landed inside 555ms.
-  · It replaced a full-screen keyhole plate (an opaque path with the hole punched out by
-  `fill-rule: evenodd`, opening by re-projecting its own viewBox). That had no way in
-  except scroll, and the payoff is three-quarters of a 380vh track away. `verify:e2e`
-  asserts `.keyhole` is **absent**, the way it does for `/`'s FAQ accordion.
+- **Locked-door hero** (`src/components/HeroKeyhole.tsx`): a real door stands close in a
+  dark hall with a **drawn brass keyhole on its lock stile** and a key in it that nudges
+  itself round; turn the key — or scroll — and it swings open and rushes past you, the four
+  behind it do the same, and the last opens onto the Door Wall. Phases (`heroTunnel.ts`):
+  gate opens 0.02–0.15, the field advances 0.13–0.7, wall fades 0.46–0.66, dwell after
+  that; the lock lands you at p 0.86. Track: 380vh desktop, 340vh phone.
+  ⚠️⚠️ **THE TUNNEL IS ONE `<canvas>`, DRAWN FROM A SCROLL LISTENER, AND REACT DOES NOT
+  RENDER DURING THE SCRUB** (rebuilt 2026-11-11; `src/lib/tunnelCanvas.ts`, hand-written
+  WebGL, ~3 kB gz). That shape *is* the fix for the hero stuttering on desktop and tearing
+  apart on phones — doors drawn in chunks, strips missing, worse on the way back up — and it
+  replaced three months of attempts that all failed the same way:
+  · 2026-08-21: DOM doors under a `preserve-3d` scene, positioned by React state on scroll.
+  · 2026-09-01: the same doors scrubbed from a generated CSS scroll-timeline sheet.
+  · 2026-09-10: four `<img>`s per door laid out at 1000% and drawn at `scale(0.1)` so Chrome
+  would composite them as textures ("directly composited images") instead of tiles.
+  **Every one of those measured clean in headless Chrome and every one broke on a real
+  phone.** They all asked the browser's compositor for the same thing: keep ~20 layers that
+  each grow 30× on their way past the camera correctly tiled, rastered and inside a GPU
+  memory budget. Whether that works is decided by heuristics that differ per browser, per
+  version and per device, and a page can neither see nor steer them — so no amount of
+  measuring on a laptop could ever certify it. A canvas takes the decision away: it is one
+  screen-sized layer whatever is drawn in it, its memory is a constant (a drawing buffer +
+  five ~4 MB textures) on the way in, at rest and on the way back, and WebGL has no "fast
+  path" to fall off. It is how every scroll-scrubbed product page that has to survive phones
+  is built, minus the megabytes of pre-rendered frames.
+  ⚠️ **Do not rebuild any part of the tunnel as elements, CSS 3D or keyframes "for one small
+  thing".** `verify:e2e` asserts the shape: `.ktun` holds exactly a vignette, a canvas and a
+  ruler; no `<img>`, no `perspective`, no stylesheet animation; a live WebGL context; and a
+  non-blank drawing buffer at rest and mid-flight (`coverage()` — a canvas that initialised
+  and drew nothing looks healthy to every markup check).
+  ⚠️ **Do not put a per-frame value back into React state.** The hero used `useTrackProgress`
+  (a `setState` per scroll event), so the whole component — and the 56-tile wall under it —
+  re-rendered sixty times a second on the thread that has to keep up with the finger. The
+  loop in `HeroKeyhole`'s effect now computes `p`, writes six opacities straight to element
+  styles, fills five reused door objects and calls `renderer.draw()`. React hears only about
+  `Phase` flips (lock mounted, copy clickable, wall wanted/running/parked/interactive, head
+  shown) — about eight renders across the whole track. `verify:e2e`'s "scrolling the hero
+  does not re-render it" step watches the pane with a MutationObserver across a scrub.
+  ⚠️ A scroll event and the rAF it requests run in the **same frame** (scroll events are
+  dispatched ahead of animation callbacks), so the canvas is never more than its own frame
+  behind the page, and the pane is sticky so there is no seam for that to show against.
+  ⚠️ **No three.js.** `three` must keep exactly one importer (`Beams`, via the `?hero=old`
+  portal hero); a second makes Rollup hoist a vendor chunk into every visitor's download.
+  Same rule and same reason as `arScene.ts`. `verify:e2e` asserts no such chunk is fetched.
+  · **The renderer** takes `{cx, cy, scale, w, h, opacity, open, glow}` per door, far → near,
+  and draws three quads each from one unit-quad buffer: the jamb (`--night`, 18px ring), the
+  lit room behind the leaf (a radial ramp computed in the shader, dithered half a level
+  because it crosses ~140 levels over three screens), and the leaf (the photograph, with
+  its edge shade folded into the same draw). The vertex shader reproduces CSS exactly — a
+  flat box at depth z is a uniform scale about the pane's centre; the leaf is `rotateY`
+  about its left edge under the door's own 900px perspective, emitted homogeneous so the
+  photograph is perspective-correct — which is why the DOM lock still lands on the door's
+  own hardware. Edges are ramped in the shader from the quad's known size (no MSAA buffer).
+  ⚠️ **The drawing buffer is capped at 2 device px per CSS px and ~4 MP.** At a phone's 3.5×
+  it would fill three times the pixels for moving photographs in fog.
+  ⚠️ **`.ktun__canvas` is `100lvh` tall, not the pane's `100dvh`.** The pane tracks a
+  phone's URL bar and changes height mid-scroll; resizing a WebGL buffer clears it. At the
+  large viewport height it never has to — the pane clips the surplus and the renderer
+  centres the scene on the pane's real height each frame.
+  ⚠️ `.ktun__ruler` is how the canvas learns `--kt-h` (declared in `svh`, which a script
+  cannot evaluate). The lock layer is sized from the same variable in CSS, so the drawn
+  door and the DOM lock cannot disagree.
+  ⚠️ `destroy()` frees what the renderer made but **never loses the context**: a canvas has
+  one context for its whole life, so under React StrictMode (mount → cleanup → mount) a
+  context lost in cleanup is the dead one the second mount is handed.
+  ⚠️ Context loss (a backgrounded tab on a phone) is handled: `webglcontextlost` is
+  `preventDefault`ed, and on restore everything is rebuilt and the photographs re-uploaded
+  from the `<img>`s the renderer still holds. Textures upload one per frame, decoded off
+  the main thread via `createImageBitmap` where available, and fade up over 260ms.
+  ⚠️ **No WebGL at all → the static hero** (the reduced-motion one), never an empty hall.
+  ⚠️ WebGL 1 only mipmaps power-of-two textures, so there the photograph is redrawn into
+  512×1024 first; WebGL 2 takes it at its own size. Without mips a far door shimmers.
+  · **`heroTunnel.ts` is the one source of numbers** — functions of `p`, no React/DOM/GL.
+  Still true and still load-bearing from before the rebuild:
   ⚠️ **The gate is field index 0, not an object in front of the field.** Given its own z
-  schedule it moves at its own speed, and since it is the nearest thing on screen anything
-  slower lets door 2 overtake and fly *through* it. One field, one `advance`.
-  ⚠️ `TUNNEL_IDS[0]` is the door the lock is drawn on, and the order is chosen for it:
-  `architect-teak-door` leads because it is the one leaf that is a whole door, square on,
-  with real hardware at lock height. Burma teak led until 2026-08-31 and cannot — its crop
-  carries a slice of jamb down the left, invisible at 0.4 scale and unmissable at 0.88.
-  ⚠️ The lock is in its **own flat layer** (`.kgate`), never inside `.ktun` — that subtree
-  is `pointer-events: none` because Chrome resolves `elementFromPoint` wrongly inside
-  preserve-3d (the DriftWall and `/try` scars). It repeats the gate's projection instead,
-  and unmounts a few points into the scrub rather than tracking a moving 3D transform.
-  ⚠️ Two CSS scars in that layer, both from the same shape of mistake — a box whose size
-  is being decided by the thing inside it. (1) `.kgate__plate` needs an explicit
-  width/height **pair and `max-width: none`**: the sheet's global `img, svg { max-width:
-  100% }` resolves to zero inside a shrink-to-fit button, so the plate rendered 0×0 with
-  its escutcheon spilling out — a keyhole hanging in mid-air with no plate behind it.
-  (2) `.kgate__label` is **absolutely positioned**: in flow it was ~160px of the button's
-  own width, and the button is what the plate's centring transform measures against, so
-  the lock came to rest a third of the way across the leaf instead of on its stile.
-  · `.ktun__copy` carries its own top-down scrim now. What sits behind the headline is no
-  longer an opaque plate but the top third of a 0.85-scale photograph of a teak door, and
-  cream 16px on figured walnut is not readable — the sub-line lost three words into the
-  grain at 1440. The gradient ends on `transparent`, never on a colour.
-  ⚠️⚠️ **EVERYTHING A TUNNEL DOOR SHOWS IS AN `<img>` WITH `will-change: transform`, THE
-  BOXES AROUND THEM PAINT NOTHING, AND THERE IS NO `preserve-3d` IN THE TUNNEL** (2026-09-10).
-  That shape is the fix for the hero coming back corrupted and stuttering on a phone after
-  a scroll out and back, and it reverses the 2026-08-31 rule that banned `will-change`
-  from the tunnel — the ban was right for what the doors were then (picture layers, where
-  the hint pins a raster at the wrong scale) and wrong for what they are now. Chrome
-  composites an `<img>` whose layer is exactly one image draw as a *directly composited
-  image*: the texture is the decoded image at its own resolution, the GPU scales it to
-  wherever the door is, and nothing is ever rasterised — 3 MB for a leaf, a few KB for the
-  jamb (`kt-jamb.png`, solid `--night`), the glow (`kt-gap.webp`) and the edge shade
-  (`kt-shade.png`), all from `npm run art:build`, at every scale. The full account, with
-  the numbers, is the note on `.ktun__door` in global.css; the rules it rests on:
-  · **No border-radius, box-shadow, background or object-fit on the four images** — one
-  extra paint op and the layer is a picture layer again, re-rasterised at every scale.
-  · **Each image is laid out at 10× and drawn at `scale(0.1)`** (`transform-origin: 0 0`;
-  the generator emits `rotateY(θ) scale(0.1)` for the leaf and the shade). Chrome takes
-  the texture path unconditionally when the image is under a tenth of its box; the other
-  route is a rounding test on the door's size in device pixels that a 613×1200 leaf passes
-  on one phone and fails on the next. `verify:scrub` reads the swing from the matrix's
-  third column because of this — the 2D scale multiplies the first two.
-  · **No opacity on any box with children.** A group opacity is a render surface; the fog
-  is multiplied into each image's own opacity by the generator (jamb and leaf take it
-  plain, gap and shade carry their own curve × fog). `verify:scrub` fails a door box whose
-  opacity is not 1.
-  · **No `preserve-3d`, no 3D sorting context.** Doors are ordered by `z-index` (nearest
-  last — the field never overtakes itself), `.ktun__space` carries the scene `perspective`
-  inline, and each door carries its own `perspective` inline so the leaf's rotateY still
-  reads in 3D against the door's centre.
-  · `verify:e2e`'s "four directly composited images per door" step asserts every half of
-  this, because each half is exactly what the next tidy-up would undo.
-  · ⚠️⚠️ **THE HERO IS SCRUBBED FROM A CSS SCROLL TIMELINE, NOT FROM JS, AND THAT IS
-  THE FIX FOR MOBILE STUTTER.** `src/styles/hero-scrub.gen.css` (generated by
-  `npm run scrub:build` from `src/lib/heroTunnel.ts`) drives every moving thing in this
-  hero — door transforms, fog, the swings, the gap/shade/hall/rays/copy/wall/lock fades —
-  off `view-timeline-name: --kt-track` on `.portal--keyhole`. `HeroKeyhole` asks
-  `CSS.supports('animation-timeline','view()')` once (`scrubCss`) and **stops writing the
-  same values as inline styles** when the answer is yes; where it is no, the React path
-  runs exactly as it always did.
-  · **Why.** The hero was smooth on a laptop and visibly stuttery on a flagship phone,
-  and it was never a speed problem. On desktop Lenis owns wheel scrolling and drives the
-  page from a main-thread rAF, so the scroll offset and the door positions are computed
-  in the same frame, in lockstep. On a phone Lenis is off by design (`syncTouch: false`)
-  and touch scrolling runs on the **compositor thread** — the page moves without waiting
-  for the main thread, while the doors were repositioned from a `scroll` listener that
-  the scroller does not wait for. Measured on a mobile profile with a real synthesized
-  touch gesture: the page moved on 106 frames and **the doors froze on 66% of them** —
-  *identically with and without a 4× CPU throttle*, which is what rules out throughput
-  and is why the earlier pass below (which halved script time) barely helped. A 120Hz
-  flagship shows it more clearly, not less: more presented frames for the doors to miss.
-  On the scroll timeline the freeze rate is **6%**, and unchanged at 6× throttle.
-  · ⚠️ It is also *cheaper*, measured under a real touch gesture rather than an
-  rAF-driven `scrollTo` (which forces main-thread scrolling and flatters the JS path):
-  task 745 vs 868ms, script 138 vs 168, **style recalc 52 vs 109**. If you benchmark this
-  with `window.scrollTo` in a rAF loop you will measure the desktop path and conclude the
-  CSS costs more. Use `Input.synthesizeScrollGesture` with `gestureSourceType: 'touch'`.
-  · ⚠️ **`npm run verify:scrub` is what keeps the two paths honest** — it parks the real
-  page at a grid of progress values on phone and desktop and compares every door's
-  computed z, swing angle and three opacities against `heroTunnel.ts`'s own arithmetic,
-  plus the six chrome fades — hall, rays, copy, cue, wall, lock — against theirs (624
-  checks, tolerance 1px / 0.15° / 0.012). It exists because the failure that shipped
-  in the first cut was invisible to `verify:e2e`: the `animation` shorthand resolved
-  `animation-duration` to `0s`, so every animation was instantly `finished` and
-  `fill: both` pinned the whole field at its END transform — a hero that still rendered
-  five doors, just all of them parked past the camera. **Use the longhands** (see `bind()`
-  in the generator) and never the shorthand.
-  ⚠️ **The generated sheet is imported from `main.tsx` AFTER `global.css`, never from the
-  component.** It overrides the static sheet by design and has to come after it to win a
-  tie. Imported from `HeroKeyhole` it was emitted *first* — `main.tsx` imports `App`
-  above its stylesheets, so anything the component graph reaches lands ahead of them —
-  and `.portal .hero__scrollcue { animation: none }` (there to switch off the cue's
-  entrance `fadein`; same specificity; later in the bundle) reset the cue's
-  `animation-timeline` and left "Scroll — look inside" at full opacity through the whole
-  flight. The door checks passed throughout, which is why the chrome fades are in
-  `verify:scrub` now: anything bound in the generator's `chromeBindings` gets a line
-  there. Check with `grep -o '\.portal[^{]*\.hero__scrollcue{[^}]*}' dist/assets/index-*.css`
-  — the `--keyhole` rule must be the later of the two.
-  · ⚠️ Keyframe stops land on the **phase edges**, not on a uniform grid. These curves are
-  smooth within a phase and kinked at its edges (z is flat until the field starts moving
-  at `TUNNEL[0]`), and a uniform grid interpolates straight across a corner — without
-  `TUNNEL[0]` in the knot list the rearmost door's fog ramped from p=0 and was 0.20 too
-  bright, i.e. lit up before anything had moved. Anything linear in p is emitted at its
-  breakpoints *exactly* rather than sampled, which is also what keeps the file at 6.7 kB
-  gz instead of 62 kB raw.
-  · ⚠️⚠️ **`doorZ` CLAMPS AT `near`, and that clamp is what keeps the hero from tearing
-  itself apart when you scroll back UP.** A door projects as `PERSPECTIVE / (PERSPECTIVE
-  − z)`, so any z at or past 900 is *behind the viewer* and the divide inverts. Unclamped
-  the field runs to z ≈ 5060 by the end of the track, so all five doors spend the whole
-  dwell (p 0.7 → 1) past the camera on a degenerate transform — and on Android they came
-  back stale: doors at the wrong size, the lock plate detached beside a shrunken door, the
-  nav's own layer blank, differently wrong every time. Perfect on the way in, broken on the
-  way out. **The React path never hit it** because it parked a faded door at
-  `translate3d(0,0,-9999px)`; moving the transform into CSS keyframes dropped that guard
-  silently, and neither `verify:e2e` nor the desktop nor headless (software raster) showed
-  it. `near` costs nothing — `doorOpacity` is already 0 there.
-  ⚠️ **It parks FAR (−9000), not at `near`.** The first cut returned
-  `Math.min(z, near)`, which pins a spent door at its LARGEST projected scale for the rest
-  of the track — five doors' worth of maximum-size composited layers at once. Parking far
-  in front makes it project at ~0.09 and cost almost nothing, and it is what the React
-  path always did. Invisible either way; `doorOpacity` is 0 from z = near.
-  ⚠️ The clamp and the park make z piecewise-linear with a STEP, so the generator MUST emit
-  `pAtZ(i, near, near)` ± 0.0005 as transform breakpoints — one either side. A stop landing
-  exactly on the step evaluates to the parked value (floats put z a hair over `near`) and
-  the door then interpolates from its rest depth straight back to −9000, sailing away from
-  the camera instead of at it. Every curve derived from z (swing, gap, shade) needs the
-  same pair in its knots.
-  · ⚠️⚠️ **THE SWING IS ANCHORED TO `near` AND IS AN ease-IN-OUT — `SWING_SPAN` /
-  `SWING_LEAD` / `doorOpen(z, near)` in `heroTunnel.ts`** (2026-09-10). A leaf holds shut
-  through the far half of its approach, turns through the near half, and is wide open a
-  beat (300 world px) before it starts to fade. Desktop: 0° at 0.51× on screen, 21° at
-  0.69×, 55° at life size, 72° at 1.8×.
-  ⚠️ **What it replaced looked fine in the code and was invisible on screen**:
-  `easeOutCubic` over a *fixed* z −1000 → +100. That put the whole turn between 0.53× and
-  1.13× — the far, small end of the approach — with 45° of the 72° inside the first 200 px,
-  so a door reached full open *before* the entire rush from 1.3× to 4.5× began, and the
-  door behind it was already 33° open at that moment. The client's report was exactly
-  right and exactly diagnostic: *"as one door opens and you scroll further, the next door
-  is already open, and you don't really get the animation of the doors opening."* Every
-  leaf you were close enough to look at had finished moving. It is now 13° behind a
-  fully-open door, so they open one at a time, each in its turn.
-  ⚠️ It takes `near` because a phone cuts the pass at 2.65× where a desktop runs to 4.5×:
-  the same fixed depth lands in a different part of the two approaches. And it is an
-  ease-in-out because the curve has to spend its motion in the MIDDLE — the same argument
-  as the lock's flight easing, for the same reason. `easeInOutSine` is shared from
-  `useTrackProgress.ts` by both, and by the gate, which opens on progress rather than on z
-  but must swing like the field behind it.
-  ⚠️ The generator subdivides the swing window itself (`SWING_STOPS = 24`) — the uniform
-  60-step grid lands in it only ~8 times, which leaves the leaf up to 0.75° off mid-swing.
-  The gate gets the same treatment over `GATE_OPEN` in *progress*: it opens on p, so the
-  depth knots say nothing about it and it had been running on the uniform grid alone.
-  · ⚠️⚠️ **A PHONE FLIES THE SAME FIVE DOORS AS THE DESKTOP, AND THE 3-DOOR CUT OF
-  2026-09-01 WAS BUILT ON A MEASUREMENT THAT NEVER REACHED THE COMPOSITOR.** Playwright's
-  `deviceScaleFactor` (CDP `Emulation.setDeviceMetricsOverride`) changes
-  `devicePixelRatio` and the screenshot size and **not** what cc rasterises: the cc.debug
-  snapshot reports `device_scale: 1` and 412×255-px tiles. Every "DPR 3" number in this
-  file before 2026-09-10 — the layer memory, the 96 MB corruption scores, the "3 doors =
-  0.1%, 5 = 3–14%" — was taken at 1× and understates a real phone by ~12×. **Launch Chrome
-  with `--force-device-scale-factor=3.5` instead**; that goes through Blink's zoom and the
-  compositor sees it. Measured that way, on a 412×915 viewport (a 1440px flagship), the
-  hero as shipped on 2026-09-10 morning:
-  · 159 MB of tiles at rest, **470–510 MB mid-flight, 475 MB at rest after scrolling
-  back** — against Chrome Android's hard tile budget, which is a flat **256 MB** on any
-  device with ≥2 GB (96 MB below that; `GetGpuMemoryPolicy` in
-  `layer_tree_settings.cc`), not the screen-derived figure guessed at before. Over budget,
-  the tile manager evicts and an evicted tile draws as a flat rectangle of the page
-  background — the cream blocks, the blank nav, the leaf missing a strip: exactly the
-  phone screenshots. *Three* doors did not fix it because the cost was never the count.
-  · **One door mid-flight was 350 MB on its own**: the leaf 148 MB across three tilings,
-  the glow 85, the jamb box 78, the shade 41. A gradient or a shadow on a box that grows
-  30× is rasterised into device-resolution tiles at every new scale.
-  · **The way back was worse than the way in, and it never recovered**: cc pins the raster
-  scale of a layer whose transform is animating and only ever bumps it *up*
-  (`PictureLayerImpl::ShouldAdjustRasterScale`), and the `.ktun` content-visibility park
-  rebuilt every door at p 0.72 at 0.09× — so on the return each door was first dragged to
-  full screen from a raster made for a thumbnail, then, once a commit let it re-raster at
-  2.4×, kept that raster at rest. 475 MB at p = 0, broken until reload.
-  · After the rebuild (images, no group opacity, no preserve-3d, no park, five doors):
-  **59–65 MB at every point of the track and 64 MB back at rest**, the tunnel itself
-  ~15 MB, and 1–5 drawn render passes a frame (viz trace) against the 33 "surfaces" a
-  misread of the cc.debug `render_surface_layer_list` had suggested.
-  ⚠️ **How to measure this again**: `npm run profile:hero` (`scripts/profile.hero.mjs`)
-  parks the page at a list of progress values — going out by touch gesture and coming back
-  by touch gesture — and prints, per cc layer, the tile memory, ideal vs raster scale and
-  tilings from a `disabled-by-default-cc.debug` `LayerTreeHostImpl:snapshot`, mapped to
-  DOM nodes through the CDP `LayerTree` domain. Screenshot diffs cannot see any of this
-  (headless re-composites from scratch and the Mac GPU has no budget to run out of): the
-  old build and the new one both score 0.01% on a scroll-out-and-back pixel diff at
-  3.5×, which is why the earlier "clean, every run" numbers proved nothing.
-  ⚠️ `TUNNEL_IDS_MOBILE` is kept as a separate constant (equal to `TUNNEL_IDS`) because
-  `NEAR_MOBILE` and `OFFSET_SCALE_MOBILE` still make the phone field its own schedule;
-  `travelFor`/`doorZ` take the field's `count` for the same reason. `verify:e2e` asserts
-  five at 390px and five at 1440.
-  ⚠️ `verify:scrub` now asserts no door ever reaches `PERSPECTIVE` — 58 failures without
-  the clamp. `verify.e2e`'s "flew past the camera" step had to stop reading React's inline
-  `style.visibility` (which only the fallback path writes) and read the effective opacity
-  instead; it was testing which code path was running, not whether the door had left.
-  · The jamb is `img.ktun__jamb` — a solid `--night` texture under the leaf, 18px
-  larger than it on every side, of which the ring is what shows while the leaf is closed.
-  It was a `.ktun__jamb` span until 2026-09-01, then box-shadows on `.ktun__door` until
-  2026-09-10 (a layer-count measure, taken at 1×); the inset vignette and the outer drop
-  shadow went with the box-shadows and nobody sees a door for long enough to miss them.
-  · ⚠️ **Never toggle a main-thread visual property on a box the compositor is animating.**
-  That is the second half of the same bug. React was still writing `visibility` on the
-  doors and on `.portal__rays` while the compositor animated their opacity — two threads
-  writing one box. On the compositor path it writes neither now.
-  · Only **motion** moved to CSS. State — `wallMounted`/`wallRunning`, `inert`,
-  `pointer-events`, the lock's mount — stays in React, where being a frame late is
-  harmless. One `content-visibility` park remains, on a box the compositor is *not*
-  animating and far from any transition: `.ktwall` at `p < WALL_IN − 0.12` (it was −0.02,
-  i.e. the toggle and the wall's first visible pixel in the same handful of frames).
-  ⚠️ **`.ktun` is never parked any more.** It took `content-visibility: hidden` past
-  p 0.74 from 2026-08-31 to 2026-09-10 to hand back the tunnel's layers for the dwell, and
-  every scroll back up rebuilt the whole tunnel at p 0.72 — five photographs decoded
-  again, every layer re-created at a tenth of its size and, because cc pins an animating
-  layer's raster scale, dragged up to full screen from a thumbnail raster. A parked door is
-  now four tiny textures at −9000px; there is nothing to hand back.
-  · ⚠️ **Change `heroTunnel.ts` and re-run `scrub:build`.** `npm run build` runs it, so a
-  deploy cannot ship the CSS and the fallback out of step — a dev server can.
-  · ⚠️ **This hero is still ~3× the portal hero's cost on a phone**, and an earlier pass on
-  2026-08-31 took it from ~5× to that. Profiled at 390×844 DPR 3, 4× CPU throttle,
-  scrubbing p 0.05→0.70: main-thread task 625→500ms, script 243→139ms, Commit 109→76ms,
-  layers at p 0.15 65→55. `?hero=old` over the same scrub is 167ms task / 26ms script,
-  which is the number to keep honest about — five full-screen photographs through a CSS
-  3D perspective at DPR 3 is intrinsically expensive and no amount of tuning makes it
-  free. The four things that were wrong, in order of what they cost:
-  · **The Door Wall re-rendered through React on every scroll frame** — half of all
-  script time. `useTrackProgress` setStates per scroll event, `HeroKeyhole` re-renders,
-  and `DoorWall` was a plain function component, so React diffed 56 tiles and 28 `<img>`s
-  60×/sec — **from the top of the page**, since the wall mounts on the first idle after
-  `load`. `DoorWall` is `memo` now and its props are all quantised or constant; see the
-  note on the component. Any new prop has to be quantised too or the memo stops being one.
-  · **Layer explosion.** `Layerize` was the single biggest main-thread item in the trace
-  (1010ms of 3650ms self time) and it runs once a frame over every composited layer —
-  100 of them, 57–65 MB of layer memory on a phone. `.ktun__leaf` was `preserve-3d` for
-  no reason (nothing inside it has a 3D transform), and every child of a preserve-3d box
-  is promoted, so each door cost 6–7 layers. (Since 2026-09-10 nothing in the tunnel is
-  preserve-3d at all and a door is four single-quad image layers — see the top bullet.)
-  · **`visibility: hidden` does not release composited layers.** `.ktwall` also sets
-  `content-visibility: hidden` while the wall is parked, which does — Commit 103→77ms.
-  ⚠️ It brings size containment, so DriftWall's ResizeObserver reads nothing until the
-  reveal; that is safe only because `.doorwall__wall`'s height is pure CSS. Verified it
-  causes no re-raster burst at p 0.46.
-  · **Blurred box-shadows re-raster at every new scale.** A door's projected scale changes
-  every frame, so its layers re-rastered every frame, and `.ktun__jamb`/`.ktun__leaf img`
-  carried 90px/70px blurs — 54% of all raster work. Halved then, gone on 2026-09-10: a
-  door has no box-shadows at all now, because anything that is not a single image draw
-  turns a texture back into tiles.
-  ⚠️ **Do not flatten `.drift-wall__col`/`__track` to chase the wall's 56 tile layers.**
-  It halves the layer count at p 0.5 (108→53) and **visibly blurs the wall** — 20 tiles
-  merge into one very tall layer that is then perspective-stretched. Those 56 layers are
-  the price of the wall's sharpness; the lever is when they are alive, not merging them.
-  · Still on the table, both measured and neither applied: `Reveal.tsx` creates a fresh
-  `IntersectionObserver` per instance (10 of the home page's 13, for 15 observed elements
-  in total) and `computeIntersections` is 7% of the hero's main thread — `useAjarInView`
-  already shares one observer via a `Map` and `Reveal` should copy it. And `wallRunning`
-  starts at p > 0.42 while doors are still passing at 0.46/0.54/0.62, so the wall's rAF
-  and 56 live layers overlap the last three fly-bys; moving it past ~0.63 clears the
-  busiest stretch at the cost of a static wall through the first part of its fade-in.
-  ⚠️ **The key must be turnable again.** `unlocking` is cleared on a timer, never latched:
-  scrolling back up puts you in front of the same locked door and a second tap is the
-  first thing anyone tries. Latched, the key stayed at −96° and the button refused every
-  further tap. Don't reintroduce an `if (unlocking) return` guard — a second tap mid-flight
-  only re-aims the same scroll at the same target.
-  ⚠️ **A phone gets all five doors** — the three-door cut (2026-09-01 → 2026-09-10) was
-  a memory measure built on a 1× measurement; see the compositor bullet above. The track
-  stays at 340vh: fly-bys are spaced in track *progress*, ~200px of scroll per pass on a
-  phone against the desktop's 249. `verify:e2e` asserts exactly five at 390px and at 1440.
-  · The brass escutcheon sits **on** the leaf's own black lock strip (90–98% across,
-  41–58% down), not on the bare stile below it — two locks on one door is what that read
-  as. A second key hint (`?key=insert`, the key sliding in and turning) was built beside
-  the nudge and dropped 2026-08-31: its loop leaves the plate a bare keyhole for a fifth
-  of every cycle, and the key's job is to be there when someone looks.
+  schedule it moves at its own speed and door 2 flies *through* it. One field, one advance.
+  ⚠️ **`doorZ` parks a door at `near`** (returns −9000): its projection is `900/(900 − z)`,
+  so z ≥ 900 is behind the viewer and unclamped the field runs to z ≈ 5060. `doorOpacity`
+  is 0 from z = near, and the renderer skips anything under 0.002.
+  ⚠️ **The swing is anchored to `near` and is an ease-in-out** (`SWING_SPAN`/`SWING_LEAD`/
+  `doorOpen(z, near)`): shut through the far half of the approach, turning through the near
+  half, wide open a beat before the fade. It replaced an ease-out over a fixed depth that
+  finished the whole turn while the door was still small — "the next door is already open".
+  The gate opens on *progress* (`gateOpen`) on the same curve, because it is already near.
+  ⚠️ `TUNNEL_IDS[0]` is the door the lock is drawn on; `architect-teak-door` leads because
+  it is the one leaf that is a whole door, square on, with real hardware at lock height.
+  A phone flies the same five doors with a nearer cut (`NEAR_MOBILE`) and tighter offsets.
+  · **The lock** (`.kgate`, plain DOM over the canvas, unmounted past p ≈ 0.05).
+  ⚠️ **The click animates nothing.** `unlock()` scrolls the page (Lenis `scrollTo`, 3s,
+  `easeInOutSine`) and the doors follow because they are a function of scroll — one flight,
+  the scrolled one; the visitor lands with a real scroll position and can scroll back up.
+  `verify:e2e` asserts the scroll actually moved. Judge any change to that easing on the
+  time it leaves the **middle** (p 0.22–0.60, where all five fly-bys are).
+  ⚠️ **The key must be turnable again** — `unlocking` is cleared on a timer, never latched.
+  ⚠️ Two CSS scars in that layer: `.kgate__plate` needs an explicit width/height pair **and
+  `max-width: none`** (the global `img, svg { max-width: 100% }` resolves to zero inside a
+  shrink-to-fit button), and `.kgate__label` is absolutely positioned (in flow it widened
+  the button the plate's centring is measured against).
+  · **The landing** (`.ktwall`, the Door Wall inside the sticky pane, under the canvas).
+  ⚠️ **It is still parked with `content-visibility: hidden` until p 0.34, and that was
+  re-measured on 2026-11-11.** Leaving it live from its idle mount (so nothing is laid out
+  mid-flight) took the pane from ~40 compositor layers to ~105 for the whole flight and
+  raised main-thread time over a 3s scrub by half (1160 → 1790ms at 6× CPU throttle),
+  against an un-park hitch that measures as one 27ms frame. The steady cost loses.
+  ⚠️ The wall's head fades in on a **boolean** (`headShown` → `.is-shown`, a 520ms CSS
+  transition), not an opacity scrubbed from scroll — it keeps scroll position out of
+  `DoorWall`'s props entirely. Never add a prop to `DoorWall` that changes with scroll.
+  · **Measured** (headless Chrome, phone profile 412×915, 6× CPU throttle, 3s scrub in and
+  out): main-thread task 1547 → 1173ms, compositor layers at rest 66 → 42 and mid-flight
+  61 → 35, entry CSS 122 → 71 kB (the generated scroll-timeline sheet was 51 kB of it).
+  ⚠️ **Those numbers are not the evidence that it works on a phone** — the three attempts
+  before this one all had good numbers. The evidence is the shape. Not yet confirmed on a
+  physical device as of 2026-11-11; when it is, record the phone and browser here.
 - **Portal hero** (`src/components/HeroPortal.tsx`): 520vh (mobile 300vh) sticky track;
   phases: door opens (0–.25) → scale push-through (.25–.55, transform+opacity only) →
   corridor of 4 world-doors (.55–.9). The hero door is `HeroDoorPhoto.tsx`: two photos of
@@ -809,7 +630,7 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   *created*, and the draw plays out minutes of scroll before the wall is on screen. It
   shipped as a plain `<h2>` (`.doorwall__title--plain`) from 2026-08-23 to 2026-08-31
   for that reason; the size was a real constraint but the trigger was the actual bug.
-  `DoorWall` now latches off the `headOpacity` the hero already hands it — the hero is
+  `DoorWall` now latches off the `headShown` flag the hero hands it — the hero is
   the only thing that knows when the head arrives — and *mounts* StrokeText on that
   frame, so `mount` fires exactly once, on arrival. Latched, so scrubbing back and
   forward cannot redraw a headline the visitor has already watched.
@@ -1196,8 +1017,8 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   · ⚠️⚠️ **A SCRUBBED TRACK'S HEIGHT IS `calc(Nvh + 100dvh)`, NEVER A PLAIN `Nvh`**
   (`.portal`, `.portal--keyhole`, both breakpoints; fixed 2026-09-11). Progress
   through a sticky track is measured against `trackHeight − scrollportHeight` by
-  **both** paths — `useTrackProgress`'s `rect.height - innerHeight` and the CSS
-  timeline's `contain 0% → contain 100%`. Chrome Android's URL bar resizes the
+  every reader — `useTrackProgress`'s `rect.height - innerHeight` (portal hero) and the
+  keyhole hero's `track.offsetHeight - pane.clientHeight`. Chrome Android's URL bar resizes the
   layout viewport (that is what `lvh` exists for), so `innerHeight` swings ~56px
   while a plain `vh` height does not move: the span changes under the visitor and
   p = scroll / span remaps, the error growing linearly toward the end of the track
@@ -1340,10 +1161,18 @@ products; timber, ply and WPC board are quoted in the store). `npm run dev` / `b
   plain inches plus the spec line, because the workshop cuts from that message.
 - TS config uses `verbatimModuleSyntax` (use `import type`) and `erasableSyntaxOnly`
   (no enums), `noUnusedLocals/Parameters`.
-- **Three verifiers now**, and the split is deliberate: `verify:e2e` proves the site works
-  in a browser, `verify:geometry` proves the try-at-home arithmetic, and **`verify:scrub`
-  proves the hero's compositor path draws the same tunnel its JS fallback does** — see the
-  keyhole-hero bullet. A smoke test cannot tell a correct tunnel from a plausible one.
+- **Two verifiers**, and the split is deliberate: `verify:e2e` proves the site works in a
+  browser, `verify:geometry` proves the try-at-home arithmetic. (`verify:scrub` — which
+  compared the hero's CSS scroll-timeline path against its JS fallback — went on 2026-11-11
+  with both of the paths it compared; the hero is one canvas driven one way now.)
+  ⚠️ `verify:geometry` and `leaves:build` took their project root from a file URL's
+  `.pathname`, which on Windows is `/c:/Users/…` and resolves to `c:\c:\Users\…` — every
+  module failed to load. They use `fileURLToPath` now. The site was first built on a Mac;
+  any new script must do the same.
+  ⚠️ `verify:geometry` currently reports **1 failure that is data, not code**: a test row
+  the client saved in `/admin` (`sdfsdfa`, a 1.25:1 "door") is in the published catalogue,
+  and "every leaf cut-out is door-shaped" is right to reject it. Delete the row in `/admin`
+  (and `test` beside it) rather than loosening the check.
 - E2E smoke test: `scripts/verify.e2e.mjs` (playwright-core + system Chrome, headless).
   `BASE=… OUT=… node scripts/verify.e2e.mjs` against a dev/preview server. Covers portal
   phases, world pages, photo cards, the door wall (desktop click-to-viewer + mobile

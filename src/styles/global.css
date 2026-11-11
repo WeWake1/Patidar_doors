@@ -2370,6 +2370,9 @@ button { font-family: var(--sans); }
   gap: 40px;
   padding: 90px 24px 40px;
   background: radial-gradient(120% 100% at 50% 0%, #3a2e1e 0%, var(--night) 55%, var(--deep3) 100%);
+  /* 0 until the hero's scroll loop says otherwise (HeroKeyhole writes it
+     inline, per frame) — the wall is under the tunnel from the first paint */
+  opacity: 0;
   will-change: opacity;
 }
 /* The room the arches stand in. Everything here is soft on purpose — the old
@@ -2593,6 +2596,14 @@ button { font-family: var(--sans); }
   /* the corridor's ground, so the dissolve out of the tunnel lands on the same
      dark the hall was fading toward */
   background: radial-gradient(120% 100% at 50% 0%, #3a2e1e 0%, var(--night) 55%, var(--deep3) 100%);
+  /* 0 until the hero's scroll loop says otherwise (HeroKeyhole writes it
+     inline, per frame) — the wall is under the tunnel from the first paint.
+     ⚠️ `will-change` does two jobs here: it keeps the fade off the raster
+     path, and it stops the compositor skipping this subtree while it is at
+     opacity 0 — so the wall's tiles are rastered when it mounts (at idle,
+     page at rest) instead of in a burst the moment it starts to fade in,
+     which is mid-flight. */
+  opacity: 0;
   will-change: opacity;
 }
 /* The wall is a full page band by default and has to become one screenful
@@ -2601,8 +2612,17 @@ button { font-family: var(--sans); }
    every viewport height we care about. */
 .ktwall .doorwall { padding: 0 var(--gutter); background: none; border: 0; }
 .doorwall--compact .doorwall__head { margin-bottom: 4px; }
-/* opacity is set inline per frame by HeroKeyhole (see DoorWall) */
-.ktwall .doorwall__head { will-change: opacity; }
+/* The head arrives after the last door has gone past, not with the wall: a
+   door sweeping across "THE DOOR WALL" mid-word reads as two things drawn on
+   top of each other. A timed fade switched by one class (`headShown`, from
+   HeroKeyhole) rather than an opacity scrubbed from scroll — it is the one
+   fade in the hero that does not need to follow the finger, and a boolean
+   keeps scroll position out of DoorWall's props entirely. */
+.ktwall .doorwall__head {
+  opacity: 0;
+  transition: opacity 520ms var(--ease-out);
+}
+.ktwall .doorwall__head.is-shown { opacity: 1; }
 .doorwall--compact .doorwall__wall { height: min(56vh, 500px); }
 .doorwall--compact .doorwall__frame { max-height: min(56vh, 500px); }
 /* The drawn headline, sized for one screenful. The band's own ~104px draw does
@@ -2679,12 +2699,9 @@ button { font-family: var(--sans); }
    opening by re-projecting its own viewBox — lived in this slot until
    2026-08-31. It went with the phase: see the note above HeroKeyhole.
 
-   This layer takes the same z-index and stays FLAT. It repeats the gate's
-   projection (--kg-scale) rather than sharing its transform, because the 3D
-   field is pointer-events: none and must stay that way — Chrome resolves
-   elementFromPoint to the wrong element inside a preserve-3d subtree, the
-   scar the DriftWall tile and the /try warp surface both carry. Repeating one
-   multiplication is the cheap half of that trade. */
+   This layer takes the same z-index and is plain DOM over the canvas. It
+   repeats the gate's projection (--kg-scale) so the plate lands on the door
+   the canvas has drawn: same centre (the pane's), same `--kt-h`, same scale. */
 .kgate {
   position: absolute;
   left: 50%;
@@ -2870,10 +2887,8 @@ button { font-family: var(--sans); }
      front of a hall that is already lighting up ahead of them (HeroKeyhole) */
   z-index: 2;
   overflow: hidden;
-  /* ⚠️ Never make anything in here interactive. Chrome resolves
-     elementFromPoint (and so mouse events) to the wrong element inside a
-     preserve-3d subtree — the same scar the DriftWall tile and the /try warp
-     surface both carry. The layer opts out of hit-testing entirely. */
+  /* Nothing in here is interactive: it is a vignette and a canvas, stacked
+     over the wall. The lock is a separate layer above (`.kgate`). */
   pointer-events: none;
 }
 /* The room the doors stand in: light pooled at the far end, walls falling away
@@ -2890,145 +2905,51 @@ button { font-family: var(--sans); }
     radial-gradient(80% 38% at 50% 100%, rgba(201, 169, 100, 0.09), transparent 74%),
     linear-gradient(90deg, rgba(10, 7, 3, 0.7) 0%, transparent 30%, transparent 70%, rgba(10, 7, 3, 0.7) 100%);
 }
-/* ⚠️⚠️ **THERE IS NO `preserve-3d` IN THE TUNNEL, AND EVERYTHING A DOOR SHOWS
-   IS AN `<img>`.** Both are the fix for the hero coming back corrupted and
-   stuttering on a phone when you scroll out of it and back, and both were
-   found by measuring the compositor at a REAL device scale factor — every
-   figure taken before 2026-09-10 was from a browser whose emulated DPR never
-   reached the compositor, so the tunnel cost 12× what the notes said.
+/* ⚠️⚠️ **THE TUNNEL IS ONE CANVAS.** Every door, jamb, glow and edge shade is
+   drawn into `.ktun__canvas` by `src/lib/tunnelCanvas.ts`; there are no door
+   elements, no CSS 3D and no keyframes here any more, and there must not be.
 
-   Measured on a 412×915 viewport at 3.5× (a 1440px flagship), the old tunnel:
-   · 159 MB of tiles at rest, 470–510 MB mid-flight, 475 MB at rest again after
-     scrolling back — against Chrome Android's hard tile budget of 256 MB (96 MB
-     on a low-end device). Over budget the tile manager evicts, and an evicted
-     tile is drawn as a flat rectangle of the page background: the cream
-     blocks, the blank nav, the leaf missing a strip down one side.
-   · one door mid-flight was 350 MB on its own: the leaf 148 MB across three
-     tilings at once, the glow 85, the jamb box 78, the shade 41. A CSS gradient
-     or shadow on a box that grows 30× is rasterised into tiles at device
-     resolution at every new scale.
-   · and on the way BACK it never came down: Chrome pins the raster scale of a
-     layer whose transform is animating and only ever bumps it upward, so a door
-     rastered at 2.4× while passing the camera kept that raster at rest, ideal
-     0.32. Hence 475 MB at p = 0 and a hero that stayed broken until reload.
-   · 18–23 render surfaces, six of them full-screen: every animated opacity
-     inside a 3D sorting context is an offscreen texture, filled and composited
-     again every frame at 3.5× — that was the stutter.
+   Until 2026-11-11 this block was ~140 lines of the opposite: `.ktun__door`
+   boxes holding four `<img>`s each, laid out at 1000% and drawn at
+   `scale(0.1)` so that Chrome would composite them as textures instead of
+   tiles, with rules about which properties would silently undo that. It
+   measured 16 MB and clean in headless Chrome and still came apart on real
+   phones — doors drawn in chunks, strips missing, stutter — because the
+   whole design rested on a compositor fast path a page can neither see nor
+   request. A canvas is one screen-sized layer whatever is drawn in it. The
+   full account is at the top of `tunnelCanvas.ts`.
 
-   What replaced it, and why each part is load-bearing:
-   · **The four things in a door are `<img>`s with `will-change: transform`.**
-     Chrome composites such a layer as a *directly composited image*: its
-     texture is the decoded image at the image's own resolution, the GPU
-     scales it to wherever the door is, and no raster ever happens — 3 MB for a
-     leaf, a few KB for the glow, the shade and the jamb, at every scale. The
-     three non-photographic ones are PNGs from `npm run art:build`. A picture
-     layer needs exactly one image draw covering its whole box to qualify, so
-     **no border-radius, box-shadow, background or object-fit on any of them**,
-     and `max-width: none` against the sheet's global `img` rule.
-   · **No opacity on any box with children.** A group opacity is a render
-     surface; a single quad takes opacity for free. The fog is multiplied into
-     each image's own opacity by the generator instead of set on `.ktun__door`.
-   · **No `preserve-3d`.** A 3D sorting context turns every animated-opacity
-     participant into a render surface as well. The doors are ordered by
-     `z-index` (nearest last; the field never overtakes itself), each door is a
-     flat box the scene's `perspective` projects, and each door carries its OWN
-     `perspective` so the leaf's rotateY still reads in 3D — the swing is
-     projected against the door's centre rather than the scene's vanishing
-     point, which nobody can tell apart at 130ms a door.
-   · The jamb is a solid --night image under the leaf, of which the 18px around
-     the leaf is what shows; the glow sits over it and under the leaf, so the
-     opening lights up as the leaf swings. The inset vignette and the outer
-     drop shadow the box-shadow ring carried are gone with it.
-   Result on the same phone profile: ~16 MB for all five doors at any point of
-   the track, going in or coming back, and zero render surfaces from the
-   tunnel. `verify:e2e` asserts the shape (images carry the hint, the boxes do
-   not); the numbers are in CLAUDE.md. */
-.ktun__space {
+   So the canvas's box is all this sheet owns:
+   · **`100lvh` tall, not the pane's `100dvh`.** The pane tracks a phone's URL
+     bar and so changes height mid-scroll; resizing a WebGL drawing buffer
+     clears it. At the LARGE viewport height the buffer never has to change
+     for a bar — the pane clips the surplus, and the renderer centres the
+     scene on the pane's real height each frame, which is the same point the
+     `.kgate` lock is centred on.
+   · It paints nothing of its own and takes no pointer events — it sits over
+     the Door Wall for the back half of the track. */
+.ktun__canvas {
   position: absolute;
-  inset: 0;
-  /* perspective comes inline from HeroKeyhole's PERSPECTIVE constant */
-}
-
-/* one door, mid-flight. Height is the only size given: the width comes off the
-   leaf's own aspect (--kt-ar, from leaves.gen.ts), because these are real doors
-   and real doors are not one shape — the same reason the admin cropper stopped
-   forcing every photo into a 3:8 box. Paints nothing itself; see above. */
-.ktun__door {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  height: var(--kt-h);
-  width: calc(var(--kt-h) * var(--kt-ar));
-}
-.ktun__jamb,
-.ktun__gap,
-.ktun__leaf,
-.ktun__shade {
-  position: absolute;
-  display: block;
-  /* ⚠️ the sheet's `img { max-width: 100% }` would cap the jamb and the glow,
-     which are wider than the door on purpose */
-  max-width: none;
-  /* ⚠️ this hint is what makes each of them a directly composited image; it
-     is the opposite of the old rule for `.ktun__door`/`.ktun__leaf`, which
-     were picture layers where the hint pinned a raster at the wrong scale */
-  will-change: transform;
-  pointer-events: none;
-}
-/* ⚠️⚠️ **Every one of the four is laid out at TEN TIMES its size and drawn at
-   `scale(0.1)`, and that is what makes them directly composited images
-   reliably rather than by luck.** Chrome only takes the texture path when
-   (a) the image is under a tenth of its box in pixels, or (b) the box scaled
-   to the image's own resolution rounds to within a pixel of itself — and (b)
-   depends on the fractional part of the door's size in device pixels, i.e. on
-   the viewport, so a leaf that was a 3 MB texture on one phone was a 150 MB
-   picture layer on the next. (a) is under our control: a 10× box puts every
-   texture at 0.08 of its bounds whatever the screen, and the compositor
-   applies the 0.1 on the same GPU pass that projects the door. Layout of an
-   oversized <img> costs nothing; `.ktun` clips the overflow.
-   Replaced elements also do not stretch between `left`/`right` — an absolutely
-   positioned <img> with `width: auto` is its intrinsic width — so each box is
-   sized explicitly, the width/height PAIR always (ProductPhoto's scar), and
-   the scale is about the box's own top-left so it lands where a 1× box would. */
-.ktun__jamb,
-.ktun__gap,
-.ktun__leaf,
-.ktun__shade {
-  transform-origin: 0 0;
-}
-.ktun__jamb {
-  left: -18px;
-  top: -18px;
-  width: calc(1000% + 360px);
-  height: calc(1000% + 360px);
-  transform: scale(0.1);
-}
-/* The light the leaf swings away from. Bled well past the leaf's own box on
-   every side: at the leaf's size with an opaque last stop this was a
-   hard-edged lit rectangle the same size as the door, which read as a
-   light-box standing in the dark rather than as light coming through an
-   opening. The image ends on transparent, never on a colour. */
-.ktun__gap {
-  left: -15%;
-  top: -15%;
-  width: 1300%;
-  height: 1300%;
-  transform: scale(0.1);
-}
-/* hinge left, handle side sweeping toward the camera — the same swing as every
-   other door on the site (.door-scene__leaf, .pdoor__leaf). The shade rides
-   the same hinge with the same animation, so it is always exactly on the leaf.
-   ⚠️ rotateY about a vertical axis does not care where along that axis the
-   origin sits, so `0 0` is the left-centre hinge for the swing AND the corner
-   the 0.1 scale needs; the generated keyframes carry `scale(0.1)` after the
-   rotation — see bind() in scripts/build-hero-scrub.mjs. */
-.ktun__leaf,
-.ktun__shade {
   left: 0;
   top: 0;
-  width: 1000%;
-  height: 1000%;
-  transform: scale(0.1);
+  display: block;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  pointer-events: none;
+}
+/* How the canvas learns `--kt-h`. The door's height is declared once, on
+   `.portal--keyhole`, in units a script cannot evaluate (`svh`); the lock
+   layer is sized from it in CSS and the renderer reads it off this box, so
+   the drawn door and the DOM lock can never disagree about how big it is. */
+.ktun__ruler {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: var(--kt-h);
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* copy keeps the top of the screen, above the lock and the tunnel both.
