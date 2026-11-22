@@ -11,7 +11,14 @@ export function useAuth() {
       setSession(null)
       return
     }
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    // A rejected getSession (offline, Supabase unreachable, a corrupt token in
+    // localStorage) left `session` at undefined, which this hook reports as
+    // `loading` — so the admin sat on "Loading…" with no way forward. Failing
+    // to read a session is the same outcome as not having one: show the form.
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setSession(data.session))
+      .catch(() => setSession(null))
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => sub.subscription.unsubscribe()
   }, [])

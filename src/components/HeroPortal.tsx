@@ -1,134 +1,61 @@
-import { useRef } from 'react'
-import { Link } from 'react-router-dom'
-import type { ArtId, Tone, WorldId } from '../data/products'
-import { WOOD_TONES } from '../data/products'
-import { WORLDS } from '../data/worlds'
+import { Suspense, lazy, memo, useEffect, useRef, useState } from 'react'
 import { smoothScrollTo } from '../lib/smoothScroll'
+import { useDecorativeChunk } from '../lib/useDecorativeChunk'
 import { easeInQuad, easeOutCubic, seg, useMediaQuery, useTrackProgress } from '../lib/useTrackProgress'
-import { DoorArt } from './DoorArt'
+import { ErrorBoundary } from './ErrorBoundary'
 import { HeroDoorPhoto } from './HeroDoorPhoto'
-import { MaterialArt } from './MaterialArt'
-import LightRays from './reactbits/LightRays'
+import { Corridor, HeroKicker, WORLD_ARTS, WorldCard } from './heroWorlds'
+/* Beams pulls in three + @react-three/fiber + drei — ~220kB gzipped, which is
+   most of the bundle. It is a decorative backdrop, so it must never sit in
+   front of first paint on a phone: lazy-loaded into its own chunk, with
+   .portal__rays' warm gradient standing in until it arrives (it fades in, so
+   the swap doesn't pop). */
+const Beams = lazy(() => import('./reactbits/Beams'))
 
 /**
  * The portal hero: scroll swings the hero door open (phase A), pushes the
  * camera through the doorway (phase B), and lands in a corridor of four
  * world-doors (phase C/D). Transform + opacity only — nothing paint-heavy
  * animates during scroll. Falls back to a static layout under reduced motion.
+ *
+ * The world cards, the corridor and the kicker live in ./heroWorlds — shared
+ * with the keyhole/tunnel hero prototyped beside this one.
  */
 
-const t = (id: string, name: string, base: string, dark: string, light: string, grain = true): Tone => ({
-  id,
-  name,
-  base,
-  dark,
-  light,
-  grain,
-  delta: 0,
+/* The headline and sub are fixed copy inside the scrubbed zoom block — same
+   deal as the memoised corridor cards, and this one carries the LCP element. */
+const HeroCopy = memo(function HeroCopy() {
+  return (
+    <>
+      <HeroKicker className="rise" />
+      <h1 className="hero__title rise rise--1">
+        Walk right <em>in</em>.
+      </h1>
+      <p className="hero__sub rise rise--2">
+        Teak timbers, made-to-measure doors, ply and WPC — all under one roof, straight from our factory floor.
+      </p>
+    </>
+  )
 })
-
-/**
- * Each world is a spinning glass globe with its material floating inside:
- * timber/ply/wpc use the generated MaterialArt swatch, doors a miniature
- * DoorArt leaf. `tone` also tints the globe's rim glow + label (via --wd).
- */
-type Globe =
-  | { id: WorldId; kind: 'door'; art: ArtId; tone: Tone }
-  | { id: WorldId; kind: 'material'; material: 'timber' | 'ply' | 'wpc'; tone: Tone }
-
-const WORLD_GLOBES: Globe[] = [
-  { id: 'timbers', kind: 'material', material: 'timber', tone: t('w-timbers', 'Amber Teak', '#8a6234', '#6b4a24', '#a87c46') },
-  { id: 'doors', kind: 'door', art: 'meridian', tone: WOOD_TONES[4] },
-  { id: 'ply', kind: 'material', material: 'ply', tone: t('w-ply', 'Terracotta', '#b0725a', '#93583f', '#c78a70') },
-  { id: 'wpc', kind: 'material', material: 'wpc', tone: t('w-wpc', 'Teal', '#2f7e72', '#215c53', '#47968a', false) },
-]
-
-function WorldGlobe({ globe, style, tabbable }: { globe: Globe; style?: React.CSSProperties; tabbable: boolean }) {
-  const world = WORLDS.find((w) => w.id === globe.id)!
-  return (
-    <Link
-      to={`/${globe.id}`}
-      className={`world-globe world-globe--${globe.id}`}
-      style={{ ...style, '--wd': globe.tone.base } as React.CSSProperties}
-      tabIndex={tabbable ? 0 : -1}
-    >
-      <span className="globe" aria-hidden="true">
-        <span className="globe__shine" />
-        <span className={`globe__mat globe__mat--${globe.kind}`}>
-          {globe.kind === 'door' ? (
-            <DoorArt art={globe.art} tone={globe.tone} />
-          ) : (
-            <MaterialArt material={globe.material} base={globe.tone.base} dark={globe.tone.dark} light={globe.tone.light} />
-          )}
-        </span>
-        <span className="globe__glass" />
-      </span>
-      <span className="world-globe__label">{world.short}</span>
-      <span className="world-globe__hint">{world.tagline}</span>
-    </Link>
-  )
-}
-
-/**
- * "Our yard · Our factory · Our store" — each phrase is atomic so a narrow
- * screen breaks between them, never mid-phrase ("OUR YARD · OUR / FACTORY…").
- */
-function HeroKicker({ className }: { className?: string }) {
-  return (
-    <div className={`hero__kicker${className ? ` ${className}` : ''}`}>
-      {['Our yard', 'Our factory', 'Our store'].map((phrase, i, all) => (
-        <span key={phrase} className="hero__kicker-part">
-          {phrase}
-          {/* separator trails its phrase, so a wrap never starts a line with "·" */}
-          {i < all.length - 1 && (
-            <span className="hero__kicker-sep" aria-hidden="true">
-              ·
-            </span>
-          )}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-function Corridor({ p, interactive }: { p: number; interactive: boolean }) {
-  const heading = seg(p, 0.8, 0.88)
-  return (
-    <div
-      className="portal__corridor"
-      style={{
-        opacity: seg(p, 0.45, 0.58),
-        visibility: p > 0.45 ? 'visible' : 'hidden',
-        pointerEvents: interactive ? 'auto' : 'none',
-      }}
-    >
-      <div className="portal__hall" aria-hidden="true" />
-      <div className="portal__corridor-head" style={{ opacity: heading, transform: `translateY(${(1 - heading) * 14}px)` }}>
-        <div className="kicker kicker--gold">Step into the store</div>
-        <h2>Choose your world</h2>
-      </div>
-      <div className="portal__doors">
-        {WORLD_GLOBES.map((g, i) => {
-          const s = seg(p, 0.56 + i * 0.07, 0.66 + i * 0.07)
-          return (
-            <WorldGlobe
-              key={g.id}
-              globe={g}
-              tabbable={interactive}
-              style={{ opacity: s, transform: `translateY(${(1 - s) * 48}px)` }}
-            />
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 export function HeroPortal() {
   const trackRef = useRef<HTMLElement>(null)
   const p = useTrackProgress(trackRef)
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   const mobile = useMediaQuery('(max-width: 720px)')
+  /* Whether the beams chunk should be fetched on this device and this
+     connection, and whether now is a good moment — false until the page has
+     loaded and gone idle, so 230 kB of decorative WebGL stops queueing ahead of
+     the hero photograph. */
+  const beamsWanted = useDecorativeChunk()
+  /* Whether the backdrop is worth *running* right now — see the Beams block
+     below. Setting the same value bails out of the re-render, so this costs
+     nothing on the frames in between. Must sit above the reduced-motion early
+     return: hooks can't run conditionally. */
+  const [beamsLive, setBeamsLive] = useState(true)
+  useEffect(() => {
+    setBeamsLive((live: boolean) => (live ? p < 0.62 : p < 0.5))
+  }, [p])
 
   if (reduced) {
     return (
@@ -150,8 +77,8 @@ export function HeroPortal() {
           </div>
         </div>
         <div className="portal__grid">
-          {WORLD_GLOBES.map((g) => (
-            <WorldGlobe key={g.id} globe={g} tabbable />
+          {WORLD_ARTS.map((g) => (
+            <WorldCard key={g.id} art={g} tabbable />
           ))}
         </div>
       </section>
@@ -177,27 +104,60 @@ export function HeroPortal() {
   return (
     <section className="portal portal--dark" ref={trackRef}>
       <div className="portal__sticky">
-        {/* LightRays backdrop — only the opening phase; fades out before the corridor. */}
+        {/* Beams backdrop — only the opening phase; fades out before the corridor.
+            beamWidth/Height are world units in front of a fov-30 camera at z=20,
+            which sees ~17 units across: `beamWidth` alone sets how wide a beam
+            reads (4 = broad slabs), while `beamNumber`/`beamHeight` only need to
+            be large enough that the field's edges stay off-frame once rotated —
+            a short beamHeight puts a hard diagonal seam across the corner.
+            Speed stays under the demo's 2 — that fast, the noise crawling down
+            the beams pulls the eye off the headline. */}
         <div
           className="portal__rays"
           style={{ opacity: zoomOpacity, visibility: zoomOpacity === 0 ? 'hidden' : 'visible' }}
           aria-hidden="true"
         >
-          <LightRays
-            raysOrigin="top-center"
-            raysColor="#f2d18a"
-            raysSpeed={0.9}
-            lightSpread={0.7}
-            rayLength={2}
-            fadeDistance={1.2}
-            followMouse
-            mouseInfluence={0.08}
-            noiseAmount={0.08}
-            distortion={0.04}
-          />
-        </div>
+          {/* If the three.js chunk 404s — the usual cause is a redeploy under an
+              open tab — the hero must simply not have beams. Without a boundary
+              the failed import throws through Suspense and takes the whole home
+              page down over a decorative backdrop. `.portal__rays`' warm
+              gradient is already the standing-in layer, so the fallback is
+              nothing at all. */}
+          <ErrorBoundary label="beams" fallback={null}>
+            <Suspense fallback={null}>
+            {/* Two gates, and both are load-bearing.
 
-        <Corridor p={p} interactive={corridorInteractive} />
+                `beamsWanted` decides whether the 230 kB chunk is fetched at
+                all: not during first paint (it used to hold the connection from
+                1193ms to 3615ms while the hero photo and every font waited
+                behind it), and not on Save-Data or a 2g phone. Because
+                React.lazy imports on first render, this gate IS the download.
+
+                `beamsLive` decides whether it runs. `visibility: hidden` hides
+                the canvas but does NOT stop @react-three/fiber's render loop —
+                it kept issuing ~120 WebGL draw calls/sec through the corridor
+                and all the way down the page, which is most of the hero's
+                main-thread budget and all of its GPU one. Hysteresis (off above
+                .62, back on below .5) so scrubbing across the edge can't thrash
+                the WebGL context. */}
+            {beamsWanted && beamsLive && (
+              <Beams
+                beamWidth={4}
+                beamHeight={30}
+                beamNumber={12}
+                /* --beam-light. The CSS backdrop under this canvas is drawn to
+                   the same colour and the same 30° rake so the fade between
+                   them is a dissolve, not a change of scene — retune both or
+                   neither. three needs a literal, so this is the one copy. */
+                lightColor="#f2d18a"
+                speed={2}
+                noiseIntensity={1.5}
+                 rotation={30}
+              />
+            )}
+            </Suspense>
+          </ErrorBoundary>
+        </div>
 
         <div
           className="portal__zoom"
@@ -209,13 +169,7 @@ export function HeroPortal() {
           }}
         >
           <div className="portal__copy" style={{ opacity: copyOpacity }}>
-            <HeroKicker className="rise" />
-            <h1 className="hero__title rise rise--1">
-              Walk right <em>in</em>.
-            </h1>
-            <p className="hero__sub rise rise--2">
-              Teak timbers, made-to-measure doors, ply and WPC — all under one roof, straight from our factory floor.
-            </p>
+            <HeroCopy />
           </div>
 
           <div className="portal__scene rise rise--3">
@@ -224,6 +178,13 @@ export function HeroPortal() {
             </HeroDoorPhoto>
           </div>
         </div>
+
+        {/* After the zoom block, not before it. Paint order is set by z-index
+            (corridor 1, zoom 2), so this is free visually — but in the document
+            the corridor's "Choose your world" was an <h2> standing ahead of the
+            page's own <h1>, and a heading outline that opens on a subheading is
+            the first thing a screen-reader user meets on this site. */}
+        <Corridor p={p} interactive={corridorInteractive} />
 
         <button
           type="button"

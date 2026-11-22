@@ -7,7 +7,7 @@ export function Footer() {
       <div className="footer__grid">
         <div>
           <div className="footer__brand">
-            <img className="footer__mark" src="/images/logo/patidar-mark-cream.png" alt="" aria-hidden="true" width="30" height="27" />
+            <img className="footer__mark" src="/images/logo/patidar-mark-cream.png" alt="" aria-hidden="true" width="19" height="27" />
             <span>PATIDAR DOORS</span>
           </div>
           <p className="footer__blurb">
@@ -44,7 +44,7 @@ export function Footer() {
       </div>
       <div className="footer__bar">
         <span>© 2026 {config.brand}. {config.city}.</span>
-        <span>Free measurement visit · {config.warrantyYears}-year warranty</span>
+        <span>Free measurement in {config.serviceCity} · Warranty included</span>
       </div>
     </footer>
   )

@@ -1,23 +1,36 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useCart } from '../cart/CartContext'
+import { DoorConfigurator, PriceBreakdown } from '../components/DoorConfigurator'
 import { DoorScene } from '../components/DoorScene'
 import { MaterialArt } from '../components/MaterialArt'
 import { PhotoShowcase } from '../components/PhotoShowcase'
 import { ProductCard } from '../components/ProductCard'
+import { ProductPhoto } from '../components/ProductPhoto'
 import { useToast } from '../components/Toast'
 import { config, whatsappLink } from '../config'
+import { DEFAULT_REF, defaultConfig, formatSizeLabel, normalizeConfig, toSizeId, type DoorConfig } from '../data/pricing'
+import { usePriceBook } from '../data/priceBook'
 import type { Product as ProductT } from '../data/products'
-import { BASE_SIZE_ID, PRODUCTS, SIZES, defaultToneId, getProduct, getTone, priceFor, tonesFor } from '../data/products'
+import { defaultToneId, getTone, pricingOf, quoteFor, tonesFor, tryState } from '../data/products'
+import { useCatalog, useCatalogStatus } from '../data/useCatalog'
 import { getWorld } from '../data/worlds'
 import { fmtINR } from '../lib/format'
+import { t } from '../lib/i18n'
 import { usePageMeta } from '../lib/usePageMeta'
 import { NotFound } from './NotFound'
 
 export function Product() {
   const { id } = useParams()
-  const product = getProduct(id ?? '')
-  if (!product) return <NotFound />
+  const catalogue = useCatalog()
+  const status = useCatalogStatus()
+  const product = catalogue.find((p) => p.id === id)
+  /* A door the client added since the last deploy is not in the bundle's
+     snapshot, so "not found" is only an answer once the live read has come
+     back. Until then this holds the page open the same way a route chunk
+     does — 404-ing a link the client has just sent a customer would be the
+     worst possible moment to be right about a stale copy. */
+  if (!product) return status === 'loading' ? <div className="route-hold" /> : <NotFound />
   // key resets configurator state when navigating between products
   return <ProductInner key={product.id} product={product} />
 }
@@ -36,17 +49,73 @@ function StageNote() {
   )
 }
 
-function ProductStage({ product }: { product: ProductT }) {
+/**
+ * Doors only — every door, nothing but doors. `tryState` owns that rule (see
+ * products.ts); this just renders it, so the day the photographed doors get
+ * their leaf corners marked in /admin they light up here with no edit.
+ */
+function TryLink({ product, cfg, toneId }: { product: ProductT; cfg?: DoorConfig; toneId?: string }) {
+  if (tryState(product) !== 'ready') return null
+  const c = cfg ?? DEFAULT_REF
+  return (
+    // The size and finish travel in the URL, so /try/kyoto?h=84&w=33 is also a
+    // link the store can paste into a WhatsApp reply.
+    <Link
+      className="btn btn--ghost pdp__try"
+      to={`/try/${product.id}?h=${c.heightIn}&w=${c.widthIn}${toneId ? `&t=${toneId}` : ''}`}
+    >
+      {t('try.open')}
+    </Link>
+  )
+}
+
+/**
+ * `cfg` is threaded in so the try-on link carries the size the customer has
+ * actually dialled in. It used to default here, which was right while no
+ * photographed door had a configurator; now that they all do, a link built
+ * from DEFAULT_CONFIG would quietly send an 8′ × 3′ door to /try however the
+ * sliders were set — and that number is burnt into the picture that reaches
+ * our WhatsApp.
+ */
+function ProductStage({ product, cfg }: { product: ProductT; cfg: DoorConfig | null }) {
   const visual = product.visual
   if (visual.kind === 'material') {
     return (
       <div className="pdp__stage pdp__stage--material">
-        <MaterialArt material={visual.material} base={visual.base} dark={visual.dark} light={visual.light} className="pdp__material" />
+        {/* same seed as the card that opened this page, so it is the same board */}
+        <MaterialArt
+          material={visual.material}
+          base={visual.base}
+          dark={visual.dark}
+          light={visual.light}
+          seed={product.id}
+          className="pdp__material"
+        />
       </div>
     )
   }
   if (visual.kind === 'photo') {
-    const swing = (visual.presentation ?? 'swing') === 'swing'
+    const presentation = visual.presentation ?? 'swing'
+    const swing = presentation === 'swing'
+    /* A photograph of a board or a billet — not a door, so it takes the swatch
+       stage, not the door stage. `TryLink` renders nothing here anyway
+       (`tryState` is `no`), but the frame is what read as a door. */
+    if (presentation === 'plain') {
+      return (
+        <div className="pdp__stage pdp__stage--material">
+          <div className="photo-plain pdp__photo-plain">
+            <ProductPhoto photo={visual.cover} className="photo-plain__img" loading="eager" sizes="(max-width: 900px) 92vw, 46vw" />
+          </div>
+          {visual.gallery && visual.gallery.length > 0 && (
+            <div className="pdp__gallery">
+              {visual.gallery.map((g) => (
+                <ProductPhoto key={g.src} photo={g} sizes="30vw" />
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
     return (
       <div className="pdp__stage">
         {swing ? (
@@ -55,15 +124,16 @@ function ProductStage({ product }: { product: ProductT }) {
             <StageNote />
           </>
         ) : (
-          <PhotoShowcase photo={visual.cover} className="pdp__scene" />
+          <PhotoShowcase photo={visual.cover} className="pdp__scene" still={presentation === 'still'} />
         )}
         {visual.gallery && visual.gallery.length > 0 && (
           <div className="pdp__gallery">
             {visual.gallery.map((g) => (
-              <img key={g.src} src={g.src} srcSet={g.srcSet} sizes="30vw" alt={g.alt} loading="lazy" decoding="async" />
+              <ProductPhoto key={g.src} photo={g} sizes="30vw" />
             ))}
           </div>
         )}
+        <TryLink product={product} cfg={cfg ?? undefined} />
       </div>
     )
   }
@@ -105,24 +175,34 @@ function EnquiryPanel({ product }: { product: ProductT }) {
 }
 
 function ProductInner({ product }: { product: ProductT }) {
-  const [sizeId, setSizeId] = useState(BASE_SIZE_ID)
+  const book = usePriceBook()
+  const pricing = pricingOf(product)
+  const [raw, setCfg] = useState<DoorConfig | null>(null)
   const [toneId, setToneId] = useState(defaultToneId(product))
   const cart = useCart()
   const { toast } = useToast()
   usePageMeta(product.name, product.tag)
 
+  const catalogue = useCatalog()
   const world = getWorld(product.world)
-  // Size×finish configurator for anything with a confirmed price — SVG art
-  // doors pick a finish too; CMS photo doors configure size only.
-  const configurable = product.purchasable && product.price !== undefined
+  // Made-to-measure configurator for anything with a rate card. The
+  // configuration is normalised against the card and the book on every
+  // render, so the live read landing with a renamed option (or a real price
+  // replacing the placeholder) can never leave a chosen id that no longer
+  // exists under the customer's hands.
+  const configurable = pricing !== undefined
+  const cfg = pricing ? (raw ? normalizeConfig(pricing, book, raw) : defaultConfig(pricing, book)) : null
   const tone = getTone(product, toneId)
-  const price = priceFor(product, sizeId, tone.id)
-  const related = PRODUCTS.filter((p) => p.id !== product.id)
+  const quote = cfg ? quoteFor(product, cfg, tone.id) : null
+  const price = quote?.total ?? 0
+  const related = catalogue
+    .filter((p) => p.id !== product.id)
     .sort((a, b) => Number(b.world === product.world) - Number(a.world === product.world))
     .slice(0, 3)
 
   const add = () => {
-    cart.add(product.id, sizeId, tone.id)
+    if (!cfg) return
+    cart.add(product.id, toSizeId(cfg.heightIn, cfg.widthIn), tone.id, cfg)
     toast(`${product.name} added to cart`)
   }
 
@@ -139,51 +219,30 @@ function ProductInner({ product }: { product: ProductT }) {
           <div className="pdp__stage">
             <DoorScene art={product.visual.art} tone={tone} hoverOpen className="pdp__scene" />
             <StageNote />
+            <TryLink product={product} cfg={cfg ?? undefined} toneId={tone.id} />
           </div>
         ) : (
-          <ProductStage product={product} />
+          <ProductStage product={product} cfg={cfg} />
         )}
 
-        {configurable ? (
+        {configurable && pricing && cfg ? (
           <div className="pdp__info">
             <div className="pdp__cat">
               {world?.name} · {product.sub} · Made to measure
             </div>
             <h1 className="pdp__name">{product.name}</h1>
-            <p className="pdp__story">{product.story}</p>
-            {product.motif && (
-              <div className="pdp__motif">
-                <span className="diamond" aria-hidden="true" />
-                Recreated from a trending motif: {product.motif}
-              </div>
-            )}
+            {/* Factory doors carry no long story, only the one-line tag —
+                without the fallback the heading sat on a blank paragraph. */}
+            <p className="pdp__story">{product.story ?? product.tag}</p>
 
             <div className="pdp__price-row">
               <div className="pdp__price">{fmtINR(price)}</div>
-              <div className="pdp__price-note">installed · {SIZES.find((s) => s.id === sizeId)?.label}</div>
+              <div className="pdp__price-note">
+                incl. GST & installation · {formatSizeLabel(cfg.heightIn, cfg.widthIn)}
+              </div>
             </div>
 
-            <fieldset className="cfg">
-              <legend>Size — made to your frame</legend>
-              <div className="cfg__sizes">
-                {SIZES.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`cfg__size${sizeId === s.id ? ' cfg__size--on' : ''}`}
-                    onClick={() => setSizeId(s.id)}
-                    aria-pressed={sizeId === s.id}
-                  >
-                    <span className="cfg__size-label">{s.label}</span>
-                    <span className="cfg__size-note">{s.note}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="cfg__hint">
-                Different opening? Pick the closest size — we confirm exact dimensions (and price, same per-area rate)
-                at the free measurement visit.
-              </div>
-            </fieldset>
+            {quote && <DoorConfigurator pricing={pricing} book={book} config={cfg} onChange={setCfg} quote={quote} />}
 
             {tonesFor(product).length > 0 && (
               <fieldset className="cfg">
@@ -209,6 +268,8 @@ function ProductInner({ product }: { product: ProductT }) {
               </fieldset>
             )}
 
+            {quote && <PriceBreakdown quote={quote} />}
+
             <button type="button" className="btn btn--dark btn--big btn--block" onClick={add}>
               Add to cart — {fmtINR(price)}
             </button>
@@ -218,8 +279,8 @@ function ProductInner({ product }: { product: ProductT }) {
               {product.specs.map((s) => (
                 <li key={s}>{s}</li>
               ))}
-              <li>Free measurement visit & installation included</li>
-              <li>10-year warranty</li>
+              <li>Measurement visit & installation included in {config.serviceCity}</li>
+              <li>Covered against manufacturing defects</li>
             </ul>
           </div>
         ) : (
@@ -228,7 +289,10 @@ function ProductInner({ product }: { product: ProductT }) {
       </div>
 
       <div className="pdp__related">
-        <div className="kicker">You may also like</div>
+        {/* This is the section's heading, so it is one — the kicker class is the
+            look, not the level. Without it the card names were h3s hanging off
+            the product's h1 with nothing in between. */}
+        <h2 className="kicker">You may also like</h2>
         <div className="grid grid--3">
           {related.map((p) => (
             <ProductCard key={p.id} product={p} />

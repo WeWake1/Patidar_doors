@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { config } from '../config'
 import { usePageMeta } from '../lib/usePageMeta'
 
@@ -7,28 +8,34 @@ export function Policies() {
     <div className="page-pad policies">
       <div className="kicker">The fine print, in plain words</div>
       <h1 className="page-title">Warranty & policies</h1>
+      {/* /faq has pointed here since it shipped; this is the other half of that
+          pair. It matters more since 2026-08-13, when the home page's FAQ
+          teaser was removed — the footer is now the only other way in. */}
+      <p className="policies__sub">
+        The terms below are the long form. For the shorter questions — sizes, timelines, what to bring to the store —{' '}
+        <Link to="/faq">read the FAQ</Link>.
+      </p>
 
       <section>
-        <h2>{config.warrantyYears}-year warranty</h2>
+        <h2>Warranty</h2>
         <p>
-          Every Patidar door carries a {config.warrantyYears}-year warranty against manufacturing defects: warping
-          beyond 3 mm across the leaf, delamination of the face, core defects, and failure of hardware supplied by us
-          under normal domestic use.
+          Every door we make is covered against manufacturing defects under normal domestic use. Ask us for the exact
+          term and what it covers before you order — we would rather tell you in person than have you read it off a
+          page. The written warranty is issued with your final invoice, so you have it in hand either way.
         </p>
         <p>
-          The warranty does not cover physical damage or misuse, exposure to standing water at the frame, alterations
-          made by third parties, or natural variation in wood grain and colour — that variation is the point. Your
-          digital warranty card is issued with the final invoice; claims are honoured with repair first, replacement
-          where repair isn’t possible.
+          What no warranty covers, here or anywhere: physical damage and misuse, standing water at the frame,
+          alterations made by third parties, and natural variation in wood grain and colour — that last one is the
+          point of buying real timber. Claims are settled with repair first, replacement where repair isn’t possible.
         </p>
       </section>
 
       <section>
         <h2>Measurement visit</h2>
         <p>
-          Placing an order books a free measurement visit — it costs nothing and doesn’t commit you. Our fitter
-          measures the frame, checks swing side and level, and confirms the final size and price (same per-area rate as
-          the site). Production begins only after your go-ahead.
+          Sending us an order books a free measurement visit anywhere in {config.serviceCity} — it costs nothing and
+          doesn’t commit you. Our fitter measures the frame, checks swing side and level, and confirms the final size
+          and price (same per-area rate as the site). Production begins only after your go-ahead.
         </p>
       </section>
 
@@ -44,28 +51,50 @@ export function Policies() {
       <section>
         <h2>Delivery & installation</h2>
         <p>
-          Made-to-measure production takes 10–14 working days from confirmation. Delivery and installation happen in a
-          single visit by our own crew — the door is hung on our hinges, aligned, sealed, and the site left clean. We
-          serve customers pan-India; remote pincodes are confirmed on the scheduling call.
+          Made-to-measure production takes 10–14 working days from confirmation. Across {config.serviceCity}, delivery
+          and installation happen in a single visit by our own crew — the door is hung on our hinges, aligned, sealed,
+          and the site left clean.
+        </p>
+        <p>
+          Outside the city we supply the material rather than the fitting: timber, ply and finished doors can be
+          freighted to you, but our crews do not travel to install them. Send us your pincode before you order and
+          we’ll tell you exactly what we can and can’t do for that address.
         </p>
       </section>
 
       <section>
         <h2>Cancellation & refunds</h2>
+        {/* The "full refund if we miss 30 working days" guarantee that used to
+            close this paragraph was removed on 2026-08-14: the client has not
+            confirmed that term, and content.ts's header had it tracked as
+            shipping-but-unverified. Handled the way the warranty was — say what
+            is true, and point at the person who can answer the rest. Put a
+            confirmed term back here and in the "Can I cancel my order?" FAQ
+            together, or the two will disagree. */}
         <p>
           Cancel free of charge any time before production begins — that is, up to your post-measurement confirmation.
           Because each leaf is cut to your exact opening, orders cannot be cancelled once production starts; the 50%
-          production payment covers the made-to-order leaf. If we fail to deliver within 30 working days of
-          confirmation, you may cancel for a full refund of everything paid.
+          production payment covers the made-to-order leaf. If anything delays your order past the 10–14 working days
+          we quote, we will call you — talk to us about it and we will sort it out.
         </p>
       </section>
 
       <section>
         <h2>Contact</h2>
-        <p>
-          {config.brand} · <a href={`tel:${config.phoneTel}`}>{config.phoneDisplay}</a> ·{' '}
-          <a href={`mailto:${config.email}`}>{config.email}</a> · {config.hours}
-        </p>
+        {/* A list, not a sentence: on a phone each entry takes its own row, which
+            is what lets the number and the email carry a thumb-sized target
+            without their hit areas overlapping. The dots are drawn by CSS and
+            only on wide screens. */}
+        <ul className="policies__contact">
+          <li>{config.brand}</li>
+          <li>
+            <a href={`tel:${config.phoneTel}`}>{config.phoneDisplay}</a>
+          </li>
+          <li>
+            <a href={`mailto:${config.email}`}>{config.email}</a>
+          </li>
+          <li>{config.hours}</li>
+        </ul>
       </section>
     </div>
   )

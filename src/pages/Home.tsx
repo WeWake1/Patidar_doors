@@ -1,27 +1,39 @@
 import { Link } from 'react-router-dom'
+import { DoorWallSlot } from '../components/DoorWallSlot'
+import { HeroKeyhole } from '../components/HeroKeyhole'
+import { WorldsBand } from '../components/heroWorlds'
 import { HeroPortal } from '../components/HeroPortal'
 import { ProductCard } from '../components/ProductCard'
 import { Reveal } from '../components/Reveal'
-import { FAQS, PROCESS, TESTIMONIALS } from '../data/content'
-import { getProduct } from '../data/products'
-import { WORLDS } from '../data/worlds'
+import { PAYMENT_STEPS, PROCESS } from '../data/content'
+import { FEATURED_IDS } from '../data/products'
+import { useCatalog } from '../data/useCatalog'
 import { usePageMeta } from '../lib/usePageMeta'
 
-const MARQUEE = 'Timbers  ✦  Doors  ✦  Ply  ✦  WPC  ✦  Our yard, our factory, our store  ✦  Made to measure  ✦  '
-
-const FEATURED = ['burma-teak-door', 'meridian', 'membrane-door']
+/* The four worlds and nothing else. Each span has to be wider than the widest
+   viewport on its own — the loop is two identical spans translated -50%, so a
+   span narrower than the screen leaves a visible gap at the wrap. Repeats and
+   `marquee`'s 72s duration are a pair: change one and the ribbon changes speed. */
+const MARQUEE = 'Timbers  ✦  Doors  ✦  Ply  ✦  WPC  ✦  '.repeat(6)
 
 export function Home() {
   usePageMeta(
     undefined,
     'Patidar Doors by Patidar Timbers — teak timbers, made-to-measure doors, plywood and WPC from our own yard and factory. Explore online, see it in person.',
   )
-  const featured = FEATURED.map((id) => getProduct(id)!).filter(Boolean)
+  const catalogue = useCatalog()
+  const featured = FEATURED_IDS.map((id) => catalogue.find((p) => p.id === id)).filter((p) => p !== undefined)
+  const oldHero = new URLSearchParams(window.location.search).get('hero') === 'old'
 
   return (
     <div>
-      {/* ── PORTAL HERO ──────────────────────────────────────── */}
-      <HeroPortal />
+      {/* ── HERO ─────────────────────────────────────────────────
+          Prototype swap (2026-08-21): the keyhole/tunnel hero is the default
+          and `?hero=old` puts the portal hero back, so the two can be compared
+          on the same page at the same width without a rebuild. Read once at
+          render — there is no reason for this to be reactive, and it is meant
+          to be deleted along with the loser. */}
+      {oldHero ? <HeroPortal /> : <HeroKeyhole />}
 
       {/* ── MARQUEE ──────────────────────────────────────────── */}
       <div className="marquee" aria-hidden="true">
@@ -52,34 +64,34 @@ export function Home() {
         ].map((v, i) => (
           <Reveal key={v.n} delay={i * 90}>
             <div className="props__num">{v.n}</div>
-            <h3 className="props__head">{v.h}</h3>
+            {/* h2: these are top-level sections of the page, and there is no
+                heading above them to be a level-3 under */}
+            <h2 className="props__head">{v.h}</h2>
             <p className="props__body">{v.p}</p>
           </Reveal>
         ))}
       </section>
 
-      {/* ── WORLD TILES ──────────────────────────────────────── */}
-      <section className="worldstrip">
-        <div className="featured__top">
-          <div>
-            <div className="kicker">Four worlds, one roof</div>
-            <h2 className="featured__title">Where do you want to start?</h2>
-          </div>
-        </div>
-        <div className="worldstrip__grid">
-          {WORLDS.map((w, i) => (
-            <Reveal key={w.id} delay={i * 80}>
-              <Link to={`/${w.id}`} className={`worldstrip__tile worldstrip__tile--${w.id}`}>
-                <span className="worldstrip__name">{w.short}</span>
-                <span className="worldstrip__tag">{w.tagline}</span>
-                <span className="worldstrip__go" aria-hidden="true">
-                  Enter →
-                </span>
-              </Link>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      {/* ── DOOR WALL ────────────────────────────────────────────
+          Moved off /shop 2026-08-13. `.props` above it makes the claim — "see
+          it, touch it, then decide" — and the wall is the evidence: real doors
+          standing in the real store, before `.featured` narrows to three with
+          prices. It also keeps the page's dark-band rhythm even — hero, wall,
+          econ, terms — with `.featured` as the light breather between this band
+          and the next. Lazy + mounted on approach: see DoorWallSlot.
+
+          (It followed a `.worldstrip` of four world tiles until 2026-08-13.
+          That strip was removed, not moved: it rendered the same `w.short` +
+          `w.tagline` to the same four routes as the hero corridor's "Choose
+          your world", which every visitor scrolls through to reach any of this
+          page. The worlds are still in the nav and the footer.) */}
+      {/* ⚠️ Wall and worlds swapped places 2026-08-23, and only for the keyhole
+          hero. There the wall IS the hero's landing — you fly through the
+          tunnel of doors and arrive at the doors — so it is mounted inside the
+          sticky track, not here, and the four worlds take the slot it left.
+          The portal hero keeps the old arrangement: its own landing is the
+          corridor, so the wall stays a mid-page band underneath it. */}
+      {oldHero ? <DoorWallSlot /> : <WorldsBand />}
 
       {/* ── FEATURED ─────────────────────────────────────────── */}
       <section className="featured">
@@ -88,8 +100,8 @@ export function Home() {
             <div className="kicker">From the floor</div>
             <h2 className="featured__title">A few doors we’re proud of.</h2>
             <p className="featured__sub">
-              Solid Burma teak, our Designer Studio originals, and membrane lines in every shade — each one built in
-              our factory and standing in the store.
+              Solid Burma teak, natural-veneer designers, and membrane lines in every shade — each one built in our
+              factory and standing in the store.
             </p>
           </div>
           <Link to="/shop" className="linkline">
@@ -150,44 +162,40 @@ export function Home() {
             </Reveal>
           ))}
         </div>
-        <div className="process__note">
-          You pay nothing online. 50% after the measurement visit, the rest after installation.
+      </section>
+
+      {/* ── PAYMENT SEQUENCE ─────────────────────────────────────
+          Replaced three fabricated testimonials (see content.ts). The band
+          keeps its place in the page's dark-band rhythm and absorbs the old
+          `.process__note`, which said the same thing in 13.5px muted text —
+          the terms are the reassurance, so they get the band, not a footnote. */}
+      <section className="terms">
+        <div className="terms__inner">
+          <div className="kicker kicker--gold">What you pay, and when</div>
+          <h2 className="terms__title">Nothing is paid online.</h2>
+          <ol className="terms__track">
+            {PAYMENT_STEPS.map((s, i) => (
+              <Reveal key={s.when} as="li" delay={i * 90} className="terms__stop">
+                <span className="diamond diamond--gold" aria-hidden="true" />
+                <span className="terms__amount">{s.amount}</span>
+                <span className="terms__when">{s.when}</span>
+                <p className="terms__body">{s.body}</p>
+              </Reveal>
+            ))}
+          </ol>
+          <p className="terms__foot">
+            Cancel free of charge any time before production begins.
+          </p>
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ─────────────────────────────────────── */}
-      <section className="quotes">
-        <div className="kicker kicker--gold">From our doorways</div>
-        <div className="quotes__grid">
-          {TESTIMONIALS.map((t, i) => (
-            <Reveal key={t.name} delay={i * 90} className="quotes__card">
-              <p className="quotes__text">“{t.quote}”</p>
-              <div className="quotes__who">
-                {t.name} · {t.place}
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ── FAQ TEASER ───────────────────────────────────────── */}
-      <section className="faqteaser">
-        <div className="faqteaser__col">
-          <div className="kicker">Good to know</div>
-          <h2 className="faqteaser__title">Questions, answered.</h2>
-          <Link to="/faq" className="linkline">
-            Read the full FAQ →
-          </Link>
-        </div>
-        <div className="faqteaser__list">
-          {FAQS.slice(0, 3).map((f) => (
-            <details key={f.q} className="faq">
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      {/* A `.faqteaser` — three <details> from FAQS with a "read the full FAQ"
+          link — sat here until 2026-08-13. Removed, not moved: accordions of
+          shipping questions are the oldest furniture on a storefront, and the
+          page had just answered the two that matter (`.process` = how it works,
+          `.terms` = what you pay and when) in its own voice. What was left in
+          the teaser was fine print, which belongs on /policies and /faq — both
+          in the footer, and now cross-linked to each other. */}
 
       {/* ── CTA ──────────────────────────────────────────────── */}
       <section className="cta">

@@ -4,8 +4,14 @@
 -- Tables:
 --   subcategories (world, name, slug, sort_order) — unique(world, slug)
 --   products (slug unique, world, subcategory_id FK, tag, story, specs jsonb,
---             purchasable, price, price_unit, presentation swing|showcase,
---             sort_order, published) + touch_updated_at trigger
+--             purchasable, price, price_unit, pricing jsonb (the door's rate
+--             card — see src/data/pricing.ts DoorPricing; `price` is the
+--             headline it implies, written by the admin on save),
+--             presentation swing|showcase|still, sort_order, published)
+--             + touch_updated_at trigger
+--   settings (key pk, value jsonb, updated_at) — one row per key; `price_book`
+--             holds the shop-wide PriceBook (frames, hardware, fitting, size
+--             limits, stock boards, rounding). Read by anyone, written by admins.
 --   product_images (product_id FK cascade, role cover|gallery, src_480, src_960,
 --                   width, height, original_path, crop jsonb, sort_order)
 --   admins (user_id FK auth.users) — write allow-list
@@ -15,6 +21,11 @@
 -- RLS: anyone reads published products + all subcategories/images; only users in
 -- `admins` may write any catalogue table or storage bucket. Policies use
 -- exists(select 1 from admins where user_id = auth.uid()) — NOT auth.role().
+--
+-- Migrations of note: widen_products_presentation_still (2026-08-31) added 'still'
+-- to products_presentation_check — the CHECK is the reason a new presentation value
+-- needs a migration, not just a TS type change. add_products_pricing_and_settings
+-- (2026-09-15) added products.pricing and the settings table + its RLS.
 --
 -- Full DDL was applied as migrations; use `npm run catalog:seed` → supabase/seed.sql
 -- to (re)populate data.

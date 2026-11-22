@@ -18,6 +18,22 @@ export function easeInQuad(t: number): number {
 }
 
 /**
+ * Symmetric ease — slow, fast, slow — and the hero uses it for both of its
+ * openings: the leaf swing in `heroTunnel.ts` and the lock's 3s flight in
+ * `HeroKeyhole`.
+ *
+ * ⚠️ **What it buys is the MIDDLE.** An ease-out spends its motion in the first
+ * few frames and then creeps; for a door that is approaching the camera while
+ * it turns, that puts the whole swing at the far end of the approach, where the
+ * leaf is half the size it will be. A symmetric curve is also simply what a
+ * heavy leaf does — it starts gently, gets going, and settles rather than
+ * snapping to a stop.
+ */
+export function easeInOutSine(t: number): number {
+  return -(Math.cos(Math.PI * t) - 1) / 2
+}
+
+/**
  * Scroll progress (0..1) through a tall "track" element with a sticky stage
  * inside — 0 when the track top hits the viewport top, 1 when its bottom
  * reaches the viewport bottom. rAF-throttled; the ref must be reset to 0 in

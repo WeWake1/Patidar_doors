@@ -1,5 +1,42 @@
 import { supabase } from '../lib/supabase'
-import type { PhotoPresentation, Product, ProductImage, WorldId } from '../data/products'
+import type { DoorPricing, PriceBook } from '../data/pricing'
+import { headlinePrice, parseDoorPricing, parsePriceBook, placeholderPricing } from '../data/pricing'
+import type { Product, ProductImage, StoredPresentation, WorldId } from '../data/products'
+import { isDoorProduct } from '../data/products'
+import { t } from '../lib/i18n'
+
+/**
+ * Turn whatever came back into something a non-technical store owner can act
+ * on.
+ *
+ * This admin is used by one person who is not a developer, on a phone as often
+ * as a laptop. Postgres and Supabase speak in `new row violates row-level
+ * security policy for table "products"` and `duplicate key value violates
+ * unique constraint "products_slug_key"` — true, unactionable, and alarming.
+ * Each of these maps to the thing the owner would actually do next; anything
+ * unrecognised keeps its original text rather than being flattened into
+ * "Something went wrong", because an unknown error is exactly the one worth
+ * reading out over the phone.
+ */
+export function humanError(e: unknown): string {
+  const err = e as { code?: string; status?: number; message?: string; name?: string } | null
+  const code = err?.code ?? ''
+  const msg = err?.message ?? String(e)
+
+  // Offline / DNS / CORS all surface as a bare TypeError from fetch.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return t('ax.offline')
+  if (err?.name === 'TypeError' && /fetch|network/i.test(msg)) return t('ax.offline')
+
+  if (code === '23505') return t('ax.duplicateSlug')
+  if (code === '23503') return t('ax.stillReferenced')
+  // 42501 is Postgres "insufficient privilege"; PostgREST returns it for a
+  // blocked RLS write, which here means "signed in but not in `admins`".
+  if (code === '42501' || err?.status === 403) return t('ax.notAllowed')
+  if (err?.status === 401 || /jwt|token is expired/i.test(msg)) return t('ax.sessionExpired')
+  if (/invalid login credentials/i.test(msg)) return t('ax.badCredentials')
+
+  return msg
+}
 
 /** Admin-side shapes (superset of the public Product — carries db ids). */
 export interface DbSubcategory {
@@ -18,8 +55,24 @@ export interface DbImage {
   width: number
   height: number
   original_path?: string | null
+  /**
+   * How this image was cropped, so the crop can be re-opened later:
+   * `{ mode: 'leaf' | 'rect', quad: number[8], ratio, flip?: true }`.
+   * `mode: 'leaf'` means the four-corner tool produced it, so the picture *is*
+   * the door — that flag is what lets the storefront's doorway view warp it
+   * whole. `quad` always describes the *original*, unmirrored photo; `flip`
+   * records that the saved copy was mirrored on the way out, so re-opening the
+   * crop can put both back. Nothing downstream of the admin reads `flip` — the
+   * stored image is already the right way round.
+   */
   crop?: unknown
   sort_order: number
+}
+
+/** True when this image is a straightened, background-free door leaf. */
+export function isLeafCrop(im: DbImage): boolean {
+  const c = im.crop as { mode?: unknown } | null | undefined
+  return !!c && typeof c === 'object' && c.mode === 'leaf'
 }
 
 export interface DbProduct {
@@ -32,9 +85,14 @@ export interface DbProduct {
   story: string | null
   specs: string[]
   purchasable: boolean
+  /** The headline the rate card implies; written on save, read by nothing the admin shows. */
   price: number | null
   price_unit: string | null
-  presentation: PhotoPresentation
+  /** The door's rate card (jsonb). Parsed on load, so the editor never holds a shape it can't render. */
+  pricing: DoorPricing | null
+  /* Only the three stored values — `plain` is derived from the world and the
+     section by `buildCatalogue`, never written to this column. */
+  presentation: StoredPresentation
   sort_order: number
   published: boolean
   images?: DbImage[]
@@ -57,14 +115,36 @@ export async function listProducts(): Promise<DbProduct[]> {
     .select('*, images:product_images(*)')
     .order('sort_order')
   if (error) throw error
-  return (data as DbProduct[]).map((p) => ({ ...p, images: (p.images ?? []).slice().sort((a, b) => a.sort_order - b.sort_order) }))
+  return (data as DbProduct[]).map(fromRow)
+}
+
+/**
+ * A row as the editor holds it: images in order, the rate card parsed.
+ *
+ * A door saved before rate cards existed carries a bare `price` and no card;
+ * the site turns that into a placeholder card (`buildCatalogue`), so the
+ * editor opens on the same card rather than on "Off" for a door the site is
+ * selling. Saving writes the card out properly.
+ */
+function fromRow(p: DbProduct): DbProduct {
+  return {
+    ...p,
+    pricing: parseDoorPricing(p.pricing) ?? (p.purchasable && p.price ? placeholderPricing(p.price) : null),
+    images: (p.images ?? []).slice().sort((a, b) => a.sort_order - b.sort_order),
+  }
 }
 
 export async function getProduct(id: string): Promise<DbProduct | null> {
   const { data, error } = await db().from('products').select('*, images:product_images(*)').eq('id', id).single()
-  if (error) return null
-  const p = data as DbProduct
-  return { ...p, images: (p.images ?? []).slice().sort((a, b) => a.sort_order - b.sort_order) }
+  // "No rows" is a real answer (a deleted product, a stale bookmark) and
+  // returns null. Anything else is a failure and has to be thrown — swallowing
+  // it handed the editor a blank form that looked like an empty product, and
+  // saving that would have overwritten the real one.
+  if (error) {
+    if (error.code === 'PGRST116') return null
+    throw error
+  }
+  return fromRow(data as DbProduct)
 }
 
 export async function createSubcategory(world: WorldId, name: string): Promise<DbSubcategory> {
@@ -96,7 +176,11 @@ export async function deleteSubcategory(id: string): Promise<void> {
 /** Upsert a product and replace its images. Returns the product id. */
 export async function saveProduct(p: DbProduct): Promise<string> {
   const { images, id, ...fields } = p
-  const row = id ? { ...fields, id } : fields
+  /* The headline `price` is derived from the rate card, never typed: it is
+     what the card's "from ₹" shows and what anything reading the table raw
+     sees, and two numbers that can disagree is one number too many. */
+  const price = fields.purchasable && fields.pricing ? headlinePrice(fields.pricing) : null
+  const row = id ? { ...fields, price, id } : { ...fields, price }
   const { data, error } = await db().from('products').upsert(row).select('id').single()
   if (error) throw error
   const productId = (data as { id: string }).id
@@ -121,8 +205,32 @@ export async function saveProduct(p: DbProduct): Promise<string> {
   return productId
 }
 
+/** Products keep their place on the site in this order — one write per moved row. */
+export async function reorderProduct(id: string, sort_order: number): Promise<void> {
+  const { error } = await db().from('products').update({ sort_order }).eq('id', id)
+  if (error) throw error
+}
+
 export async function deleteProduct(id: string): Promise<void> {
   const { error } = await db().from('products').delete().eq('id', id)
+  if (error) throw error
+}
+
+/* ── the price book ─────────────────────────────────────── */
+
+/**
+ * The shop-wide price book, or the defaults when no row has been saved yet.
+ * Parsed field by field, the way the storefront parses it: the editor opens
+ * on a book it can render whatever the row holds.
+ */
+export async function getPriceBook(): Promise<{ book: PriceBook; saved: boolean }> {
+  const { data, error } = await db().from('settings').select('value').eq('key', 'price_book').maybeSingle()
+  if (error) throw error
+  return { book: parsePriceBook(data?.value ?? null), saved: Boolean(data) }
+}
+
+export async function savePriceBook(book: PriceBook): Promise<void> {
+  const { error } = await db().from('settings').upsert({ key: 'price_book', value: book })
   if (error) throw error
 }
 
@@ -142,6 +250,33 @@ export async function uploadOriginal(path: string, file: File): Promise<string> 
   return path
 }
 
+/**
+ * A temporary read URL for an untouched original, so a photo can be re-cropped
+ * from the full frame rather than from what was kept last time.
+ *
+ * The `originals` bucket is private, so this has to be signed — the public URL
+ * that works for `catalog` returns 400 here. Ten minutes is far longer than a
+ * crop takes and short enough that a copied link is useless later.
+ */
+export async function originalUrl(path: string): Promise<string> {
+  const { data, error } = await db().storage.from('originals').createSignedUrl(path, 600)
+  if (error) throw error
+  return data.signedUrl
+}
+
+/** The four corners a previous crop used, if it recorded any. */
+export function cropQuad(im: DbImage): number[] | null {
+  const c = im.crop as { quad?: unknown } | null | undefined
+  if (!c || typeof c !== 'object' || !Array.isArray(c.quad) || c.quad.length !== 8) return null
+  return c.quad.every((n) => typeof n === 'number' && Number.isFinite(n)) ? (c.quad as number[]) : null
+}
+
+/** Whether a previous crop mirrored the door left-to-right on the way out. */
+export function cropFlip(im: DbImage): boolean {
+  const c = im.crop as { flip?: unknown } | null | undefined
+  return !!c && typeof c === 'object' && c.flip === true
+}
+
 /** Convert a DbProduct to the public Product shape (for the live preview). */
 export function toPreviewProduct(p: DbProduct, subName: string): Product {
   const cover = p.images?.find((i) => i.role === 'cover') ?? p.images?.[0]
@@ -151,13 +286,18 @@ export function toPreviewProduct(p: DbProduct, subName: string): Product {
     alt: p.name,
     w: im.width,
     h: im.height,
+    ...(isLeafCrop(im) ? { isLeafCrop: true } : {}),
   })
+  /* The same rule `buildCatalogue` applies to the live site, applied here so
+     the preview card is the card. Without it the editor showed a stack of teak
+     logs swinging open in an architrave and the client had no way to see that
+     the site would not. */
   const visual = cover
     ? {
         kind: 'photo' as const,
         cover: toImg(cover),
         gallery: (p.images ?? []).filter((i) => i !== cover).map(toImg),
-        presentation: p.presentation,
+        presentation: isDoorProduct(p.world, subName) ? p.presentation : ('plain' as const),
       }
     : materialFor(p.world)
   return {
@@ -169,9 +309,10 @@ export function toPreviewProduct(p: DbProduct, subName: string): Product {
     story: p.story ?? undefined,
     specs: p.specs,
     visual,
-    purchasable: Boolean(p.purchasable && p.price),
-    price: p.price ?? undefined,
+    purchasable: Boolean(p.purchasable && p.pricing),
+    price: p.pricing ? headlinePrice(p.pricing) : undefined,
     priceUnit: (p.price_unit as Product['priceUnit']) ?? undefined,
+    ...(p.purchasable && p.pricing ? { pricing: p.pricing } : {}),
   }
 }
 

@@ -2,41 +2,46 @@
  * Catalog, finishes, sizes and pricing for all four worlds
  * (Timbers · Doors · Ply · WPC).
  *
- * ── CMS (Sanity) ──────────────────────────────────────────────────────────
- * The client manages the catalogue in the Sanity Studio (studio/). At build
- * time `npm run cms:fetch` writes published documents to catalog.gen.ts and
- * PRODUCTS below merges them over this local base (see the merge at the
- * bottom). Local data doubles as the seed (scripts/seed-sanity.mjs) and the
- * fallback when no CMS is configured. Setup: docs/cms-setup.md.
+ * ── CMS (Supabase + /admin) ───────────────────────────────────────────────
+ * The client manages the catalogue in the custom admin (src/admin/), and the
+ * storefront reads it two ways: `npm run catalog:fetch` bakes the published
+ * rows into catalog.gen.ts at build time, and `liveCatalog.ts` re-reads them
+ * in the browser so a door added this morning appears without a redeploy.
+ * `buildCatalogue()` at the bottom merges either of them over this local base.
+ * Local data doubles as the seed (scripts/seed-supabase.mjs) and the fallback
+ * when no CMS is configured. Setup: docs/admin-setup.md.
  *
  * ⚠️ Product copy (tags/stories/specs) is drafted placeholder text — verify
  * every line with the client before launch.
  *
- * The 12 "Designer Studio" doors are original artwork recreated from the
- * most-pinned door motifs of 2025–26. See docs/design-research.md.
+ * ⚠️ There is no drawn door in the catalogue any more. The 12 "Designer
+ * Studio" doors (11 of them plus The Sentinel under "Safety Doors") were
+ * original SVG artwork drafted as placeholders while the client's own
+ * photography was pending, and they were removed on 2026-08-20 — a showcase
+ * whose whole job is footfall to a real shop floor cannot front designs the
+ * shop floor does not stock. Every product here is now either a photograph of
+ * a real door or a generated material swatch. `DoorArt`'s `classic` leaf
+ * survives only as the hero corridor's texture and as the fallback for a door
+ * whose photo has not landed yet.
  */
 
 import { CMS_PRODUCTS } from './catalog.gen'
-import { photoVisualFor } from './photoMap'
+import type { CmsSections } from './cmsMap'
+import { leafImageFor, photoVisualFor } from './photoMap'
+import type { DoorConfig, DoorPricing, PriceResult } from './pricing'
+import { calcPrice, configFromLine, formatSizeLabel, headlinePrice, parseSizeId, placeholderPricing } from './pricing'
+import { getPriceBook } from './priceBook'
 
 export type WorldId = 'timbers' | 'doors' | 'ply' | 'wpc'
 
-export type ArtId =
-  | 'kyoto'
-  | 'meridian'
-  | 'jaali'
-  | 'deco'
-  | 'haveli'
-  | 'chevron'
-  | 'linea'
-  | 'duet'
-  | 'flute'
-  | 'atrium'
-  | 'noir'
-  | 'sentinel'
-  | 'classic' // hero door + photo-pending placeholder
+/**
+ * The one drawn leaf left. It is not a catalogue design — it is the plain
+ * panelled door used as the hero corridor's Doors texture and as the stand-in
+ * for a real door whose photograph has not been shot yet.
+ */
+export type ArtId = 'classic'
 
-/** A wood / paint / steel tone the artwork is tinted with. */
+/** A wood tone the drawn leaf is tinted with. */
 export interface Tone {
   id: string
   name: string
@@ -60,22 +65,12 @@ export const WOOD_TONES: Tone[] = [
   { id: 'ebony', name: 'Ebonised Walnut', base: '#2A2118', dark: '#1D1710', light: '#3A2F23', grain: true, delta: 2400 },
 ]
 
-export const PAINT_TONES: Tone[] = [
-  { id: 'sage', name: 'Sage Matte', base: '#8A9484', dark: '#75806F', light: '#9AA694', grain: false, delta: 0 },
-  { id: 'clay', name: 'Terracotta Clay', base: '#B0725A', dark: '#98604B', light: '#C08269', grain: false, delta: 0 },
-  { id: 'navy', name: 'Deep Navy', base: '#2E3A4E', dark: '#242E3E', light: '#3B4A63', grain: false, delta: 1200 },
-  { id: 'black', name: 'Matte Black', base: '#26262A', dark: '#1B1B1E', light: '#333338', grain: false, delta: 1200 },
-]
-
-export const STEEL_TONES: Tone[] = [
-  { id: 'graphite', name: 'Brushed Graphite', base: '#3C3C42', dark: '#2C2C31', light: '#4C4C54', grain: false, delta: 0 },
-  { id: 'gunmetal', name: 'Gunmetal Blue', base: '#333A45', dark: '#262B34', light: '#424B59', grain: false, delta: 1200 },
-]
-
+/**
+ * Only wood remains: the paint and steel ramps existed for The Flute, The Noir
+ * and The Sentinel, and went with them.
+ */
 const TONE_GROUPS = {
   wood: WOOD_TONES,
-  paint: PAINT_TONES,
-  steel: STEEL_TONES,
 } as const
 
 export type ToneGroup = keyof typeof TONE_GROUPS
@@ -89,7 +84,12 @@ export interface SizeOption {
   heightIn: number
 }
 
-export const SIZES: SizeOption[] = [
+/**
+ * The sizes people actually ask for. Since the configurator went in these are
+ * no longer the only buyable sizes — the sliders take any ¼″ — they are the
+ * labelled ticks under them, and one tap sets both sliders.
+ */
+export const COMMON_SIZES: SizeOption[] = [
   { id: '78x30', label: '6′6″ × 2′6″', note: 'Bath & utility', widthIn: 30, heightIn: 78 },
   { id: '84x33', label: '7′0″ × 2′9″', note: 'Bedroom', widthIn: 33, heightIn: 84 },
   { id: '84x36', label: '7′0″ × 3′0″', note: 'Bedroom, wide', widthIn: 36, heightIn: 84 },
@@ -107,6 +107,17 @@ export interface ProductImage {
   alt: string
   w: number
   h: number
+  /**
+   * True when this image was cropped with the admin's corner tool, so the
+   * picture *is* the door leaf: background removed, camera tilt straightened,
+   * edge to edge. The doorway try-on can then warp the whole image onto a
+   * customer's doorway with nothing to cut away first.
+   *
+   * Set automatically by the cropper — never by hand. Absent on the older
+   * photos, which are still whole-showroom shots and would put our shop floor
+   * in someone's hallway.
+   */
+  isLeafCrop?: boolean
 }
 
 /**
@@ -117,16 +128,55 @@ export interface ProductImage {
  */
 export type Visual =
   | { kind: 'art'; art: ArtId; tones: ToneGroup; defaultTone: string }
-  | { kind: 'photo'; cover: ProductImage; gallery?: ProductImage[]; presentation?: PhotoPresentation }
+  | {
+      kind: 'photo'
+      cover: ProductImage
+      gallery?: ProductImage[]
+      presentation?: PhotoPresentation
+      /**
+       * The leaf, cut out of `cover` and squared up: no wall, no architrave, no
+       * camera tilt — the whole image is the door, edge to edge. This is the
+       * only thing "see it in your doorway" can warp into a customer's photo,
+       * and it is deliberately a *second* image rather than a replacement:
+       * the cover keeps the room around the door, which is what makes it read
+       * as a real door on a card.
+       *
+       * Set either by the admin's corner cropper (which crops in place, so the
+       * cover itself is the leaf and carries `isLeafCrop`) or by
+       * `npm run leaves:build` from the corners marked in photoMap.ts.
+       */
+      leaf?: ProductImage
+    }
   | { kind: 'material'; material: 'timber' | 'ply' | 'wpc'; base: string; dark: string; light: string }
 
 /**
- * How a photo card behaves on hover/scroll:
+ * How a photo card behaves on hover/scroll. The three the CMS stores — they are
+ * CHECK-constrained in Postgres as well as typed here, so a fourth stored value
+ * needs a migration (see `widen_products_presentation_still`).
  *  - swing:    the door-open animation (clean, straight-on, isolated leaf)
  *  - showcase: a gentle zoom/lift (in-situ room photos that would look wrong swung)
+ *  - still:    the same framed photo, held still — for shots where any motion
+ *              misleads (a group of doors, a door already photographed ajar,
+ *              a busy in-situ frame the zoom crops the subject out of)
  * Absent ⇒ 'swing' (the original curated behaviour).
  */
-export type PhotoPresentation = 'swing' | 'showcase'
+export type StoredPresentation = 'swing' | 'showcase' | 'still'
+
+/**
+ * All three of the above plus `plain`, which is **derived, never stored**:
+ * `buildCatalogue` forces it onto every photograph of something that is not a
+ * door (see `isDoorProduct`). All three stored values frame the photo as a door
+ * — swing and showcase animate it, and even `still` keeps the architrave, which
+ * is the whole point of that treatment. A stack of teak logs in a door frame
+ * reads as a door. `plain` is the swatch treatment instead: full-bleed 4:3, no
+ * frame, no motion, so a photographed board and a generated one sit in one grid.
+ *
+ * It is derived rather than a fourth column because it is not a choice anyone
+ * should have to make — timber is not a door whoever is filling the form in —
+ * and because that column is CHECK-constrained, so a stored fourth value would
+ * fail the client's *save* with a bare postgres 23514.
+ */
+export type PhotoPresentation = StoredPresentation | 'plain'
 
 export interface Product {
   id: string
@@ -138,242 +188,25 @@ export interface Product {
   tag: string
   /** longer story for the product page */
   story?: string
-  /** the Pinterest-trend motif it recreates (Designer Studio only) */
-  motif?: string
   /** construction / grade bullet points */
   specs: string[]
   visual: Visual
   /** false ⇒ no online price; card & PDP show an "Enquire" CTA instead */
   purchasable: boolean
-  /** base ₹ for the standard 8′×3′ leaf, installed (purchasable doors only) */
+  /**
+   * The headline ₹ a card shows ("from …"): the door at its reference size
+   * (8′ × 3′ unless the owner set another) with every option at its default,
+   * installed. Derived from `pricing` by `headlinePrice` wherever one exists.
+   */
   price?: number
   priceUnit?: 'leaf' | 'cft' | 'sqft' | 'sheet'
+  /**
+   * The door's own rate card — base rate + option groups + which of the
+   * price book's frames and hardware it is offered with (see pricing.ts).
+   * Present on every purchasable door; absent means "price on enquiry".
+   */
+  pricing?: DoorPricing
 }
-
-/* ═══════════════ DOORS — Designer Studio (original SVG artwork) ═══════════ */
-
-const DESIGNER_DOORS: Product[] = [
-  {
-    id: 'kyoto',
-    name: 'The Kyoto',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Japandi slats in pale oak — calm, vertical, precise',
-    story:
-      'Narrow timber slats with hand-set shadow gaps run the full height of the leaf — the Japanese-Scandinavian profile that quietly took over design boards this year. Warmth without ornament.',
-    motif: 'Japandi slatted door',
-    price: 72000,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'kyoto', tones: 'wood', defaultTone: 'oak' },
-    specs: [
-      'Solid engineered core, 35 mm leaf',
-      '18 vertical slats, 3 mm shadow grooves',
-      'Matte PU seal, low-VOC',
-      'Full-height matte black edge pull',
-    ],
-  },
-  {
-    id: 'meridian',
-    name: 'The Meridian',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Ebonised walnut split by a single line of brass',
-    story:
-      'One uninterrupted brass inlay runs floor to header through near-black walnut. The most-saved look in luxury entrances — vertical metal inlay on dark grain — reduced to its essence.',
-    motif: 'Vertical brass-inlay door',
-    price: 84500,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'meridian', tones: 'wood', defaultTone: 'ebony' },
-    specs: [
-      'Solid core, 40 mm leaf',
-      '6 mm solid brass inlay, hand-levelled',
-      'Open-pore ebonised finish',
-      'Concealed hinges, brass pull',
-    ],
-  },
-  {
-    id: 'jaali',
-    name: 'The Jaali',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Diamond lattice over frosted glass — air and privacy',
-    story:
-      'The traditional Indian jali, machined to modern tolerances: a diamond lattice band lets light and air move while frosted backing keeps the room private. Heritage geometry, contemporary build.',
-    motif: 'Modern jali / lattice door',
-    price: 88000,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'jaali', tones: 'wood', defaultTone: 'teak' },
-    specs: [
-      'CNC-cut lattice, 12 mm ribs',
-      'Toughened frosted glass backing',
-      'Brass trim around lattice field',
-      'Breathable — ideal for pooja & study',
-    ],
-  },
-  {
-    id: 'deco',
-    name: 'The Deco',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Art-deco fan in book-matched veneer and brass',
-    story:
-      'A sunburst fan of alternating veneers rises from the foot of the door, each ray parted by a sliver of brass. Statement geometry straight from the art-deco revival boards.',
-    motif: 'Art-deco sunburst door',
-    price: 96000,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'deco', tones: 'wood', defaultTone: 'walnut' },
-    specs: ['Book-matched veneer marquetry', 'Inlaid brass rays, 2 mm', '40 mm solid core', 'Demi-lune brass pull'],
-  },
-  {
-    id: 'haveli',
-    name: 'The Haveli',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Hand-carved heritage borders with aged brass studs',
-    story:
-      'Carved by hand the way haveli doors have been for two centuries — layered borders, a studded field, and brass that will outlive the house. Our master-carver signs each leaf.',
-    motif: 'Carved heritage / fort door',
-    price: 132000,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'haveli', tones: 'wood', defaultTone: 'teak' },
-    specs: [
-      'Seasoned solid wood, 45 mm',
-      'Hand-carved twin borders',
-      'Aged solid-brass studs & ring pull',
-      'Natural oil finish, signed leaf',
-    ],
-  },
-  {
-    id: 'chevron',
-    name: 'The Chevron',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Two-tone chevron laminate, seamless herringbone face',
-    story:
-      'Alternating chevrons in two tones of the same grain give the leaf constant movement. The herringbone door — one of the most-pinned interior door looks — made durable in laminate.',
-    motif: 'Chevron / herringbone door',
-    price: 44900,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'chevron', tones: 'wood', defaultTone: 'teak' },
-    specs: [
-      '1 mm high-pressure laminate, both faces',
-      'Mirror-matched chevron joints',
-      'Solid engineered core, 32 mm',
-      'Scratch & stain resistant',
-    ],
-  },
-  {
-    id: 'linea',
-    name: 'The Linea',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Hand-routed groove trios across warm teak laminate',
-    story:
-      'Groups of three shadow grooves cross the leaf at measured intervals — the quiet lined texture found on every “modern door” board, cut deep so it reads at a distance.',
-    motif: 'Grooved / lined door',
-    price: 38900,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'linea', tones: 'wood', defaultTone: 'teak' },
-    specs: ['Routed grooves, 4 mm deep', 'HPL laminate, matching edge bands', 'Solid engineered core, 32 mm', 'Brass knob included'],
-  },
-  {
-    id: 'duet',
-    name: 'The Duet',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Book-matched ivory × walnut split with a steel seam',
-    story:
-      'Half calm ivory, half deep walnut, parted by a brushed-steel seam. Colour-blocking for doors — the two-tone leaf that keeps resurfacing on design boards.',
-    motif: 'Two-tone color-block door',
-    price: 46500,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'duet', tones: 'wood', defaultTone: 'walnut' },
-    specs: ['Dual-laminate face, sealed seam', 'SS-304 inlay strip', 'Solid engineered core, 32 mm', 'Moisture-guard edges'],
-  },
-  {
-    id: 'flute',
-    name: 'The Flute',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Full-width fluting in matte colour — sage to navy',
-    story:
-      'Continuous half-round flutes catch light differently through the day. Fluted texture is the defining door trend of the moment; ours comes in four matte colours.',
-    motif: 'Fluted / reeded door',
-    price: 36500,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'flute', tones: 'paint', defaultTone: 'sage' },
-    specs: ['Machined flutes, 25 mm pitch', 'Matte PU colour coat', 'Solid engineered core, 32 mm', 'Wipe-clean surface'],
-  },
-  {
-    id: 'atrium',
-    name: 'The Atrium',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Ribbed-glass panel in a black grid, oak WPC frame',
-    story:
-      'A half-lite of vertical ribbed glass in a slim black grid lets light through and keeps shapes soft — the kitchen-and-study door filling design boards this year. Zero-warp WPC build.',
-    motif: 'Ribbed-glass insert door',
-    price: 42800,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'atrium', tones: 'wood', defaultTone: 'oak' },
-    specs: [
-      'Solid WPC core — waterproof, zero-warp',
-      'Toughened ribbed glass, 6 mm',
-      'Powder-coated black grid',
-      'Ideal for kitchen, study, balcony',
-    ],
-  },
-  {
-    id: 'noir',
-    name: 'The Noir',
-    world: 'doors',
-    sub: 'Designer Studio',
-    tag: 'Matte black leaf, one long line of brass',
-    story:
-      'Searches for bold door colours are up 156% — and black leads them all. A light-absorbing matte face, a single 4-foot brass pull, nothing else. WPC core, so it stays perfectly flat.',
-    motif: 'Matte black statement door',
-    price: 31200,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'noir', tones: 'paint', defaultTone: 'black' },
-    specs: [
-      'Solid WPC core — waterproof, termite-proof',
-      'Ultra-matte micro-texture coat',
-      '1200 mm brass bar pull',
-      'Fingerprint resistant',
-    ],
-  },
-  {
-    id: 'sentinel',
-    name: 'The Sentinel',
-    world: 'doors',
-    sub: 'Safety Doors',
-    tag: 'Steel core in brushed graphite with a smart-lock plate',
-    story:
-      'A 16-gauge steel core dressed in brushed graphite, seamed like plate armour, with a flush smart-lock panel. Security that looks like architecture, not a cage.',
-    motif: 'Industrial steel security door',
-    price: 64000,
-    priceUnit: 'leaf',
-    purchasable: true,
-    visual: { kind: 'art', art: 'sentinel', tones: 'steel', defaultTone: 'graphite' },
-    specs: [
-      '16-gauge galvanised steel core',
-      '13-point multi-lock, smart-lock ready',
-      'Brushed metallic PU finish',
-      'Fire-retardant, 60 min rating',
-    ],
-  },
-]
 
 /* ═══════════════ TIMBERS — raw wood from the yard ════════════════════════ */
 
@@ -717,29 +550,208 @@ const WPC_PRODUCTS: Product[] = [
 ]
 
 /**
- * Local catalogue merged with the CMS (catalog.gen.ts, written by
- * `npm run cms:fetch`): a CMS product with a matching id replaces the local
- * entry, brand-new slugs are appended, and the 12 Designer Studio doors are
- * never overridden (their SVG art + cart pricing live in code).
+ * Local catalogue merged with the CMS: a CMS product with a matching id
+ * replaces the local entry and brand-new slugs are appended.
+ *
+ * The Designer Studio carve-out that used to sit here is gone with the doors
+ * it protected — every id in this file is now a real product the store
+ * actually stocks, so the CMS is free to own all of them.
  */
-const LOCAL_PRODUCTS: Product[] = [...DESIGNER_DOORS, ...FACTORY_DOORS, ...TIMBER_PRODUCTS, ...PLY_PRODUCTS, ...WPC_PRODUCTS]
-const DESIGNER_IDS = new Set(DESIGNER_DOORS.map((p) => p.id))
+const LOCAL_PRODUCTS: Product[] = [...FACTORY_DOORS, ...TIMBER_PRODUCTS, ...PLY_PRODUCTS, ...WPC_PRODUCTS]
 const LOCAL_IDS = new Set(LOCAL_PRODUCTS.map((p) => p.id))
-const CMS_OVERRIDES = new Map(CMS_PRODUCTS.filter((p) => !DESIGNER_IDS.has(p.id)).map((p) => [p.id, p]))
 
-export const PRODUCTS: Product[] = [
-  ...LOCAL_PRODUCTS.map((p) => CMS_OVERRIDES.get(p.id) ?? p),
-  ...CMS_PRODUCTS.filter((p) => !LOCAL_IDS.has(p.id) && !DESIGNER_IDS.has(p.id)),
-]
+/**
+ * ⚠️ PLACEHOLDER PRICES — every number below is invented, exactly like the
+ * rates in pricing.ts, and the whole table must be confirmed with the client.
+ * Each is the all-in ₹ for a plain 30 mm 8′ × 3′ leaf, installed, GST in;
+ * `calcPrice` derives every other size and option from it.
+ *
+ * It is applied **after** the CMS merge rather than written into the product
+ * literals above, and that is deliberate: `npm run catalog:fetch` overwrites a
+ * merged product wholesale, so a price set locally on an id the CMS also
+ * carries would silently vanish on the next fetch. A rate card saved in
+ * /admin (`products.pricing`) wins over the line here without any edit — the
+ * overlay only fills in a door that has none — so delete a door's line the day
+ * its real card is typed, or leave it; either way the CMS value stands.
+ */
+const PLACEHOLDER_PRICES: Record<string, number> = {
+  'burma-teak-door': 68000,
+  'burma-border-teak-door': 52000,
+  'teak-osc-2nds': 34000,
+  'gana-teak-polish-door': 46000,
+  'architect-teak-door': 78000,
+  'honne-ab-door': 29500,
+  'mahagony-ab-door': 33500,
+  'veneer-designer-door': 24500,
+  'veneer-cng-door': 27500,
+  'laminate-cng-door': 19500,
+  'laminate-designer-door': 17500,
+  'microcoat-door': 12500,
+  'primer-door': 9500,
+  'korean-membrane-door': 21500,
+  'membrane-door': 16500,
+  'wpc-cnc-door': 22500,
+  'wpc-digital-veneer-door': 25500,
+}
+
+/**
+ * The invented headline the site quotes for a door the client has not priced
+ * yet, so /admin can say so beside the door instead of calling it "enquiry".
+ */
+export function placeholderHeadline(id: string): number | undefined {
+  return PLACEHOLDER_PRICES[id]
+}
+
+/**
+ * The catalogue the site renders: the local base, the CMS over it, and three
+ * overlays on top.
+ *
+ * The overlays carry curation that lives in this repo rather than in the CMS,
+ * which a wholesale CMS override would otherwise drop:
+ *
+ *  1. `PLACEHOLDER_PRICES` — a price the client has not set yet (above).
+ *  2. `leafImageFor` — the perspective-corrected leaf cut-out that
+ *     "see it in your doorway" warps into a customer's photo. A CMS image gets
+ *     one by being cropped with the admin's corner tool (`isLeafCrop`); the 17
+ *     seeded photographs never were, so their leaves are marked in photoMap.ts
+ *     and generated by `npm run leaves:build`. Whichever exists wins, and a
+ *     real /admin crop takes precedence — see `tryState`.
+ *  3. `presentation: 'plain'` — a photograph of something that is not a door
+ *     (see `isDoorProduct`) is shown full-bleed rather than in a door frame.
+ *     The CMS has no way to say this: every value its `presentation` column
+ *     accepts is a door treatment.
+ *
+ * It is a function, not a one-off constant, because the same merge now runs
+ * twice: once over the build-time snapshot below, and again in the browser
+ * over whatever the CMS holds *right now* (`liveCatalog.ts`). Running the
+ * second one through anything but this function is how the live site and the
+ * built site would start disagreeing about prices and leaf cut-outs.
+ */
+export function buildCatalogue(cms: Product[]): Product[] {
+  const overrides = new Map(cms.map((p) => [p.id, p]))
+  const merged: Product[] = [
+    ...LOCAL_PRODUCTS.map((p) => overrides.get(p.id) ?? p),
+    ...cms.filter((p) => !LOCAL_IDS.has(p.id)),
+  ]
+  return merged.map((p) => {
+    const isDoor = isDoorProduct(p.world, p.sub)
+    /* Overlay one: a rate card for every door that sells but has none — the
+       placeholder headline for the 17 seeded doors, or a bare `price` on a row
+       saved before rate cards existed. A door the client has priced in /admin
+       carries its own `pricing` and nothing here touches it. Only doors: the
+       configurator is a door configurator, and a per-cft timber price is an
+       enquiry line, not a thing to put sliders on. */
+    const headline = isDoor && !p.pricing ? (PLACEHOLDER_PRICES[p.id] ?? (p.purchasable ? p.price : undefined)) : undefined
+    const pricing = headline === undefined ? undefined : placeholderPricing(headline)
+    const leaf =
+      isDoor && p.visual.kind === 'photo' && !p.visual.cover.isLeafCrop
+        ? leafImageFor(p.id, p.name)
+        : undefined
+    /* Overlay three: a photograph of something that is not a door is shown as a
+       picture, not as a door. The CMS cannot say this — its `presentation`
+       column holds only the three door treatments, all of which frame the photo
+       in an architrave — so it is decided here, from the world and the section
+       the client filed the product under. See `isDoorProduct` for the two-month
+       bug this closes. */
+    const plain = !isDoor && p.visual.kind === 'photo' && p.visual.presentation !== 'plain'
+    if (!pricing && !leaf && !plain) return p
+    const visual =
+      leaf || plain
+        ? { ...p.visual, ...(leaf ? { leaf } : {}), ...(plain ? { presentation: 'plain' as const } : {}) }
+        : undefined
+    return {
+      ...p,
+      ...(pricing ? { purchasable: true, price: headlinePrice(pricing), priceUnit: 'leaf' as const, pricing } : {}),
+      ...(visual ? { visual } : {}),
+    }
+  })
+}
+
+/**
+ * The catalogue as it stood when the site was built (catalog.gen.ts, written
+ * by `npm run catalog:fetch`).
+ *
+ * ⚠️ This is a *snapshot*, and components must not read it — it is what the
+ * bundle ships with, not what the store is selling this morning. Build-time
+ * tools do read it (the sitemap, the geometry checks, the seed), because a
+ * build can only describe the catalogue it was given. Everything rendered goes
+ * through `useCatalog()` / `getProduct()` / `productsIn()`, which read the live
+ * catalogue below and fall back to this until it lands.
+ */
+export const CATALOGUE_SNAPSHOT: Product[] = buildCatalogue(CMS_PRODUCTS)
+
+/* ═══════════════ the live catalogue ══════════════════════════════════════
+ *
+ * The site was purely static until 2026-08-30: the only path from /admin to
+ * the storefront was `catalog:fetch` → rebuild → redeploy, so a door added in
+ * the admin appeared on the site only if someone (or a Supabase→Vercel deploy
+ * hook that was never wired up) rebuilt it. The client added products, saw
+ * nothing change, and reasonably concluded the admin was broken.
+ *
+ * `liveCatalog.ts` now re-reads the published catalogue in the browser and
+ * publishes it here; the snapshot is what renders until it arrives, so nothing
+ * waits on the network to paint and the site is unchanged when Supabase is
+ * unreachable or unconfigured.
+ */
+
+/** Where the rendered catalogue currently comes from. */
+export type CatalogueStatus = 'snapshot' | 'loading' | 'live' | 'error'
+
+let CATALOGUE: Product[] = CATALOGUE_SNAPSHOT
+let SECTIONS: CmsSections = {}
+let STATUS: CatalogueStatus = 'snapshot'
+const listeners = new Set<() => void>()
+
+function announce() {
+  for (const fn of listeners) fn()
+}
+
+/** Subscribe to catalogue changes (see `useCatalog`). Returns an unsubscribe. */
+export function subscribeCatalogue(fn: () => void): () => void {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
+}
+
+/** The catalogue as it is right now — live if it has landed, snapshot if not. */
+export function getCatalogue(): Product[] {
+  return CATALOGUE
+}
+
+export function catalogueStatus(): CatalogueStatus {
+  return STATUS
+}
+
+/**
+ * The client's own section order for a world, once the live catalogue has
+ * landed. Undefined until then, so the world page falls back to the order
+ * written in worlds.ts.
+ */
+export function sectionsIn(world: WorldId): string[] | undefined {
+  return SECTIONS[world]
+}
+
+/** Called by `liveCatalog.ts` — nothing else should touch these three. */
+export function setCatalogueStatus(status: CatalogueStatus) {
+  if (STATUS === status) return
+  STATUS = status
+  announce()
+}
+
+export function publishCatalogue(cms: Product[], sections: CmsSections) {
+  CATALOGUE = buildCatalogue(cms)
+  SECTIONS = sections
+  STATUS = 'live'
+  announce()
+}
 
 /* ═══════════════ helpers ═════════════════════════════════════════════════ */
 
 export function getProduct(id: string): Product | undefined {
-  return PRODUCTS.find((p) => p.id === id)
+  return getCatalogue().find((p) => p.id === id)
 }
 
 export function productsIn(world: WorldId): Product[] {
-  return PRODUCTS.filter((p) => p.world === world)
+  return getCatalogue().filter((p) => p.world === world)
 }
 
 export function tonesFor(product: Product): Tone[] {
@@ -756,20 +768,161 @@ export function getTone(product: Product, toneId: string): Tone {
   return tones.find((t) => t.id === toneId) ?? tones[0]
 }
 
+/**
+ * True when a visual fills its card edge to edge instead of standing in the
+ * stage's padded box — a generated swatch, or a photograph of one (`plain`).
+ *
+ * The card, the PDP and the admin's live preview all pick their stage class
+ * from this, so a photographed board and a drawn one can never end up framed
+ * differently on the same grid.
+ */
+export function isFullBleedVisual(v: Visual): boolean {
+  return v.kind === 'material' || (v.kind === 'photo' && v.presentation === 'plain')
+}
+
+/**
+ * Is this product a door?
+ *
+ * ⚠️ **The catalogue used to answer this with `visual.kind`**, and that was a
+ * trapdoor with a two-year fuse. A door is `art` or `photo` and board stock is
+ * `material` — which held exactly as long as nothing but doors was
+ * photographed. It is not a rule about doors; it is a rule about *which
+ * products happen to have a picture*. The day the client cropped a photo of
+ * teak logs into `/timbers`, that product stopped being `material`, and every
+ * door behaviour switched itself on at once: the card became a 3:8 architrave
+ * that swings open, the editor offered swing/zoom/still, the cropper asked for
+ * four corners "on the door itself" plus a handle-flip and a row of 6′6″–8′
+ * door sizes, and the PDP started promising the doorway view. All of it for a
+ * log pile.
+ *
+ * So doorness is asked of the *catalogue position*, which is where the client
+ * already states it, and is the one owner of the answer — the admin's controls,
+ * the card treatment and `tryState` all read this and cannot disagree.
+ *
+ *  - `doors`           — always. That is what the world is.
+ *  - `timbers`, `ply`  — never. Sawn wood and sheet goods are not doors, no
+ *                        matter how good the photograph is.
+ *  - `wpc`             — **by section**, because that world genuinely holds
+ *                        both: `wpc-cnc-door` and `wpc-digital-veneer-door` are
+ *                        doors, `wpc-sheets` is 6–18 mm board. A section whose
+ *                        name ends in "Door"/"Doors" holds doors.
+ *
+ * ⚠️ The WPC rule reads a name the client can edit, so it is deliberately
+ * narrow: the *last word*, so "WPC Doors" and "Bathroom Doors" match while
+ * "WPC Sheets" and "Door Frames" do not. Renaming "WPC Doors" to something that
+ * does not end in the word turns that section's cards into plain pictures and
+ * withdraws the doorway view — which is visible immediately in /admin, where
+ * the editor says in one line which way it read the section and why.
+ */
+export function isDoorProduct(world: WorldId, sub: string): boolean {
+  if (world === 'doors') return true
+  if (world === 'wpc') return /\bdoors?$/i.test(sub.trim())
+  return false
+}
+
+/**
+ * Whether a product can be stood in a customer's doorway (`/try/:id`).
+ *
+ * ⚠️ **Doors only — every door, and nothing but doors.** That includes WPC,
+ * which is a door made of wood-plastic composite rather than a separate kind of
+ * thing; it has its own world only because it is sold and finished differently.
+ * It excludes timber and ply, which are not doors at all.
+ *
+ * The rule reads `visual.kind`, and that is not a coincidence — the catalogue
+ * already encodes the distinction. A door is either drawn (`art`) or
+ * photographed (`photo`); `material` is a generated swatch of board stock:
+ * teak billets, ply sheets, and `wpc-sheets` (6–18 mm board). You cannot stand
+ * a cubic foot of teak in a doorway.
+ *
+ * - `ready` — renders today.
+ * - `soon`  — a real door with no leaf cut-out yet, so there is nothing to
+ *             warp that would not put our shop floor in someone's hallway.
+ *             Every catalogue door has one as of 2026-08-20; this branch is
+ *             what a *newly uploaded* photo reports until it is cropped.
+ * - `no`    — not a door.
+ */
+export type TryState = 'ready' | 'soon' | 'no'
+
+export function tryState(product: Product): TryState {
+  if (!isDoorProduct(product.world, product.sub)) return 'no'
+  return leafOf(product) ? 'ready' : product.visual.kind === 'material' ? 'no' : 'soon'
+}
+
+/**
+ * The image `/try` warps, or null if this product has no leaf to stand in a
+ * doorway. One function so the route, the PDP button and `tryState` can never
+ * disagree about what is placeable — the bug that shipped before this was the
+ * PDP offering a door the route then refused.
+ *
+ * An /admin crop wins over a generated one: it was cut from the untouched
+ * original, whereas `leaves:build` only ever had the 960px web copy.
+ */
+export function leafOf(product: Product): ProductImage | null {
+  const v = product.visual
+  if (v.kind !== 'photo') return null
+  /* A photograph of something that is not a door has nothing to place, however
+     it was cropped — and a leaf crop saved before the section was renamed, or
+     before this rule existed, would otherwise stand a stack of ply in someone's
+     hallway. Asked here rather than only in `tryState` so the route, the PDP
+     button and the state cannot drift apart. */
+  if (!isDoorProduct(product.world, product.sub)) return null
+  if (v.cover.isLeafCrop) return v.cover
+  return v.leaf ?? null
+}
+
+/**
+ * Any `height x width` in inches resolves — `'84x33'` from a preset, `'79.25x32'`
+ * straight off the sliders, or an id saved in a cart before the configurator
+ * existed (they share the same shape, which is why old carts still price).
+ */
 export function getSize(sizeId: string): SizeOption {
-  return SIZES.find((s) => s.id === sizeId) ?? SIZES[3]
+  const preset = COMMON_SIZES.find((s) => s.id === sizeId)
+  if (preset) return preset
+  const parsed = parseSizeId(sizeId)
+  if (!parsed) return COMMON_SIZES[3]
+  return {
+    id: sizeId,
+    label: formatSizeLabel(parsed.heightIn, parsed.widthIn),
+    note: 'Made to measure',
+    widthIn: parsed.widthIn,
+    heightIn: parsed.heightIn,
+  }
 }
 
-const BASE = getSize(BASE_SIZE_ID)
+/**
+ * A door's rate card, when it has one. This is the gate for everything
+ * configurable: the PDP configurator, the cart, the try-on estimate.
+ */
+export function pricingOf(product: Product): DoorPricing | undefined {
+  return product.purchasable ? product.pricing : undefined
+}
 
-/** Made-to-measure price: base price scales with leaf area, finish adds a delta. */
-export function priceFor(product: Product, sizeId: string, toneId: string): number {
-  if (!product.purchasable || product.price === undefined) return 0
-  const size = getSize(sizeId)
+/**
+ * Made-to-measure price for a stored cart line. The size and the options are
+ * the whole quote — see `src/data/pricing.ts` for the model. The price book
+ * is read from its live store, so a frame rate changed in /admin reprices an
+ * open cart the moment the read lands.
+ */
+export function priceFor(product: Product, sizeId: string, toneId: string, opts?: Partial<DoorConfig>): number {
+  const pricing = pricingOf(product)
+  if (!pricing) return 0
+  const book = getPriceBook()
   const tone = getTone(product, toneId)
-  const areaFactor = (size.widthIn * size.heightIn) / (BASE.widthIn * BASE.heightIn)
-  return Math.round((product.price * areaFactor + tone.delta) / 100) * 100
+  return calcPrice(pricing, book, configFromLine(pricing, book, sizeId, opts)).total + tone.delta
 }
 
-/** Featured on the home page. */
-export const FEATURED_IDS = ['meridian', 'deco', 'flute'] as const
+/** The full quote — same numbers as `priceFor`, plus the breakdown to show. */
+export function quoteFor(product: Product, config: DoorConfig, toneId: string): PriceResult | null {
+  const pricing = pricingOf(product)
+  if (!pricing) return null
+  const q = calcPrice(pricing, getPriceBook(), config)
+  const delta = getTone(product, toneId).delta
+  if (delta <= 0) return q
+  return { ...q, total: q.total + delta, breakdown: [...q.breakdown, { label: 'Finish', amount: delta }] }
+}
+
+/**
+ * Featured on the home page — three real doors that between them cover the
+ * range: an heirloom solid teak, a mid-range veneer and an everyday membrane.
+ */
+export const FEATURED_IDS = ['burma-teak-door', 'veneer-designer-door', 'membrane-door'] as const
