@@ -1,0 +1,257 @@
+/* PROTOTYPE · creative reboot, round 1. Base, the shared shell, and the variant switcher. Each variant sets the
+   tokens below on its own root (.va .vb .vc .vd) and adds its own sheet; nothing here reaches the live site. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+}
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+img,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+a {
+  color: inherit;
+}
+h1,
+h2,
+h3,
+p,
+ol,
+address {
+  margin: 0;
+}
+address {
+  font-style: normal;
+}
+
+.rb {
+  --pad: clamp(16px, 4vw, 56px);
+  --ground: #f4f4f2;
+  --ink: #141414;
+  --ink-2: #555552;
+  --line: rgba(20, 20, 20, 0.14);
+  --accent: #141414;
+  --accent-ink: #fff;
+  --display: system-ui, sans-serif;
+  --text: system-ui, sans-serif;
+  --mono: ui-monospace, monospace;
+  min-height: 100vh;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--text);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+/* canvases fade in once their first frame lands; the poster underneath covers the gap */
+.rb canvas {
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.rb canvas.is-ready {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------------ header (shared, themed per variant) */
+.rb-head {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: max(14px, env(safe-area-inset-top)) var(--pad) 14px;
+}
+.rb-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  font-family: var(--display);
+  font-size: 17px;
+  letter-spacing: 0.01em;
+  min-height: 44px;
+}
+.rb-brand img {
+  width: auto;
+  height: 26px;
+}
+.rb-nav {
+  display: flex;
+  gap: 22px;
+  margin-left: auto;
+}
+.rb-nav a {
+  text-decoration: none;
+  font-size: 15px;
+  padding: 12px 0;
+}
+.rb-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  text-decoration: none;
+  font-size: 15px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+@media (max-width: 900px) {
+  .rb-nav {
+    display: none;
+  }
+  .rb-cta {
+    margin-left: auto;
+  }
+}
+
+/* ------------------------------------------------------------------ after the hero (shared, themed per variant) */
+.rb-index {
+  padding: clamp(72px, 10vw, 140px) var(--pad) clamp(48px, 7vw, 96px);
+}
+.rb-index h2,
+.rb-visit h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(32px, 4.4vw, 64px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+.rb-index ol {
+  list-style: none;
+  padding: 0;
+  margin-top: clamp(28px, 4vw, 56px);
+  border-top: 1px solid var(--line);
+}
+.rb-index li a {
+  display: grid;
+  grid-template-columns: 3.2em minmax(7em, 14em) 1fr;
+  gap: 16px;
+  align-items: baseline;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+}
+.rb-index__n {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.rb-index__name {
+  font-family: var(--display);
+  font-size: clamp(24px, 2.6vw, 36px);
+  line-height: 1.1;
+}
+.rb-index__what {
+  color: var(--ink-2);
+  max-width: 44ch;
+}
+@media (max-width: 700px) {
+  .rb-index li a {
+    grid-template-columns: 2.4em 1fr;
+  }
+  .rb-index__what {
+    grid-column: 2;
+  }
+}
+@media (hover: hover) {
+  .rb-index li a:hover .rb-index__name {
+    color: var(--accent);
+  }
+}
+
+.rb-visit {
+  display: grid;
+  gap: 22px;
+  padding: clamp(64px, 9vw, 128px) var(--pad) clamp(72px, 10vw, 140px);
+  border-top: 1px solid var(--line);
+}
+.rb-visit__flow {
+  max-width: 52ch;
+  font-size: clamp(17px, 1.5vw, 20px);
+}
+.rb-visit__where {
+  display: grid;
+  gap: 6px;
+  max-width: 52ch;
+  color: var(--ink-2);
+  font-size: 15px;
+}
+.rb-visit__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.rb-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 22px;
+  text-decoration: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 15px;
+}
+.rb-btn--quiet {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.rb-foot {
+  padding: 22px var(--pad) calc(96px + env(safe-area-inset-bottom));
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  border-top: 1px solid var(--line);
+}
+
+/* ------------------------------------------------------------------ the switcher (not part of any design) */
+.proto-switcher {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  width: fit-content;
+  margin: 0 auto;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  background: #111;
+  color: #fff;
+  border-radius: 999px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
+  white-space: nowrap;
+}
+.proto-switcher button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-size: 15px;
+  cursor: pointer;
+}
+.proto-switcher__label {
+  padding: 0 8px;
+  min-width: 11em;
+  text-align: center;
+}
+.proto-switcher__round {
+  padding: 0 4px 0 10px;
+  opacity: 0.55;
+}

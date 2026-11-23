@@ -27,7 +27,8 @@ dist-ssr
 Main Doors/
 Room Doors/
 /Hero/
-.claude/
+.claude/*
+!.claude/skills/
 
 # CMS credentials
 .env
@@ -38,3 +39,6 @@ studio/.sanity/
 
 # local MCP server config (may hold tokens)
 .mcp.json
+
+# Python bytecode from the Blender render scripts (tools/render)
+__pycache__/

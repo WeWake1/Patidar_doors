@@ -1,0 +1,137 @@
+/* PROTOTYPE round 1 · A "The weight". Quiet and expensive: a neutral white (not cream), near-black ink, one
+   oxblood accent, Gloock for the headline and Hanken Grotesk for everything else. */
+.va {
+  --ground: #f3f3f1;
+  --ink: #151514;
+  --ink-2: #5a5a56;
+  --line: rgba(21, 21, 20, 0.14);
+  --accent: #6e1f2a;
+  --accent-ink: #fff;
+  --display: 'Gloock', Georgia, serif;
+  --text: 'Hanken Grotesk', system-ui, sans-serif;
+  --mono: 'Hanken Grotesk', system-ui, sans-serif;
+}
+.va .rb-head {
+  color: var(--ink);
+}
+
+.va-hero {
+  position: relative;
+}
+.va-stage {
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y; /* a sideways drag turns the door; an up/down swipe still scrolls the page */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.va-stage:active {
+  cursor: grabbing;
+}
+.va-poster,
+.va-stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.va-poster {
+  object-fit: cover;
+}
+.va-hint {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-100%, -50%);
+  padding-right: 14px;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  white-space: nowrap;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+.va-hint span {
+  display: inline-block;
+  animation: va-nudge 1.8s ease-in-out infinite;
+}
+@keyframes va-nudge {
+  50% {
+    transform: translateX(6px);
+  }
+}
+.va-hint.is-gone {
+  opacity: 0;
+}
+
+.va-copy h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(44px, 6vw, 96px);
+  line-height: 0.98;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+.va-copy p {
+  margin-top: 22px;
+  max-width: 36ch;
+  font-size: clamp(16px, 1.25vw, 19px);
+  color: var(--ink-2);
+}
+.va-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 22px;
+  margin-top: 30px;
+}
+.va-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+}
+
+@media (min-width: 901px) {
+  .va-hero {
+    height: 100svh;
+    min-height: 640px;
+  }
+  .va-stage {
+    position: absolute;
+    inset: 0;
+  }
+  .va-copy {
+    position: absolute;
+    z-index: 4;
+    left: var(--pad);
+    top: 50%;
+    transform: translateY(-46%);
+    max-width: min(38rem, 44vw);
+    pointer-events: none;
+  }
+  .va-copy a {
+    pointer-events: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .va-stage {
+    aspect-ratio: 4 / 5;
+  }
+  .va-copy {
+    padding: 28px var(--pad) 8px;
+  }
+  .va-hint {
+    transform: translate(-50%, -50%);
+    padding: 0;
+    color: var(--ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .va-hint span {
+    animation: none;
+  }
+}

@@ -1,0 +1,191 @@
+/* PROTOTYPE round 1 · D "Into the grain" (wild). The page is the studio: a pale lilac ground the render fades into,
+   deep aubergine ink, an electric violet for action, Syne for the big words, Instrument Sans for text and Geist Mono
+   for the instrument-like readout. */
+.vd {
+  --ground: #e6e2f0;
+  --ink: #1c1530;
+  --ink-2: #4e4470;
+  --line: rgba(28, 21, 48, 0.16);
+  --accent: #5b3fd6;
+  --accent-ink: #fff;
+  --display: 'Syne', system-ui, sans-serif;
+  --text: 'Instrument Sans', system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+}
+.vd .rb-brand {
+  font-weight: 700;
+}
+.vd .rb-head {
+  color: #fff;
+  transition: color 0.5s;
+}
+.vd.is-light .rb-head,
+.vd.is-still .rb-head {
+  color: var(--ink);
+}
+.vd .rb-head img {
+  filter: invert(1);
+  transition: filter 0.5s;
+}
+.vd.is-light .rb-head img,
+.vd.is-still .rb-head img {
+  filter: none;
+}
+.vd .rb-index h2,
+.vd .rb-visit h2 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.vd-stage {
+  position: relative;
+  overflow: hidden;
+  background: #8a5a2f;
+}
+.vd-poster,
+.vd-stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.vd-poster {
+  object-fit: cover;
+}
+
+/* the readout: an instrument, not a caption */
+.vd-scale {
+  position: absolute;
+  z-index: 5;
+  left: var(--pad);
+  bottom: max(28px, 6vh);
+  display: grid;
+  gap: 2px;
+  color: #fff;
+  transition: color 0.5s;
+  pointer-events: none;
+}
+.vd.is-light .vd-scale,
+.vd.is-still .vd-scale {
+  color: var(--ink);
+}
+.vd-scale__k {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.vd-scale__n {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(54px, 8.4vw, 150px);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.vd-cap h2,
+.vd-cap h1,
+.vd-close {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(30px, 3.4vw, 56px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.vd-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+@media (min-width: 901px) {
+  .vd:not(.is-still) .vd-film {
+    position: relative;
+    height: 520vh;
+  }
+  .vd:not(.is-still) .vd-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+  }
+  .vd-caps {
+    position: absolute;
+    z-index: 5;
+    right: var(--pad);
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(30rem, 38vw);
+  }
+  .vd-cap {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 100%;
+    transform: translateY(-50%);
+    padding: 26px 28px 28px;
+    background: var(--ground); /* a solid block of the page: legible on any frame, no glass */
+    opacity: 0;
+    visibility: hidden;
+  }
+  .vd-cap p {
+    margin-top: 10px;
+    color: var(--ink-2);
+    font-size: 18px;
+  }
+  .vd-cap--close {
+    background: transparent;
+    padding: 0;
+  }
+  .vd-cap--close h1 {
+    font-size: clamp(44px, 5.4vw, 92px);
+  }
+  .vd-cap--close p {
+    color: var(--ink);
+  }
+}
+
+@media (max-width: 900px) {
+  .vd-stage {
+    aspect-ratio: 4 / 5;
+  }
+  .vd-scale {
+    bottom: 18px;
+  }
+  .vd-scale__n {
+    font-size: 48px;
+  }
+}
+.vd.is-still .vd-stage {
+  aspect-ratio: 16 / 9;
+}
+@media (max-width: 900px) {
+  .vd.is-still .vd-stage {
+    aspect-ratio: 4 / 5;
+  }
+}
+.vd-list {
+  padding: 24px var(--pad) 10px;
+}
+.vd-list ol {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.vd-list li {
+  font-size: 17px;
+  opacity: 0.35;
+  transition: opacity 0.45s;
+}
+.vd-list li.is-on {
+  opacity: 1;
+}
+.vd-list strong {
+  font-family: var(--display);
+  font-weight: 700;
+}
+.vd-close {
+  margin-top: 30px;
+  font-size: 40px;
+}

@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "reboot": "vite --open /reboot/",
+    "reboot:phone": "vite --host --open /reboot/",
     "build": "tsc -b && npm run sitemap:build && vite build",
     "sitemap:build": "node scripts/build-sitemap.mjs",
     "lint": "oxlint",

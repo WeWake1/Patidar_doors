@@ -1,0 +1,209 @@
+/* PROTOTYPE round 1 · C "The first cut" (wild). Sawmill: white-grey ground, black ink, safety yellow, a wide heavy
+   display face (Unbounded) and a typewriter-plain mono (DM Mono) for everything that is not shouting. */
+.vc {
+  --ground: #ebebe9;
+  --ink: #0b0b0b;
+  --ink-2: #474744;
+  --line: rgba(11, 11, 11, 0.16);
+  --accent: #ffd400;
+  --accent-ink: #0b0b0b;
+  --display: 'Unbounded', system-ui, sans-serif;
+  --text: 'DM Mono', ui-monospace, monospace;
+  --mono: 'DM Mono', ui-monospace, monospace;
+  font-size: 16px;
+}
+.vc .rb-brand {
+  font-weight: 600;
+}
+.vc .rb-index h2,
+.vc .rb-visit h2 {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+}
+.vc .rb-index__name {
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.vc-title {
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(38px, 7vw, 128px);
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.vc-stage {
+  position: relative;
+  overflow: hidden;
+  background: var(--accent);
+}
+.vc-half {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  will-change: transform;
+}
+.vc-poster,
+.vc-half canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.vc-poster {
+  object-fit: cover;
+}
+.vc-reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 22px;
+  padding: 0 calc(7% + var(--pad)); /* clear of the sliver of grain each parted half leaves (EDGE in Cut.tsx) */
+  text-align: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.vc-reveal h2 {
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(28px, 5vw, 88px);
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+  max-width: 15ch;
+}
+.vc-reveal p {
+  max-width: 46ch;
+}
+.vc-reveal__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.vc-reveal .rb-btn {
+  background: var(--ink);
+  color: #fff;
+}
+.vc-reveal .rb-btn--quiet {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+@media (min-width: 901px) {
+  .vc:not(.is-still) .vc-film {
+    position: relative;
+    height: 460vh;
+  }
+  .vc:not(.is-still) .vc-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+  }
+  .vc:not(.is-still) .vc-stage .vc-title {
+    position: absolute;
+    z-index: 6;
+    left: var(--pad);
+    right: var(--pad);
+    top: max(84px, 11vh);
+    pointer-events: none;
+  }
+  .vc-caps {
+    position: absolute;
+    z-index: 6;
+    left: var(--pad);
+    bottom: 11vh;
+    width: min(34rem, 44vw);
+    pointer-events: none;
+  }
+  .vc-caps p {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(24px, 2.5vw, 40px);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    opacity: 0;
+  }
+}
+
+/* phones (and reduced motion): the title above the picture, the film plays once, the beats listed below */
+@media (max-width: 900px) {
+  .vc-title {
+    padding: 92px var(--pad) 20px;
+  }
+  .vc-stage {
+    aspect-ratio: 4 / 5;
+  }
+  .vc-half {
+    transition: transform 0.9s cubic-bezier(0.7, 0, 0.2, 1);
+  }
+  .vc-film.is-split .vc-half--l {
+    transform: translateX(var(--open-l, -50%));
+  }
+  .vc-film.is-split .vc-half--r {
+    transform: translateX(var(--open-r, 36%));
+  }
+  .vc-reveal {
+    gap: 14px;
+  }
+  .vc-reveal h2 {
+    font-size: 26px;
+  }
+  .vc-reveal p {
+    font-size: 13px;
+  }
+  .vc-reveal .rb-btn {
+    padding: 0 16px;
+  }
+}
+.vc.is-still .vc-title {
+  padding: 92px var(--pad) 20px;
+}
+.vc.is-still .vc-stage {
+  aspect-ratio: 16 / 9;
+}
+.vc-list {
+  padding: 22px var(--pad) 8px;
+}
+.vc-list ol {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.vc-list li {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  opacity: 0.3;
+  transition: opacity 0.45s;
+}
+.vc-list li.is-on {
+  opacity: 1;
+}
+.vc-again {
+  display: none;
+  margin-top: 22px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+}
+.vc-again.is-shown {
+  display: inline-flex;
+  align-items: center;
+}

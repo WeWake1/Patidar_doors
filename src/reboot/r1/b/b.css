@@ -1,0 +1,210 @@
+/* PROTOTYPE round 1 · B "Four materials, one roof" (premium). A materials library: the page is the render's white
+   studio, ink-black type, one vermilion accent, Schibsted Grotesk set tight for the headline, JetBrains Mono for
+   the labels that ride the render. */
+.vb {
+  --ground: #ededeb;
+  --ink: #151515;
+  --ink-2: #5d5d5a;
+  --line: rgba(21, 21, 21, 0.14);
+  --accent: #e4572e;
+  --accent-ink: #fff;
+  --display: 'Schibsted Grotesk', system-ui, sans-serif;
+  --text: 'Schibsted Grotesk', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+.vb .rb-brand {
+  font-weight: 700;
+}
+.vb .rb-cta {
+  background: var(--ink);
+}
+.vb .rb-visit h2 {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.vb-stage {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.vb-poster,
+.vb-stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.vb-poster {
+  object-fit: cover;
+}
+
+/* labels riding the render: a square marker on the layer, a hairline up, the label */
+.vb-pin {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transform: translate(-4px, -100%);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.vb-pin__label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.vb-pin__label span:first-child {
+  opacity: 0.55;
+}
+.vb-pin__line {
+  width: 1px;
+  height: 46px;
+  margin-left: 3px;
+  background: var(--ink);
+}
+.vb-pin__dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+}
+.vb-pin--wpc .vb-pin__line {
+  height: 82px;
+}
+.vb-pin--doors .vb-pin__line {
+  height: 120px;
+}
+/* near the right edge a label points left instead, so it never runs off the screen */
+.vb-pin.is-flip {
+  align-items: flex-end;
+  transform: translate(calc(-100% + 4px), -100%);
+}
+.vb-pin.is-flip .vb-pin__line {
+  margin: 0 3px 0 0;
+}
+@media (hover: hover) {
+  .vb-pin:hover .vb-pin__label {
+    background: var(--accent);
+  }
+}
+.vb-hint {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  width: fit-content;
+  margin: 0 auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+.vb-hint.is-gone {
+  opacity: 0;
+}
+
+.vb-copy h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(38px, 4.6vw, 74px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.vb-copy h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+.vb-copy p {
+  margin-top: 18px;
+  max-width: 40ch;
+  color: var(--ink-2);
+  font-size: clamp(16px, 1.2vw, 18px);
+}
+.vb-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+.vb-list {
+  list-style: none;
+  padding: 0 var(--pad);
+  margin: 0;
+}
+.vb-list a {
+  display: grid;
+  grid-template-columns: 2.6em 1fr;
+  gap: 2px 12px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  text-decoration: none;
+}
+.vb-list span {
+  grid-row: span 2;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  padding-top: 6px;
+}
+.vb-list strong {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.vb-list em {
+  font-style: normal;
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+@media (min-width: 901px) {
+  .vb-hero {
+    position: relative;
+    height: 100svh;
+    min-height: 660px;
+  }
+  .vb-stage {
+    position: absolute;
+    inset: 0;
+  }
+  .vb-copy {
+    position: absolute;
+    z-index: 5;
+    left: var(--pad);
+    top: max(108px, 15vh);
+    width: min(30rem, 36vw);
+  }
+  .vb-list {
+    display: none; /* on computers the labels on the stack are the index */
+  }
+}
+
+@media (max-width: 900px) {
+  .vb-stage {
+    aspect-ratio: 4 / 5;
+  }
+  .vb-copy {
+    padding: 26px var(--pad) 20px;
+  }
+  .vb-pin {
+    display: none; /* four labels collide at phone width: the numbered list under the headline does the job */
+  }
+}
