@@ -1,0 +1,93 @@
+/* PROTOTYPE round 3 · I "Arrival": the film is the first screen, full bleed; the headline sits top left on the
+   facade's pale concrete and leaves as the camera moves in. */
+.vi-film {
+  position: relative;
+  height: 380vh; /* computers: the scroll drives the film */
+}
+.vi-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background: #e9e6e0;
+}
+.vi-poster,
+.vi-stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.vi-poster {
+  object-fit: cover;
+}
+.vi-title {
+  position: absolute;
+  z-index: 3;
+  left: var(--pad);
+  top: clamp(104px, 15vh, 170px);
+  max-width: 30rem;
+  pointer-events: none;
+}
+.vi-cap {
+  position: absolute;
+  z-index: 3;
+  left: var(--pad);
+  bottom: 16vh;
+  opacity: 0;
+  visibility: hidden;
+  color: #fff;
+  text-shadow: 0 1px 24px rgba(0, 0, 0, 0.25);
+}
+.vi-cap--right {
+  left: auto;
+  right: var(--pad);
+  text-align: right;
+}
+.vi-cap--end {
+  left: var(--pad);
+  bottom: 12vh;
+  color: #fff;
+}
+.vi-cap--end .r3-cap {
+  max-width: 18ch;
+}
+
+@media (max-width: 900px) {
+  .vi-film {
+    height: auto; /* phones: it plays once by itself */
+  }
+  .vi-title--flow {
+    position: static;
+    padding: calc(96px + env(safe-area-inset-top)) var(--pad) 18px;
+  }
+  .vi-stage {
+    position: relative;
+    height: 76svh;
+  }
+  .vi-cap {
+    left: var(--pad);
+    right: var(--pad);
+    bottom: 22px;
+    text-align: left;
+    font-size: 24px;
+  }
+  .vi-again {
+    position: absolute;
+    z-index: 4;
+    right: var(--pad);
+    top: 12px;
+    background: rgba(255, 255, 255, 0.9);
+  }
+}
+
+/* reduced motion: the last frame, still; no scroll track to wade through */
+@media (prefers-reduced-motion: reduce) {
+  .vi-film {
+    height: auto;
+  }
+  .vi-stage {
+    position: relative;
+  }
+}

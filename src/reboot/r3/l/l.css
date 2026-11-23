@@ -1,0 +1,99 @@
+/* PROTOTYPE round 3 · L "One room": the room is the whole first screen; the headline sits on the white wall, the
+   row of doors to choose from along the bottom like a colour picker. */
+.vl-hero {
+  position: relative;
+  height: 100vh;
+  height: 100svh;
+  min-height: 560px;
+  overflow: hidden;
+  background: #ece9e3;
+}
+.vl-hero canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.9s;
+}
+.vl-hero canvas.is-ready {
+  opacity: 1;
+}
+.vl-copy {
+  position: absolute;
+  z-index: 3;
+  left: var(--pad);
+  top: clamp(108px, 16vh, 180px);
+  max-width: 30rem;
+  pointer-events: none;
+}
+.vl-pick {
+  position: absolute;
+  z-index: 3;
+  left: var(--pad);
+  right: var(--pad);
+  bottom: clamp(28px, 6vh, 64px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.vl-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.9);
+  font-family: var(--display);
+  font-size: 19px;
+  text-decoration: none;
+}
+.vl-thumbs {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.vl-thumbs button {
+  flex: none;
+  width: 30px;
+  height: 64px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  outline-offset: 2px;
+  opacity: 0.75;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.vl-thumbs button[aria-checked='true'] {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.vl-thumbs img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 900px) {
+  .vl-copy {
+    top: calc(84px + env(safe-area-inset-top));
+    right: var(--pad);
+  }
+  .vl-pick {
+    flex-direction: column;
+    align-items: stretch;
+    bottom: calc(76px + env(safe-area-inset-bottom)); /* clear of the prototype switcher */
+  }
+  .vl-name {
+    align-self: flex-start;
+  }
+  .vl-thumbs button {
+    width: 44px;
+    height: 88px;
+  }
+}

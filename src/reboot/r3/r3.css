@@ -1,0 +1,73 @@
+/* PROTOTYPE round 3: one calm look for all four heroes (G's, the closest in round 2): a warm white ground, Gloock
+   set large and quiet, Hanken Grotesk for the rest, ink, and one restrained accent per variant. No chips, no
+   gradients, no frames round the pictures: the picture is the page. */
+.r3 {
+  --ground: #f4f3f0;
+  --ink: #161514;
+  --ink-2: #5b5955;
+  --line: rgba(22, 21, 20, 0.12);
+  --accent: #161514;
+  --accent-ink: #fff;
+  --display: 'Gloock', Georgia, serif;
+  --text: 'Hanken Grotesk', system-ui, sans-serif;
+  --mono: ui-monospace, monospace;
+}
+.r3 .rb-brand {
+  font-family: var(--display);
+}
+.r3 .rb-visit h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(38px, 5vw, 72px);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+.r3-head--light {
+  color: #fff;
+}
+.r3-head--light .rb-cta {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+}
+
+/* the shared hero type: a big quiet serif headline and one line under it */
+.r3-title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(44px, 6.4vw, 108px);
+  line-height: 0.96;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.r3-sub {
+  margin-top: 16px;
+  max-width: 34ch;
+  font-size: clamp(16px, 1.3vw, 19px);
+  color: var(--ink-2);
+}
+.r3-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 26px;
+}
+.r3 canvas {
+  display: block;
+}
+.r3-cap {
+  font-family: var(--display);
+  font-size: clamp(24px, 2.6vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  max-width: 16ch;
+}
+.r3-again {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  font: 500 14px/1 var(--text);
+  color: var(--ink);
+  cursor: pointer;
+}

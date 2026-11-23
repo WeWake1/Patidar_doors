@@ -1,0 +1,151 @@
+/* PROTOTYPE round 2 · H "Your name here". A's liked look, quieter than the other three: white, oxblood, Gloock for
+   the headline and on the plate, Instrument Sans for the rest. The door picture takes the right of the screen on
+   computers and the top on phones; the form is a field, two choices and one button. */
+.vh {
+  --ground: #f4f3f1;
+  --ink: #1b1414;
+  --ink-2: #5d5353;
+  --line: rgba(27, 20, 20, 0.14);
+  --accent: #6e1f2a;
+  --accent-ink: #fff;
+  --display: 'Gloock', Georgia, serif;
+  --text: 'Instrument Sans', system-ui, sans-serif;
+  --mono: ui-monospace, monospace;
+}
+.vh .rb-brand {
+  font-family: var(--display);
+}
+.vh .rb-visit h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(38px, 5vw, 72px);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+
+.vh-hero {
+  display: grid;
+  grid-template-columns: minmax(380px, 40%) 1fr;
+  grid-template-rows: minmax(100px, 1fr) auto auto minmax(56px, 1fr);
+  min-height: 100svh;
+}
+.vh-pic {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1 / -1;
+  overflow: hidden;
+  background: #3a2818;
+}
+.vh-poster,
+.vh-pic canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vh-intro,
+.vh-form {
+  grid-column: 1;
+  display: grid;
+  gap: 22px;
+  padding: 0 var(--pad);
+}
+.vh-intro {
+  grid-row: 2;
+}
+.vh-form {
+  grid-row: 3;
+  align-content: start;
+  padding-top: 28px;
+}
+.vh-intro h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(54px, 6.2vw, 104px);
+  line-height: 0.95;
+  letter-spacing: -0.025em;
+}
+.vh-lead {
+  max-width: 34ch;
+  color: var(--ink-2);
+  font-size: clamp(16px, 1.25vw, 19px);
+}
+.vh-field {
+  display: grid;
+  gap: 8px;
+  max-width: 26rem;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.vh-field input {
+  min-height: 56px;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 2px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  font: 400 22px/1.2 var(--display);
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 0;
+}
+.vh-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.vh-styles {
+  display: flex;
+  gap: 8px;
+}
+.vh-styles button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 500 15px/1 var(--text);
+  box-shadow: inset 0 0 0 1px var(--line);
+  cursor: pointer;
+}
+.vh-styles button[aria-checked='true'] {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  color: var(--accent);
+}
+.vh-send {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.vh-send p {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 900px) {
+  .vh-hero {
+    display: block;
+    min-height: 0;
+  }
+  .vh-intro {
+    padding: calc(92px + env(safe-area-inset-top)) var(--pad) 22px;
+    gap: 12px;
+  }
+  .vh-intro h1 {
+    font-size: clamp(44px, 12vw, 64px);
+  }
+  .vh-lead {
+    font-size: 15px;
+  }
+  .vh-pic {
+    aspect-ratio: 5 / 4;
+    width: 100%;
+    scroll-margin-top: 8px;
+  }
+  .vh-form {
+    padding: 22px var(--pad) 40px;
+    gap: 16px;
+  }
+}

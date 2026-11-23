@@ -40,6 +40,9 @@ def _acg(tid, size_m, grain):
 TEXSETS = {
     "teak_veneer": dict(color="teak_veneer/teak_veneer_diff_4k.jpg", rough="teak_veneer/teak_veneer_rough_4k.jpg",
                         normal="teak_veneer/teak_veneer_nor_gl_4k.jpg", size_m=1.0, grain="u"),  # Poly Haven scan, 1 m square
+    # the same scan's 8K colour map, for shots seen at true scale (round 2 F): 8 px/mm instead of 4
+    "teak_veneer_8k": dict(color="teak_veneer/teak_veneer_diff_8k.jpg", rough="teak_veneer/teak_veneer_rough_4k.jpg",
+                           normal="teak_veneer/teak_veneer_nor_gl_4k.jpg", size_m=1.0, grain="u"),
     "Wood092": _acg("Wood092", 0.9, "v"),
     "Bark014": _acg("Bark014", 1.0, "u"),
     "Wood087": _acg("Wood087", 0.4, "u"),

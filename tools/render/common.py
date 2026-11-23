@@ -42,6 +42,11 @@ args, _ = ap.parse_known_args(argv)
 # absolute, always: with no .blend open, Blender resolves a relative output path against the drive root
 # (C:\...), not the working directory, so the frames silently land somewhere else
 args.out = os.path.abspath(args.out)
+# and only ever inside the repo or the temp folder (test renders): round 1's first frames landed in C:\reboot
+REPO = os.path.dirname(os.path.dirname(HERE))
+_allowed = [os.path.normcase(os.path.abspath(p)) for p in (REPO, __import__("tempfile").gettempdir())]
+if not any(os.path.commonpath([os.path.normcase(args.out), a]) == a for a in _allowed):
+    sys.exit(f"REFUSED: {args.out} is outside the repo ({REPO}) and the temp folder")
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene

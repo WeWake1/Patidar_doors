@@ -1,6 +1,7 @@
 <!doctype html>
 <!--
-  PROTOTYPE · creative reboot, round 1. Dev-only: `npm run reboot` (or /reboot/ on `npm run dev`).
+  PROTOTYPE · creative reboot, rounds 1 (?variant=A-D), 2 (E-H) and 3 (I-L). Dev-only: `npm run reboot` (or /reboot/ on
+  `npm run dev`).
   Not a build input (vite.config has only index.html), so none of this ships with the live site.
 -->
 <html lang="en">
@@ -8,7 +9,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>Patidar Doors · round 1 (prototype)</title>
+    <title>Patidar Doors · reboot (prototype)</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,8 +20,9 @@
     <script>
       // PROTOTYPE: pick the variant before first paint, so a reload never flashes the wrong one
       ;(function () {
-        var k = (new URLSearchParams(location.search).get('variant') || 'A').toUpperCase()
-        if (!/^[A-D]$/.test(k)) k = 'A'
+        var q = new URLSearchParams(location.search)
+        var k = (q.get('variant') || '').toUpperCase()
+        if (!/^[A-L]$/.test(k)) k = { 1: 'A', 2: 'E' }[q.get('round')] || 'I'
         document.documentElement.dataset.variant = k
       })()
     </script>

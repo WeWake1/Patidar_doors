@@ -5,13 +5,76 @@ Owner answers, newest first. Never re-ask anything answered here. The brief is
 [`prototypes/README.md`](prototypes/README.md). Facts Claude looked up go under "Research facts";
 decisions are only ever the owner's.
 
+## 2026-11-23 · session 1 · round 3 built, verdict asked
+
+Round 3 is four calm, photoreal heroes at `/reboot/?variant=I|J|K|L` (rounds 1 and 2 stay at `A-H`), written up
+in [`prototypes/README.md`](prototypes/README.md). Two are Blender (I Arrival, L One room), two live 3D (J Pavilion,
+K Object), as asked, to compare.
+
+### Open questions (round 4, asked 2026-11-23)
+
+1. **Verdict** on I "Arrival", J "Pavilion", K "Object", L "One room" [L is the hero: G's calm look and real
+   light, with the range in the door and an Apple-style picker; I's film is the first section after it (the
+   cinematic arrival); K's lineup opens the Doors page; J is dropped].
+2. **Live 3D or renders** [renders for anything that has to look real; live 3D only where a visitor handles one
+   product, such as turning a door on its own page].
+3. **Next round** [the chosen hero finished to full quality, plus the two sections that follow it, so the home
+   page's opening can be judged as a whole].
+
+## 2026-11-23 · session 1 · round 2 verdict
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Verdict on round 2 (E Knock, F Actual size, G Next door, H Your name here) | **"All of them are really bad."** Only **G is "kinda decent", still not hero-page worthy.** Another round. |
+| 2 | Sound on the real site | **Fine** ("I don't mind the sound"). |
+| 3 | Next round: the hero in two brand directions | Possible later, but **a good hero and the main things come first**. |
+| 4 | Real door photos | **Keep using the placeholders for now.** |
+| 5 | Why G came closest (asked after the verdict) | **Its calm premium look** (white, serif headline, space, nothing gimmicky) **and its realistic room and light.** Not the flip, not the photos as such. |
+| 6 | What made E, F and H bad | **Gimmicky** (a trick or a joke, not a brand) **and not premium or real enough** (renders and layouts looked cheap or computer-generated). |
+| 7 | The hero's first job | **Wow, Apple-style**: a big cinematic visual and smooth motion that make people stop. |
+| 8 | Live 3D | **Yes, in one or two round-3 concepts**; Blender renders for the others, to compare. |
+
+## 2026-11-23 · session 1 · round 2 built, verdict asked
+
+Round 2 is four new hero concepts at `/reboot/?variant=E|F|G|H` (round 1 stays at `A-D`), written up in
+[`prototypes/README.md`](prototypes/README.md).
+
+### Round 3 questions as asked (2026-11-23, answered above)
+
+1. **Verdict** on E "Knock", F "Actual size", G "Next door", H "Your name here" [E is the hero: it is the most
+   "only a door company could own" (the knock test), it shows all four things sold in four taps, and it works by
+   touch on a phone. H follows it as the first section (the homeowner's moment, and it travels on WhatsApp), G
+   becomes the top of the Doors page, F the deadpan close of the home page].
+2. **Sound on the real site** [only where a tap asks for it (E's knock, G's thump), silent until that tap, with a
+   visible off switch, and recorded from the store's own doors rather than synthesised; nowhere else].
+3. **Next round** [the chosen hero, finished, in **two brand directions** side by side (name and logo treatment,
+   colour, type, voice), each shown as a full first screen with the header, the footer and one section after it,
+   since Q7 put the brand direction first].
+4. **Real door photos** [G and the catalogue are the only parts that show products, and every photo is a
+   placeholder found online: start asking the client for straight-on photos of 12 real doors now, so whichever
+   concept wins can be judged with them].
+
+## 2026-11-23 · session 1 · round 1 verdict
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Verdict on round 1 (A The weight, B Four materials, one roof, C The first cut, D Into the grain) | **None of the four is a hero.** "Good enough, but none of them are up to the mark of being a hero page." Parts may come back **as standalone pieces elsewhere on the site, not as the hero.** Round 1 is kept exactly as it is (`/reboot/?variant=A-D`); **round 2 is four more hero concepts**, "more unique and cool". |
+| 2 | Look | **All four colours are good** (oxblood `#6E1F2A`, vermilion `#E4572E`, safety yellow `#FFD400`, violet `#5B3FD6` on lilac). **Every typeface is liked except B's** (Schibsted Grotesk, with JetBrains Mono for its labels). Liked: Gloock + Hanken Grotesk, Unbounded + DM Mono, Syne + Instrument Sans + Geist Mono. |
+| 3 | How wild | **About right.** |
+| 4 | References | No answer. |
+| 5 | Copy | Keep refining it; the owner flags what sounds wrong. |
+| 6 | Sound | **Try it in the prototypes**, though "in a professional manner it's not really required". |
+| 7 | Next round's scope | **The hero, and the direction of the website and the brand, come first.** The rest of the home page waits for them. |
+| 8 | Render assets in git | The owner had already committed everything, the downloaded scans and HDRIs included. |
+| — | Renders written to `C:\` | Round 1's first frames landed in `C:\reboot`. **Never again**: `tools/render/common.py` now refuses any output path outside the repo and the temp folder. |
+
 ## 2026-11-23 · session 1 · round 1 built, verdict asked
 
 Round 1 is four hero concepts (two premium, two wild) at `/reboot/?variant=A|B|C|D` (`npm run reboot`; on a
 phone over Wi-Fi: `npm run reboot:phone`), written up in [`prototypes/README.md`](prototypes/README.md).
 Reference sites for Q7: [`references/README.md`](references/README.md).
 
-### Open questions (round 2, asked 2026-11-23)
+### Round 2 questions as asked (2026-11-23, answered above)
 
 1. **Verdict** on A "The weight", B "Four materials, one roof", C "The first cut", D "Into the grain" [C
    is the hero, and the other three become the home page after it, in story order: the log is sawn (C),
@@ -130,6 +193,9 @@ What this project already tried and dropped (from `CLAUDE.md`), newest first.
 
 | When | What was tried | Why it went |
 |---|---|---|
+| 23 Nov 2026 | **Round 2's heroes**: Knock (tap a door, hear it, the next material rides in on the ring), Actual size (an 8 ft door at 1:1 to scroll down), Your name here (a nameplate engraved as you type); and Next door (a stack of photographed doors you flip through), the least bad | "All of them are really bad": gimmicky, and not premium or real enough. G was "kinda decent" for its calm look and realistic room and light, still not a hero. **Lesson: no tricks or jokes as the hero; photoreal, calm, cinematic.** |
+| 23 Nov 2026 | **Round 1's four heroes as the hero**: The weight (push a heavy door), Four materials, one roof (a still life of offcuts that turns), The first cut (a log sawn open, the page split along the kerf), Into the grain (a 175x pull-back from teak) | "Good enough, but none of them are up to the mark of being a hero page." Their parts may return elsewhere on the site, not as the hero. |
+| 23 Nov 2026 | **B's typeface**: Schibsted Grotesk (and JetBrains Mono beside it) | The one round-1 typeface the owner did not like. |
 | 23 Nov 2026 | **The current site's look**: deep brown and cream, brass, Cormorant + Archivo | The owner hates it ("everything which is brown and cream"). Wood is still brown in the renders; the interface must not be. |
 | 13 Nov 2026 | **The `/lab` redesign** (branch `redesign`): Pocket Showroom, The Lookbook, Walkthrough, The Stocklist, The Counter | "Not good at all, and no one likes them." |
 | Aug–Nov 2026 | A scroll-scrubbed hero on phones built from page elements: 3D-transformed door elements (21 Aug), a generated CSS scroll-timeline sheet (1 Sep), composited images at 10× (10 Sep) | Each measured clean in headless Chrome and tore apart on real phones (doors drawn in chunks, strips missing, worse scrolling back up). The 11 Nov canvas rebuild is still unconfirmed on a physical phone. |
@@ -151,3 +217,10 @@ What this project already tried and dropped (from `CLAUDE.md`), newest first.
   "Walk right in.", the 01/02/03 band and the ₹0 / 50% / Balance band are examples; their facts can
   stay, their shapes cannot.
 - **Live 3D** anywhere visitors look, until the owner says otherwise (brief §3).
+- **Pallet Euro's later rounds** (its `docs/prototypes/README.md`, read 2026-11-23), so also not to be reused
+  without asking: the cursor carrying the sun or the light across a scene (rounds 4 and 6, "Indian light" and
+  "Daybreak"), dappled shade moving over the object (round 6, "Neem shade"), two worlds split by a seam that
+  follows the cursor (round 5), a frozen bullet-time drop with sawdust that the cursor orbits (round 6), a slab
+  carved away to reveal the object inside (round 7, "Carved", being rendered on this machine on 2026-11-23), a
+  technical drawing turning into the object (round 7), an eye-level frieze with parallax (round 7), and a
+  before/after drag handle (round 7).

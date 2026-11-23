@@ -1,0 +1,73 @@
+/* PROTOTYPE round 3 · J "Pavilion": the words in a white band above the scene (over the doors they could not be read), the scene below it to the bottom of the screen. */
+.vj-hero {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100svh;
+  min-height: 600px;
+  background: var(--ground);
+}
+.vj-copy {
+  padding: clamp(96px, 13vh, 150px) var(--pad) 22px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.vj-copy .r3-sub {
+  margin-top: 0;
+  text-align: right;
+}
+.vj-scene {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #e8edf1;
+}
+.vj-scene canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.9s;
+}
+.vj-scene canvas.is-ready {
+  opacity: 1;
+}
+.vj-label {
+  position: absolute;
+  z-index: 3;
+  right: var(--pad);
+  bottom: clamp(40px, 9vh, 96px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 18px;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+
+@media (max-width: 900px) {
+  .vj-copy {
+    display: block;
+    padding: calc(90px + env(safe-area-inset-top)) var(--pad) 16px;
+  }
+  .vj-copy .r3-sub {
+    margin-top: 10px;
+    text-align: left;
+  }
+  .vj-label {
+    left: var(--pad);
+    right: auto;
+    bottom: calc(82px + env(safe-area-inset-bottom)); /* above the prototype switcher */
+  }
+}

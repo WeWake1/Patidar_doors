@@ -1,20 +1,27 @@
-// PROTOTYPE: the floating bar that flips between design variants (?variant=A|B|C|D, or the arrow keys).
-// Not part of any design. The whole /reboot/ page is dev-only (reboot/index.html is not a build input).
+// PROTOTYPE: the floating bar that flips between design variants (?variant=A..H, or the arrow keys). The arrows
+// stay within a round; the round label goes to the next round. Not part of any design. The whole /reboot/ page is
+// dev-only (reboot/index.html is not a build input).
 import { useEffect } from 'react'
 
 export interface VariantMeta {
   key: string
   name: string
 }
-
-export function Switcher({ round, variants, current, onPick }: {
-  round: string
+export interface RoundMeta {
+  label: string
   variants: VariantMeta[]
+}
+
+export function Switcher({ rounds, current, onPick }: {
+  rounds: RoundMeta[]
   current: string
   onPick: (key: string) => void
 }) {
+  const ri = Math.max(0, rounds.findIndex((r) => r.variants.some((v) => v.key === current)))
+  const variants = rounds[ri].variants
   const i = Math.max(0, variants.findIndex((v) => v.key === current))
   const go = (d: number) => onPick(variants[(i + d + variants.length) % variants.length].key)
+  const nextRound = rounds[(ri + 1) % rounds.length]
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -28,7 +35,15 @@ export function Switcher({ round, variants, current, onPick }: {
 
   return (
     <div className="proto-switcher" role="toolbar" aria-label="Design variant switcher (prototype)">
-      <span className="proto-switcher__round">{round}</span>
+      <button
+        type="button"
+        className="proto-switcher__round"
+        onClick={() => onPick(nextRound.variants[0].key)}
+        aria-label={`${rounds[ri].label}. Switch to ${nextRound.label}`}
+        title={`Switch to ${nextRound.label}`}
+      >
+        {rounds[ri].label}
+      </button>
       <button type="button" onClick={() => go(-1)} aria-label="Previous variant">
         ←
       </button>

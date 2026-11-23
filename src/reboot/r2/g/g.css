@@ -1,0 +1,172 @@
+/* PROTOTYPE round 2 · G "Next door". B's vermilion, which the owner liked, with A's Gloock and Hanken Grotesk in
+   place of B's grotesk, which they didn't. The room is the render's own pale grey; the words sit on its bright
+   window side, ink-dark. */
+.vg {
+  --ground: #ecebe8;
+  --ink: #161514;
+  --ink-2: #5b5955;
+  --line: rgba(22, 21, 20, 0.14);
+  --accent: #e4572e;
+  --accent-ink: #fff;
+  --display: 'Gloock', Georgia, serif;
+  --text: 'Hanken Grotesk', system-ui, sans-serif;
+  --mono: ui-monospace, monospace;
+}
+.vg .rb-brand {
+  font-weight: 600;
+}
+.vg .rb-visit h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(40px, 5.6vw, 80px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.vg-hero {
+  position: relative;
+  height: 100svh;
+  min-height: 600px;
+  overflow: hidden;
+  background: #e9e8e5;
+}
+.vg-stage {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.vg-stage:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -6px;
+}
+.vg-stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.vg-copy {
+  position: absolute;
+  z-index: 5;
+  left: var(--pad);
+  top: clamp(108px, 22vh, 220px);
+  width: min(30rem, 40vw);
+  pointer-events: none;
+}
+.vg-copy h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(64px, 8.4vw, 136px);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+.vg-copy p {
+  margin-top: 22px;
+  max-width: 30ch;
+  color: var(--ink-2);
+  font-size: clamp(16px, 1.25vw, 19px);
+}
+
+.vg-now {
+  position: absolute;
+  z-index: 6;
+  left: var(--pad);
+  right: var(--pad);
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+}
+.vg-now__n {
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.vg-now__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-family: var(--display);
+  font-size: clamp(20px, 1.8vw, 26px);
+  text-decoration: none;
+}
+.vg-now__name span {
+  color: var(--accent);
+}
+.vg-now__ctl {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.vg-now__ctl button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: #fff;
+  color: var(--ink);
+  font: 500 15px/1 var(--text);
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+.vg-now__ctl .vg-sound {
+  font-size: 13px;
+}
+@media (hover: hover) {
+  .vg-now__ctl button:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .vg-now__name:hover {
+    text-decoration: underline;
+    text-underline-offset: 5px;
+  }
+}
+
+/* phones: the stack fills a portrait frame top to bottom, so the words go under it, not over the doors; the stage
+   is kept short enough that the headline, the instruction and the door's name all land on the first screen */
+@media (max-width: 900px) {
+  .vg-hero {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    background: var(--ground);
+  }
+  .vg-stage {
+    position: relative;
+    inset: auto;
+    height: min(62svh, 140vw);
+    background: #e9e8e5;
+  }
+  .vg-copy {
+    position: static;
+    width: auto;
+    padding: 16px var(--pad) 0;
+  }
+  .vg-copy h1 {
+    font-size: clamp(40px, 11vw, 64px);
+  }
+  .vg-copy p {
+    margin-top: 6px;
+    font-size: 14px;
+    max-width: 34ch;
+  }
+  .vg-now {
+    position: static;
+    padding: 8px var(--pad) 8px;
+  }
+  .vg-now__ctl {
+    margin-left: 0;
+  }
+  .vg .rb-head {
+    background: rgba(236, 235, 232, 0.92); /* the header sits on the doors here: give the name a ground */
+  }
+}
