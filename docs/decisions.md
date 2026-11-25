@@ -5,12 +5,39 @@ Owner answers, newest first. Never re-ask anything answered here. The brief is
 [`prototypes/README.md`](prototypes/README.md). Facts Claude looked up go under "Research facts";
 decisions are only ever the owner's.
 
+## 2026-11-25 · session 1 · round 5 built, verdict asked
+
+Round 5 is four more Blender films that play by themselves, at `/reboot/?variant=Q|R|S|T` (rounds 1 to 4 stay at
+`A-P`), written up in [`prototypes/README.md`](prototypes/README.md). The owner could not say what round 4 lacked,
+so round 5 works from Claude's reading (filmed like renders, nothing happens, empty boxes); that reading is
+Claude's, not a decision.
+
+### Open questions (round 6, asked 2026-11-25)
+
+1. **Verdict** on Q "Arrival, filmed", R "Come in", S "Monsoon", T "Courtyard" [R is the hero: it is the only one
+   where the door itself does something, it opens and lets you in, which is the site's whole job (getting people
+   into the store); T follows it further down the page; S is a seasonal swap for the monsoon months; Q is the
+   fallback if the courtyard is too much].
+2. **The moment that comes closest to "wow"**, in any of the four [even a rough time is enough, such as "R, when
+   the door opens": it tells the next round where to spend the effort, since "I don't know" left round 5 guessing].
+3. **The courtyard house as the brand's world** (R, S and T) [yes: a brass urli of marigolds, teak columns, an
+   open court is an Indian home, which no template door site has, and one picture holds main doors and room
+   doors together].
+
+## 2026-11-25 · session 1 · round 4 verdict
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Verdict on round 4 (M Arrival II, N Nightfall, O The hall, P Late light) | **"They are getting better"**, but **another round "for the same"** (the same direction: cinematic Blender films that play by themselves). |
+| 2 | What is still short of the mark | **"I don't really know."** (So round 5 works from Claude's own reading, written up in the round-5 section of the README, not from an owner answer.) |
+| 3 | Next round: the chosen film finished to full quality | **"Later, when we have finalised on one."** Finishing waits until one film is chosen. |
+
 ## 2026-11-24 · session 1 · round 4 built, verdict asked
 
 Round 4 is four cinematic Blender films that play by themselves, at `/reboot/?variant=M|N|O|P` (rounds 1 to 3
 stay at `A-L`), written up in [`prototypes/README.md`](prototypes/README.md).
 
-### Open questions (round 5, asked 2026-11-24)
+### Round 5 questions as asked (2026-11-24, answered above)
 
 1. **Verdict** on M "Arrival II", N "Nightfall", O "The hall", P "Late light" [M is the hero (round 3's Arrival,
    grander); N is its evening version; O and P are films for further down the site, such as the Doors page and a

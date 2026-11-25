@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  PROTOTYPE · creative reboot, rounds 1 (?variant=A-D), 2 (E-H), 3 (I-L) and 4 (M-P). Dev-only: `npm run reboot` (or /reboot/ on
+  PROTOTYPE · creative reboot, rounds 1 (?variant=A-D), 2 (E-H), 3 (I-L), 4 (M-P) and 5 (Q-T). Dev-only: `npm run reboot` (or /reboot/ on
   `npm run dev`).
   Not a build input (vite.config has only index.html), so none of this ships with the live site.
 -->
@@ -22,7 +22,7 @@
       ;(function () {
         var q = new URLSearchParams(location.search)
         var k = (q.get('variant') || '').toUpperCase()
-        if (!/^[A-P]$/.test(k)) k = { 1: 'A', 2: 'E', 3: 'I' }[q.get('round')] || 'M'
+        if (!/^[A-T]$/.test(k)) k = { 1: 'A', 2: 'E', 3: 'I', 4: 'M' }[q.get('round')] || 'Q'
         document.documentElement.dataset.variant = k
       })()
     </script>

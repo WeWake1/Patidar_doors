@@ -45,3 +45,5 @@ __pycache__/
 
 # PROTOTYPE round 4: the stills each film is encoded from (83 MB); the films in reboot/films/r4 are what ships
 reboot/frames/r4/
+# PROTOTYPE round 5: the same (the stills each film is encoded from; reboot/films/r5 is what ships)
+reboot/frames/r5/

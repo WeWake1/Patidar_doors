@@ -11,6 +11,7 @@ All **CC0** from [Poly Haven](https://polyhaven.com) (no attribution required), 
 | texture | `white_plaster_02` | walls (its height map only; `kit3.white_wall` paints them white) |
 | texture | `marble_tiles`, `wood_floor`, `concrete_wall_008` | Arrival's floor and facade, One room's oak floor |
 | texture | `stacked_stone_wall`, `japanese_stone_wall`, `granite_tile`, `terrazzo_tiles` | the first, rejected dusk version of Arrival (`r3/dusk.py`); kept for later scenes |
+| model | `island_tree_02`, `shrub_02`, `shrub_04`, `planter_pot_clay` | round 5's courtyard house (`r5/aangan.py`); the tree is the one big file (41 MB of geometry) |
 | hdri | `qwantani_dusk_2`, `kiara_9_dusk`, `entrance_hall` | the dusk version; the daylight scenes use Blender's physical sky |
 
 The door faces in every round-3 scene are the catalogue's leaf photographs (`public/images/leaves/`), which

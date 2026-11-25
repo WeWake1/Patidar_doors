@@ -3,7 +3,76 @@
 Every design round, what it tried, and the owner's verdict. Screenshots are 1440 px desktop (1×) and
 390 px phone (2×), WebP. Decisions themselves live in [`../decisions.md`](../decisions.md).
 
-## Round 4 · four cinematic films that play by themselves (24 Nov 2026) · awaiting the owner's verdict
+## Round 5 · filmed, and something happens (25 Nov 2026) · awaiting the owner's verdict
+
+Folder: `round-5/`. Live at **`/reboot/?variant=Q|R|S|T`** (`npm run reboot` opens it; rounds 1 to 4 stay at
+`A-P`). Code: `src/reboot/r5/` (round 4's player, reused); renders `tools/render/r5/`; films `reboot/films/r5/`;
+frames `reboot/frames/r5/` (gitignored). The brief, from round 4's verdict: "getting better", another round "for
+the same"; the owner could not say what was still short, so this round works from Claude's own reading of round 4:
+
+- **They were filmed like architecture renders, not like films.** A camera glided on rails, everything sharp,
+  nothing in the foreground, clean digital frames. So every round-5 film is shot as a crew would: a keyframed
+  camera with real motion blur (Cycles, a 0.45 shutter), focus that pulls from near to far, foreground that passes
+  the lens out of focus, and a grade at the encode (a little bloom on the highlights, a vignette, film grain).
+- **Nothing happened in them.** An Apple hero film has a moment. So the door opens and the camera goes through
+  it (R), the rain falls (S), the camera drops out of the sky (T).
+- **The places were empty white boxes.** So three films go *inside* round 4's pivot door, into a courtyard house:
+  a verandah on teak columns round an open court (an aangan), a brass urli of water and marigolds on a stone
+  plinth in the middle, a tree in one corner, and rooms behind doors on three sides (catalogue photographs).
+
+| | Film | What you see |
+|---|---|---|
+| Q | **Arrival, filmed** | Round 4's M, the owner's favourite direction, shot as a film: it opens on leaves out of focus right in front of the lens, the focus pulls to the pivot door at the end of the striped court, and the camera pushes slowly in past the plant. "Make an entrance." |
+| R | **Come in** | The same court in its morning sun. The camera walks up it; the 3.3 m pivot door swings open on its pivot as it comes; and the camera goes on through the doorway into the courtyard: the urli of marigolds in the sun, teak columns, the tree, a carved door across the court on the axis, more doors either side. "Come in." |
+| S | **Monsoon** | The courtyard in the rain on a silver afternoon: rain falling straight into the open court, the stone wet and dark, the urli stirred, warm lamps washing the doors in the dry verandah. The camera tracks along the verandah behind its columns, which pass in front of it, and settles on the carved door. "Come in from the rain." |
+| T | **Courtyard** | It opens straight down on the courtyard from above the roofs (the urli a circle in the middle of the square, the tree's crown in the corner), then cranes down into it and tilts up as it comes, landing low beside the urli: marigolds soft in front, the carved door sharp across the court. "A door for every room." |
+
+What went wrong first, so it isn't tried again:
+- **A haze for visible sun shafts** (Q's first idea): a thin volume over the court greyed the whole picture, and
+  the beams only showed when looking into the sun, with the door in shadow. Dropped.
+- **R's first version had the sun low behind the house**, so it would pour through the door as it opened: the
+  beam was faint, it landed metres from the door, and the whole court sat in a flat beige shade. Replaced by the
+  bright morning and the walk through the door.
+- **S was first the outer court in rain** with particle drops: grey, flat, the rain invisible (a raindrop is under
+  a pixel wide). The rain that works is a field of thin streaks falling as one object, lengthened by the motion
+  blur and lit against the dark verandah.
+- **Marigolds**: bumpy spheres read as oranges, then as biscuits; each head is now built petal by petal, eight
+  rings of them. Bright saturated orange shifts to salmon under the AgX view, so the petal colours are set deeper
+  than they look.
+- **The urli's water** was a black mirror (round 4's rill material); it is clear water now, so the brass shows
+  through it.
+- **The grade turned magenta** when ffmpeg blended in YUV; it blends in RGB (`format=gbrp`) first.
+
+Rendering: 144 frames (computers, 1600 × 900) and 120 (phones, 900 × 1600) per film at 128 samples with motion
+blur and depth of field, then graded and encoded by ffmpeg (H.264, crf 21, `+faststart`; the posters are the first
+and last graded frames). The grade:
+`format=gbrp,split[a][b];[b]curves=all='0/0 0.75/0 1/1',gblur=sigma=22[g];[a][g]blend=all_mode=screen:all_opacity=0.28,vignette=angle=PI/7,noise=alls=4:allf=t`.
+New CC0 models for the courtyard: `island_tree_02`, `shrub_02`, `shrub_04`, `planter_pot_clay` (Poly Haven); the
+urli, the plinth, the marigolds and the rain are built in the scripts. About 25 to 40 minutes per film and size on
+this machine (R and T, with the tree, are the slowest). The eight films are 26 MB together (round 4's were 14 MB):
+grain and rain cost bitrate, and S is the largest at 4.8 MB on computers. The stills they are encoded from
+(`reboot/frames/r5/`, 95 MB) are gitignored.
+
+**A render can stop early without an error.** Q's computer render quit at frame 110 of 144 with nothing in the
+log, and the film was encoded from what was there (4.6 s, not 6). The missing frames were rendered again
+(`--frames 110-143`) and the film re-encoded; every film was then checked for its full count with `ffprobe
+-count_frames` (144 on computers, 120 on phones). Check the count before judging a film's ending.
+
+The page is round 4's, with one fix (`src/reboot/r5/r5.css`): on the bright films the sub-line in grey vanished
+into the sunlit wall behind it, so it is in full ink, and on computers the left of the frame carries a soft light
+wash (the light film's version of round 4's dark scrim). S is the one dark film (white words, the dark scrim).
+
+Checked:
+- Switching: `/reboot/` opens Q; the arrows cycle Q → R → S → T; the round label reaches rounds 1 to 4; old links
+  (`?variant=B`, `?round=1`) still open what they opened. No page errors on any of the four, computer or phone.
+- All eight films autoplay muted and inline in Chrome, run their full length (6 s on computers, 5 s on phones) and
+  hold the last frame with "Play again". Reduced motion: the last frame, still, no running animation.
+- Phones (390 × 844): the words in a band above the film, light for Q, R and T, dark for S.
+- `tsc` and `oxlint` clean.
+
+Files: `Q-{desk,phone}-*`, `R-*`, `S-*`, `T-*` (the start, the moments that matter, the end).
+
+## Round 4 · four cinematic films that play by themselves (24 Nov 2026) · verdict: getting better; another round
 
 Folder: `round-4/`. Live at **`/reboot/?variant=M|N|O|P`** (`npm run reboot` opens it). Code: `src/reboot/r4/`;
 renders `tools/render/r4/`; films `reboot/films/r4/` (MP4, H.264, 24 fps, 6 s on computers, 5 s on phones, plus a

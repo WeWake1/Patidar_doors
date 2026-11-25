@@ -1,0 +1,21 @@
+/* PROTOTYPE round 5: round 4's page, with one fix. On a bright film the sub-line in --ink-2 vanished into the sunlit,
+   striped wall behind it, so the words read in full ink and the left of the frame carries a soft light wash, the
+   light film's version of the dark one's scrim. Computers only: on phones the words sit in their own band. */
+@media (min-width: 901px) {
+  .v5:not(.v4--dark) .v4-hero::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(244, 243, 240, 0.72) 0%,
+      rgba(244, 243, 240, 0.42) 26%,
+      rgba(244, 243, 240, 0) 48%
+    );
+    pointer-events: none;
+  }
+  .v5:not(.v4--dark) .v4-copy .r3-sub {
+    color: var(--ink);
+  }
+}

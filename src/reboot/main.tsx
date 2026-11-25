@@ -1,8 +1,9 @@
 // PROTOTYPE · creative reboot. Every round of hero concepts on one dev-only page, each round kept exactly as it
-// was judged: /reboot/?variant=A|B|C|D is round 1 (23 Nov 2026), E|F|G|H round 2, I|J|K|L round 3, M|N|O|P round 4. The letters never repeat across
-// rounds, so a link to an earlier round still opens what it opened then. The arrow keys and the bottom bar move
-// within a round; the round label switches rounds. Nothing here is imported by the live site (src/main.tsx), and
-// reboot/index.html is not a build input. Write-up: docs/prototypes/README.md.
+// was judged: /reboot/?variant=A|B|C|D is round 1 (23 Nov 2026), E|F|G|H round 2, I|J|K|L round 3, M|N|O|P
+// round 4, Q|R|S|T round 5. The letters never repeat across rounds, so a link to an earlier round still opens what
+// it opened then. The arrow keys and the bottom bar move within a round; the round label switches rounds. Nothing
+// here is imported by the live site (src/main.tsx), and reboot/index.html is not a build input. Write-up:
+// docs/prototypes/README.md.
 import { StrictMode, useCallback, useEffect, useState, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import './reboot.css'
@@ -20,6 +21,7 @@ import { Pavilion } from './r3/j/Pavilion'
 import { ObjectHero } from './r3/k/ObjectHero'
 import { OneRoom } from './r3/l/OneRoom'
 import { ArrivalII, GoldenHour, Hall, Nightfall } from './r4/Films'
+import { ArrivalFilmed, ComeIn, Courtyard, Monsoon } from './r5/Films'
 
 type Variant = { key: string; name: string; View: () => ReactElement }
 const ROUNDS: (RoundMeta & { variants: Variant[] })[] = [
@@ -57,6 +59,15 @@ const ROUNDS: (RoundMeta & { variants: Variant[] })[] = [
       { key: 'N', name: 'Nightfall', View: Nightfall },
       { key: 'O', name: 'The hall', View: Hall },
       { key: 'P', name: 'Late light', View: GoldenHour },
+    ],
+  },
+  {
+    label: 'Round 5',
+    variants: [
+      { key: 'Q', name: 'Arrival, filmed', View: ArrivalFilmed },
+      { key: 'R', name: 'Come in', View: ComeIn },
+      { key: 'S', name: 'Monsoon', View: Monsoon },
+      { key: 'T', name: 'Courtyard', View: Courtyard },
     ],
   },
 ]

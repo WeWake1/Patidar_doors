@@ -12,7 +12,13 @@ import './r4.css'
 const DIR = '/reboot/films/r4'
 
 interface Props {
-  film: 'm' | 'n' | 'o' | 'p'
+  /** the film's letter: its files are <dir>/<film>-{desk,phone}{.mp4,-first.webp,-last.webp} */
+  film: string
+  /** round 5 reuses this player for its own films */
+  dir?: string
+  round?: number
+  /** an extra class on the page root, for a later round's own styles */
+  className?: string
   title: ReactNode
   sub: ReactNode
   /** where the words sit, and whether the frame under them is dark */
@@ -22,7 +28,7 @@ interface Props {
   visit: ReactNode
 }
 
-function HeroFilm({ film, title, sub, place, dark, alt, visit }: Props) {
+export function HeroFilm({ film, dir = DIR, round = 4, className, title, sub, place, dark, alt, visit }: Props) {
   const video = useRef<HTMLVideoElement>(null)
   const [wide] = useState(isWide)
   const [reduced] = useState(prefersReduced)
@@ -45,14 +51,14 @@ function HeroFilm({ film, title, sub, place, dark, alt, visit }: Props) {
   }
 
   return (
-    <div className={`rb r3 v4${dark ? ' v4--dark' : ''}`} id="top">
+    <div className={`rb r3 v4${dark ? ' v4--dark' : ''}${className ? ` ${className}` : ''}`} id="top">
       <Header tone={dark ? 'light' : 'dark'} />
       <section className="v4-hero" aria-labelledby="v4-h">
         <video
           ref={video}
           className="v4-film"
-          src={`${DIR}/${film}-${set}.mp4`}
-          poster={`${DIR}/${film}-${set}-${reduced ? 'last' : 'first'}.webp`}
+          src={`${dir}/${film}-${set}.mp4`}
+          poster={`${dir}/${film}-${set}-${reduced ? 'last' : 'first'}.webp`}
           muted
           playsInline
           preload="auto"
@@ -82,7 +88,7 @@ function HeroFilm({ film, title, sub, place, dark, alt, visit }: Props) {
       </section>
       <Visit title={visit} lead={`${LANDMARK}.`} />
       <footer className="rb-foot">
-        Prototype · round 4 · not the live site · door photos are the catalogue’s placeholders
+        Prototype · round {round} · not the live site · door photos are the catalogue’s placeholders
       </footer>
     </div>
   )
