@@ -1,5 +1,5 @@
 // PROTOTYPE · creative reboot. Every round of hero concepts on one dev-only page, each round kept exactly as it
-// was judged: /reboot/?variant=A|B|C|D is round 1 (23 Nov 2026), E|F|G|H round 2, I|J|K|L round 3. The letters never repeat across
+// was judged: /reboot/?variant=A|B|C|D is round 1 (23 Nov 2026), E|F|G|H round 2, I|J|K|L round 3, M|N|O|P round 4. The letters never repeat across
 // rounds, so a link to an earlier round still opens what it opened then. The arrow keys and the bottom bar move
 // within a round; the round label switches rounds. Nothing here is imported by the live site (src/main.tsx), and
 // reboot/index.html is not a build input. Write-up: docs/prototypes/README.md.
@@ -19,6 +19,7 @@ import { Arrival } from './r3/i/Arrival'
 import { Pavilion } from './r3/j/Pavilion'
 import { ObjectHero } from './r3/k/ObjectHero'
 import { OneRoom } from './r3/l/OneRoom'
+import { ArrivalII, GoldenHour, Hall, Nightfall } from './r4/Films'
 
 type Variant = { key: string; name: string; View: () => ReactElement }
 const ROUNDS: (RoundMeta & { variants: Variant[] })[] = [
@@ -47,6 +48,15 @@ const ROUNDS: (RoundMeta & { variants: Variant[] })[] = [
       { key: 'J', name: 'Pavilion (live 3D)', View: Pavilion },
       { key: 'K', name: 'Object (live 3D)', View: ObjectHero },
       { key: 'L', name: 'One room', View: OneRoom },
+    ],
+  },
+  {
+    label: 'Round 4',
+    variants: [
+      { key: 'M', name: 'Arrival II', View: ArrivalII },
+      { key: 'N', name: 'Nightfall', View: Nightfall },
+      { key: 'O', name: 'The hall', View: Hall },
+      { key: 'P', name: 'Late light', View: GoldenHour },
     ],
   },
 ]

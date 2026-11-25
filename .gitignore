@@ -42,3 +42,6 @@ studio/.sanity/
 
 # Python bytecode from the Blender render scripts (tools/render)
 __pycache__/
+
+# PROTOTYPE round 4: the stills each film is encoded from (83 MB); the films in reboot/films/r4 are what ships
+reboot/frames/r4/

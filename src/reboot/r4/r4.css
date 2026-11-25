@@ -1,0 +1,125 @@
+/* PROTOTYPE round 4: the film is the first screen, edge to edge; the words come in a beat after it starts, large
+   and quiet, on the calm part of the frame; one replay control when it ends. G's calm look, as round 3. */
+.v4-hero {
+  position: relative;
+  height: 100vh;
+  height: 100svh;
+  min-height: 560px;
+  overflow: hidden;
+  background: #e9e6e0;
+}
+.v4--dark .v4-hero {
+  background: #18202e;
+}
+.v4-film {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.v4-copy {
+  position: absolute;
+  z-index: 3;
+  left: var(--pad);
+  max-width: min(34rem, 86vw);
+  animation: v4-in 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) 1.1s both;
+}
+.v4-copy--top-left {
+  top: clamp(104px, 15vh, 170px);
+}
+.v4-copy--bottom-left {
+  bottom: clamp(48px, 10vh, 110px);
+}
+.v4-copy.is-still {
+  animation: none;
+}
+.v4--dark .v4-copy {
+  color: #fff;
+}
+/* a dark film: the camera's arc brings the lit living room behind the words, so the left of the frame is
+   shaded for them, as a photographer would burn in a corner under a caption */
+.v4--dark .v4-hero::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(10, 15, 26, 0.62) 0%, rgba(10, 15, 26, 0.35) 30%, rgba(10, 15, 26, 0) 55%);
+  pointer-events: none;
+}
+.v4--dark .v4-copy .r3-sub {
+  color: rgba(255, 255, 255, 0.82);
+}
+.v4--dark .v4-copy .rb-btn {
+  background: #fff;
+  color: var(--ink);
+}
+.v4--dark .v4-copy .rb-btn--quiet {
+  background: transparent;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+@keyframes v4-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.v4-replay {
+  position: absolute;
+  z-index: 4;
+  right: var(--pad);
+  bottom: clamp(28px, 5vh, 56px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font: 500 14px/1 var(--text);
+  cursor: pointer;
+}
+/* phones: the words in a band above the film (over it they land on the door by the last frame) */
+@media (max-width: 900px) {
+  .v4-hero {
+    display: flex;
+    flex-direction: column;
+    background: var(--ground);
+  }
+  .v4--dark .v4-hero {
+    background: #121a28;
+  }
+  .v4-copy,
+  .v4-copy--top-left {
+    position: static;
+    order: -1;
+    max-width: none;
+    padding: calc(88px + env(safe-area-inset-top)) var(--pad) 18px;
+  }
+  .v4--dark .v4-hero::after {
+    display: none; /* phones: the words are in their own band */
+  }
+  .v4-film {
+    position: relative;
+    inset: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .v4-copy .r3-ctas {
+    margin-top: 16px;
+  }
+  .v4-replay {
+    bottom: calc(80px + env(safe-area-inset-bottom)); /* above the prototype switcher */
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-copy {
+    animation: none;
+  }
+}

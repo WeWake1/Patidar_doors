@@ -215,3 +215,41 @@ def white_wall(name="white_wall", hexcol="#EEEBE5", bump=0.25, tid="white_plaste
         l.remove(link)
     b.inputs["Base Color"].default_value = (*C.srgb(hexcol), 1)
     return m
+
+
+def daylight(sun_el, sun_az, sky_strength=0.25, ambient=0.55, sun_power=5.0, sun_color="#FFF4E6", amb="#EFE6DA"):
+    """A physical sky the camera and reflections see, a warm neutral for diffuse light (a photographer's white
+    balance: the blue taken out of the shade), and the sun. azim as common.aim_sun."""
+    w = bpy.data.worlds.new("sky")
+    C.scene.world = w
+    w.use_nodes = True
+    n, l = w.node_tree.nodes, w.node_tree.links
+    t = n.new("ShaderNodeTexSky")
+    for kind in ("MULTIPLE_SCATTERING", "NISHITA", "HOSEK_WILKIE"):
+        try:
+            t.sky_type = kind
+            break
+        except TypeError:
+            continue
+    if hasattr(t, "sun_elevation"):
+        t.sun_elevation = math.radians(sun_el)
+        t.sun_rotation = math.radians(sun_az + 90)
+        t.sun_disc = False
+    l.new(t.outputs["Color"], n["Background"].inputs["Color"])
+    n["Background"].inputs["Strength"].default_value = sky_strength
+    a = n.new("ShaderNodeBackground")
+    a.inputs["Color"].default_value = (*C.srgb(amb), 1)
+    a.inputs["Strength"].default_value = ambient
+    lp = n.new("ShaderNodeLightPath")
+    sel = n.new("ShaderNodeMath")
+    sel.operation = "MAXIMUM"
+    l.new(lp.outputs["Is Camera Ray"], sel.inputs[0])
+    l.new(lp.outputs["Is Glossy Ray"], sel.inputs[1])
+    mx = n.new("ShaderNodeMixShader")
+    l.new(sel.outputs[0], mx.inputs["Fac"])
+    l.new(a.outputs[0], mx.inputs[1])
+    l.new(n["Background"].outputs[0], mx.inputs[2])
+    l.new(mx.outputs[0], n["World Output"].inputs["Surface"])
+    sun = C.sun("sun", sun_power, sun_color, 0.6)
+    C.aim_sun(sun, sun_el, sun_az)
+    return sun

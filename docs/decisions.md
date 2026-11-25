@@ -5,13 +5,39 @@ Owner answers, newest first. Never re-ask anything answered here. The brief is
 [`prototypes/README.md`](prototypes/README.md). Facts Claude looked up go under "Research facts";
 decisions are only ever the owner's.
 
+## 2026-11-24 · session 1 · round 4 built, verdict asked
+
+Round 4 is four cinematic Blender films that play by themselves, at `/reboot/?variant=M|N|O|P` (rounds 1 to 3
+stay at `A-L`), written up in [`prototypes/README.md`](prototypes/README.md).
+
+### Open questions (round 5, asked 2026-11-24)
+
+1. **Verdict** on M "Arrival II", N "Nightfall", O "The hall", P "Late light" [M is the hero (round 3's Arrival,
+   grander); N is its evening version; O and P are films for further down the site, such as the Doors page and a
+   rooms section].
+2. **What is still short of the mark**, in the one you like most [say which frame or moment, even roughly: it
+   tells the next round where to spend the effort].
+3. **Next round** [the chosen film finished: longer (about 10 s), full resolution, a hand-tuned camera, the
+   client's own main door photographed for it if possible, and the page around it to final quality].
+
+## 2026-11-23 · session 1 · round 3 verdict
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Verdict on round 3 (I Arrival, J Pavilion, K Object, L One room) | **"Much better than the previous one, but still not up to the mark."** **"Arrival" is "really nice".** Another round. |
+| 2 | Live 3D or renders | **"Blender looks much more premium and real."** (So: renders; live 3D at most for handling one product.) |
+| 3 | Next round | **The hero first**: "we still haven't finalised the hero". |
+| 4 | What would push Arrival to hero level (asked after) | **All four**: more photoreal detail, a more cinematic camera, grander architecture, a better page around it. |
+| 5 | Directions for round 4 | **All of them, "and more"**: Arrival pushed further; other rooms in the same style; other light (golden hour, blue hour, rain); the whole house. |
+| 6 | How the hero film moves | **It plays by itself**, like an Apple hero video, the same on computers and phones. |
+
 ## 2026-11-23 · session 1 · round 3 built, verdict asked
 
 Round 3 is four calm, photoreal heroes at `/reboot/?variant=I|J|K|L` (rounds 1 and 2 stay at `A-H`), written up
 in [`prototypes/README.md`](prototypes/README.md). Two are Blender (I Arrival, L One room), two live 3D (J Pavilion,
 K Object), as asked, to compare.
 
-### Open questions (round 4, asked 2026-11-23)
+### Round 4 questions as asked (2026-11-23, answered above)
 
 1. **Verdict** on I "Arrival", J "Pavilion", K "Object", L "One room" [L is the hero: G's calm look and real
    light, with the range in the door and an Apple-style picker; I's film is the first section after it (the
@@ -193,6 +219,7 @@ What this project already tried and dropped (from `CLAUDE.md`), newest first.
 
 | When | What was tried | Why it went |
 |---|---|---|
+| 23 Nov 2026 | **Live 3D for the hero** (round 3's J Pavilion and K Object, three.js) | "Blender looks much more premium and real." Live 3D at most where a visitor handles one product. |
 | 23 Nov 2026 | **Round 2's heroes**: Knock (tap a door, hear it, the next material rides in on the ring), Actual size (an 8 ft door at 1:1 to scroll down), Your name here (a nameplate engraved as you type); and Next door (a stack of photographed doors you flip through), the least bad | "All of them are really bad": gimmicky, and not premium or real enough. G was "kinda decent" for its calm look and realistic room and light, still not a hero. **Lesson: no tricks or jokes as the hero; photoreal, calm, cinematic.** |
 | 23 Nov 2026 | **Round 1's four heroes as the hero**: The weight (push a heavy door), Four materials, one roof (a still life of offcuts that turns), The first cut (a log sawn open, the page split along the kerf), Into the grain (a 175x pull-back from teak) | "Good enough, but none of them are up to the mark of being a hero page." Their parts may return elsewhere on the site, not as the hero. |
 | 23 Nov 2026 | **B's typeface**: Schibsted Grotesk (and JetBrains Mono beside it) | The one round-1 typeface the owner did not like. |

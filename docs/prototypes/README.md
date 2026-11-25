@@ -3,7 +3,49 @@
 Every design round, what it tried, and the owner's verdict. Screenshots are 1440 px desktop (1×) and
 390 px phone (2×), WebP. Decisions themselves live in [`../decisions.md`](../decisions.md).
 
-## Round 3 · four calm, photoreal heroes (23 Nov 2026) · awaiting the owner's verdict
+## Round 4 · four cinematic films that play by themselves (24 Nov 2026) · awaiting the owner's verdict
+
+Folder: `round-4/`. Live at **`/reboot/?variant=M|N|O|P`** (`npm run reboot` opens it). Code: `src/reboot/r4/`;
+renders `tools/render/r4/`; films `reboot/films/r4/` (MP4, H.264, 24 fps, 6 s on computers, 5 s on phones, plus a
+first and last frame for the poster), frames `reboot/frames/r4/`. The brief, from round 3's verdict: "Arrival" was
+"really nice" but not there yet; push it on all four counts (more photoreal detail, a more cinematic camera,
+grander architecture, a better page around it), explore every direction "and more", Blender only ("much more
+premium and real"), and **the film plays by itself**, like an Apple hero video, the same on computers and phones.
+
+| | Film | What you see |
+|---|---|---|
+| M | **Arrival II** | Round 3's court made grander: six metres tall, deeper fins and bolder stripes, a 3.3 m teak pivot door in a teak-lined portal beside a warmly lit frosted panel, a still rill along the path mirroring the striped walls, bigger plants. The camera starts high at the court's mouth, cranes down to eye level and glides in to the door. "The first thing they see." |
+| N | **Nightfall** | The whole house at blue hour: a modern white house with its upper floor cantilevered over the entrance, the living room glowing through floor-to-ceiling glass, a stone wall grazed by uplights, the door lit under the overhang, lawn and slab path. A slow arc from the street that settles on the door. "Coming home." |
+| O | **The hall** | Inside: a bright double-height hall, four catalogue doors in slim teak frames along one wall, a teak bench, plants; morning sun through a glass wall lays the mullions' lines across the doors. The camera tracks slowly along them. "Every door in the house." |
+| P | **Late light** | A calm living room in the late afternoon: white walls, herringbone oak, a sofa, a lounge chair, a round table; the window's light falls in long shapes across the wall and a teak door. A slow push across the room. "At home in the light." |
+
+The page: the film edge to edge; the headline arrives a beat after it starts; it plays once and holds its last
+frame, with a quiet "Play again". On phones the words sit in a band above the film (over it they landed on the
+door by the last frame). Reduced motion: the last frame, still.
+
+What went wrong first, so it isn't tried again: a sandstone wall read as cheap brick, a light-well canopy put the
+whole court in shadow, and a pool read as flat blue tiles (M's first build); the dusk sky HDRI at strength read as
+hazy daylight, so N's sky is a drawn blue-hour gradient; glass blocks the sun when caustics are off, so every
+window lets light rays through while the camera still sees glass; golden hour turned the whole living room brown,
+so P is gentler late-afternoon light on white walls.
+
+Rendering: 144 frames (computers, 1600 × 900) and 120 (phones, 900 × 1600) per film at 128 samples, about 10 to
+15 s a frame, encoded with ffmpeg (H.264, crf 21, `+faststart`): 14 MB for all eight films. M was rendered twice
+(its frosted sidelight first read blue: the glow sat inside the wall behind it). The stills the films are encoded
+from (`reboot/frames/r4/`, 83 MB) are gitignored.
+
+Checked:
+- Switching: `/reboot/` opens M; the arrows cycle M → N → O → P; the round label reaches rounds 1 to 3; old links
+  still open what they opened. No page errors on any of the four, computer or phone.
+- The films autoplay muted and inline in Chrome on a computer and on a phone, play once (6 s), hold the last frame
+  and offer "Play again". Reduced motion: the last frame, still, no animation.
+- Phones (390 × 844): the words in a band above the film. On computers, the dark film (N) shades the left of the
+  frame under the words, because the camera's arc brings the lit living room behind them.
+- `tsc` and `oxlint` clean.
+
+Files: `M-{desk,phone}-*`, `N-*`, `O-*`, `P-*` (start, the middle of the move, the end).
+
+## Round 3 · four calm, photoreal heroes (23 Nov 2026) · verdict: better; Arrival really nice
 
 Folder: `round-3/`. Live at **`/reboot/?variant=I|J|K|L`** (`npm run reboot` opens it; the round label in the bar
 reaches rounds 1 and 2, kept as judged). Code: `src/reboot/r3/`; renders `tools/render/r3/`; frames
